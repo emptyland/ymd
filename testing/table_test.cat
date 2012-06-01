@@ -1,0 +1,18 @@
+foo = {
+	new: func(a, b, c) {
+		this.a = a
+		this.b = b
+		this.c = c
+		this.do = func(a, b, c) {
+			this.shadow.a = a
+			this.shadow.b = b
+			this.shadow.c = c
+			return c, b, a
+		}
+	}
+}
+
+foo with {
+	name: "with statement",
+	id: 100
+}

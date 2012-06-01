@@ -1,0 +1,33 @@
+if cond {
+	return "hit"
+}
+
+if cond {
+	return "hit if"
+} else {
+	return "hit else"
+}
+
+if cond {
+	return "hit if"
+} elif a {
+	return "hit elif"
+}
+
+if cond {
+	return "hit if"
+} elif a {
+	return "hit elif a"
+} elif b {
+	return "hit elif b"
+}
+
+if cond {
+	return "hit if"
+} elif a {
+	return "hit elif a"
+} elif b {
+	return "hit elif b"
+} else {
+	return "hit else"
+}
