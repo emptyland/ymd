@@ -127,10 +127,8 @@ struct hmap *hmap_new(int count) {
 	struct hmap *x = NULL;
 	if (count <= 0)
 		shift = 5;
-	else if (count > 0 && count < 0xffff)
+	else if (count > 0)
 		shift = log2x(count);
-	else if (count > 0xffff)
-		vm_die("Fatal: Bad arguments");
 	x = gc_alloc(&vm()->gc, sizeof(*x), T_HMAP);
 	assert(shift > 0);
 	x->shift = shift;
@@ -222,7 +220,7 @@ static void resize(struct hmap *map, int shift) {
 		if (i->flag != KVI_FREE) {
 			struct variable *pv = hmap_get(map, &i->k);
 			assert(pv != NULL);
-			assert(is_nil(pv));
+			//assert(is_nil(pv));
 			*pv = i->v;
 		}
 	}

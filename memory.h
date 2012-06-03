@@ -18,10 +18,9 @@ struct gc_node {
 
 struct gc_struct {
 	struct hmap *root;
-	struct gc_node **alloced;
-	struct gc_node **weak;
+	struct gc_node *alloced;
+	struct gc_node *weak;
 	int n_alloced;
-	int shift;
 	int k_alloced;
 };
 

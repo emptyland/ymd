@@ -1,14 +1,14 @@
 #include "value.h"
 #include "memory.h"
 #include "state.h"
+#include "yut_rand.h"
 #include "yut.h"
 
 #define gc(p) ((struct gc_node *)(p))
 
-int test_skls_creation() {
+static int test_skls_creation_1() {
 	struct variable k1, k2, *rv;
 	struct skls *ls = skls_new();
-	ASSERT_NOTNULL(ls);
 
 	k1.type = T_INT;
 	k1.value.i = 1024;
@@ -34,7 +34,118 @@ int test_skls_creation() {
 	return 0;
 }
 
+#define BENCHMARK_COUNT 100000
+
+static int test_skls_creation_2() {
+	struct variable k, *v;
+	struct skls *ls = skls_new();
+	int i = BENCHMARK_COUNT;
+	RAND_BEGIN(NORMAL)
+		while (i--) {
+			const struct yut_kstr *kz = RAND_STR();
+			k.type = T_KSTR;
+			k.value.ref = gc(kstr_new(kz->land, kz->len));
+			v = skls_get(ls, &k);
+			v->type = T_INT;
+			v->value.i = i;
+		}
+	RAND_END
+	ASSERT_LE(int, ls->count, BENCHMARK_COUNT);
+	return 0;
+}
+
+static int test_skls_sequence() {
+	struct variable k, *v;
+	struct skls *ls = skls_new();
+	struct sknd *x;
+	int i = BENCHMARK_COUNT;
+	while (i--) {
+		k.type = T_INT;
+		k.value.i = i;
+		v = skls_get(ls, &k);
+		v->type = T_INT;
+		v->value.i = BENCHMARK_COUNT - 1 - i;
+	}
+	EXPECT_EQ(int, ls->count, BENCHMARK_COUNT);
+	x = ls->head;
+	ASSERT_NOTNULL(x);
+	i = 0;
+	while ((x = x->fwd[0]) != NULL)
+		ASSERT_EQ(large, x->k.value.i, i++);
+	EXPECT_EQ(int, i, BENCHMARK_COUNT);
+	return 0;
+}
+
+static struct skls *build_skls(const int *raw, long i) {
+	struct skls *ls = skls_new();
+	while (i--) {
+		struct variable k, *v;
+		k.type = T_INT;
+		k.value.i = raw[i];
+		v = skls_get(ls, &k);
+		v->type = T_INT;
+		v->value.i = i;
+	}
+	return ls;
+}
+
+static int test_skls_comparation() {
+	int raw[1024];
+	struct skls *x, *rhs;
+	long k = sizeof(raw) / sizeof(raw[0]), i = k;
+	RAND_BEGIN(NORMAL)
+		while (i--)
+			raw[i] = RAND(int);
+	RAND_END
+	x = build_skls(raw, k);
+	rhs = build_skls(raw, k);
+
+	EXPECT_TRUE(skls_equal(x, x));
+	EXPECT_TRUE(skls_equal(x, rhs));
+
+	EXPECT_EQ(int, skls_compare(x, x), 0);
+	EXPECT_EQ(int, skls_compare(x, rhs), 0);
+
+	rhs = skls_new();
+	EXPECT_FALSE(skls_equal(x, rhs));
+	EXPECT_LT(int, skls_compare(x, rhs), 0);
+	return 0;
+}
+
+static int test_skls_search() {
+	struct skls *list = skls_new();
+	struct variable k, *rv;
+	char buf[32];
+	int i = BENCHMARK_COUNT;
+	while (i--) {
+		snprintf(buf, sizeof(buf), "%d", i);
+		k.type = T_KSTR;
+		k.value.ref = gc(kstr_new(buf, -1));
+		rv = skls_get(list, &k);
+		rv->type = T_INT;
+		rv->value.i = i;
+	}
+	i = BENCHMARK_COUNT;
+	RAND_BEGIN(NORMAL)
+		TIME_RECORD_BEGIN(searching)
+		while (i--) {
+			unsigned int index = RAND_RANGE(uint, 0, BENCHMARK_COUNT);
+			snprintf(buf, sizeof(buf), "%u", index);
+			k.type = T_KSTR;
+			k.value.ref = gc(kstr_new(buf, -1));
+			rv = skls_get(list, &k);
+			ASSERT_EQ(uint, rv->type, T_INT);
+			ASSERT_EQ(large, rv->value.i, index);
+		}
+		TIME_RECORD_END
+	RAND_END
+	return 0;
+}
 
 TEST_BEGIN
-	TEST_ENTRY(skls_creation, normal)
+	TEST_ENTRY(skls_creation_1, normal)
+	TEST_ENTRY(skls_creation_2, benchmark)
+	TEST_ENTRY(skls_sequence, benchmark)
+	TEST_ENTRY(skls_comparation, normal)
+	TEST_ENTRY(skls_search, benchmark)
 TEST_END

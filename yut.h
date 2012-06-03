@@ -1,26 +1,15 @@
 #ifndef TEST_YUT_H
 #define TEST_YUT_H
 
+#include "yut_type.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/time.h>
 
-//
+//--------------------------------------------------------------------------
 // yut = [Y]amada [U]nit [T]est
-//
-
-#define int_cast(i)      ((int)(i))
-#define int_tag          "%d"
-#define uint_cast(i)     ((unsigned int)(i))
-#define uint_tag         "%u"
-#define long_cast(i)     ((long)(i))
-#define long_tag         "%lld"
-#define ulong_cast(i)    ((unsigned long)(i))
-#define ulong_tag        "%llu"
-#define large_cast(i)    ((long long)(i))
-#define large_tag        "%lld"
-#define ularge_cast(i)   ((unsigned long long)(i))
-#define ularge_tag       "%llu"
+//--------------------------------------------------------------------------
 
 #define EQ_DO(to, l, r)  (to(l) == to(r))
 #define EQ_DESC          "equal"
@@ -35,6 +24,9 @@
 #define LE_DO(to, l, r)  (to(l) <= to(r))
 #define LE_DESC          "less or equal"
 
+//--------------------------------------------------------------------------
+// Integer binary comparation:
+//--------------------------------------------------------------------------
 #define ASSERT_BIN(action, type, expected, actual) \
 if (!action##_DO(type##_cast, expected, actual)) \
 	return yut_run_log2(__FILE__, __LINE__, 1, \
@@ -92,6 +84,9 @@ if (!action##_DO(type##_cast, expected, actual)) \
 #define EXPECT_LE(type, expected, actual) \
 	EXPECT_BIN(LE, type, expected, actual)
 
+//--------------------------------------------------------------------------
+// Boolean check: c has no boolean type, it's `int` type.
+//--------------------------------------------------------------------------
 #define EXPECT_TRUE(condition) \
 	if (!(condition)) \
 		yut_run_log1(__FILE__, __LINE__, 0, \
@@ -111,6 +106,9 @@ if (!action##_DO(type##_cast, expected, actual)) \
 		yut_run_log1(__FILE__, __LINE__, 0, \
 			"should be NOT NULL", #condition)
 
+//--------------------------------------------------------------------------
+// String check:
+//--------------------------------------------------------------------------
 #define ASSERT_STREQ(expected, actual) \
 	if (strcmp(expected, actual)) \
 		return yut_run_logz(__FILE__, __LINE__, 1, "equal", \
@@ -137,6 +135,9 @@ if (!action##_DO(type##_cast, expected, actual)) \
 			#expected, #actual, \
 			expected, actual)
 
+//--------------------------------------------------------------------------
+// Test reporting functions:
+//--------------------------------------------------------------------------
 int yut_run_log1(
 	const char *file,
 	int line,
@@ -164,6 +165,32 @@ int yut_run_logz(
 	const char *expected,
 	const char *actual);
 
+//--------------------------------------------------------------------------
+// Time recording:
+//--------------------------------------------------------------------------
+struct yut_time_count {
+	struct yut_time_count *chain;
+	const char *id;
+	const char *file;
+	int line;
+	struct timeval val;
+};
+
+#define TIME_RECORD_BEGIN(id) { \
+	struct yut_time_count __intl_counter_##id##_xx; \
+	yut_time_record(__FILE__, __LINE__, #id, &__intl_counter_##id##_xx);
+
+#define TIME_RECORD_END \
+	yut_time_log1(__FILE__, __LINE__); \
+}
+
+int yut_time_record(const char *file, int line, const char *id,
+                    struct yut_time_count *ctx);
+int yut_time_log1(const char *file, int line);
+
+//--------------------------------------------------------------------------
+// xterm color defines:
+//--------------------------------------------------------------------------
 #define YUT_COLOR_RED    "1;31"
 #define YUT_COLOR_GREEN  "1;32"
 #define YUT_COLOR_YELLOW "1;33"
@@ -171,13 +198,17 @@ int yut_run_logz(
 #define YUT_COLOR_PURPLE "1;35"
 #define YUT_COLOR_AZURE  "1;36"
 
-#define yut_color(color) YUT_COLOR_##color
-#define yut_color_begin(color) "\033[" YUT_COLOR_##color "m"
-#define yut_color_end()        "\033[0m"
+#define yut_color(color)   YUT_COLOR_##color
+#define yut_colored(color) "\033[" YUT_COLOR_##color "m"
+#define yut_colorless()    "\033[0m"
 
-#define yut_paint_z(color) printf(yut_color_begin(color))
-#define yut_final_z() printf(yut_color_end())
+#define yut_paint_z(color) printf(yut_colored(color))
+#define yut_final_z() printf(yut_colorless())
 
+
+//--------------------------------------------------------------------------
+// Test case enter:
+//--------------------------------------------------------------------------
 typedef int (*yut_routine_t)();
 int yut_run_test(yut_routine_t fn, const char *name);
 int yut_run_all(int argc, char *argv[]);
@@ -191,11 +222,23 @@ struct yut_ent {
 	const char *name;
 };
 
+struct yut_env {
+	int (*setup)();
+	void (*teardown)();
+};
+
 #define TEST_BEGIN \
+struct yut_env yut_intl_env = { NULL, NULL, }; \
 struct yut_ent yut_intl_test[] = {
+
+#define TEST_BEGIN_WITH(setup, teardown) \
+struct yut_env yut_intl_env = { setup, teardown, }; \
+struct yut_ent yut_intl_test[] = {
+
 #define TEST_END \
 	{ .fn = NULL, .name = NULL, }, \
 };
+
 #define TEST_ENTRY(func, postfix) { \
 	.fn = test_##func, \
 	.name = #func"."#postfix, \

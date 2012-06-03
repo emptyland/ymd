@@ -2,19 +2,13 @@
 # y.tab.c
 # par.l
 # par.y
-CC=gcc
+CC=clang
 CFLAGS=-O0 -g -Wall -Wextra
 OBJS=state.o value.o memory.o hash_map.o skip_list.o closure.o
-OBJT=$(OBJS) yut.o main_test.o
+OBJT=$(OBJS) yut_rand.o yut.o main_test.o
 
-test: yut_test memory_test value_test skip_list_test
-	./memory_test && ./value_test && ./skip_list_test
-
-yut_test: yut_test.o yut.o
-	$(CC) yut_test.o yut.o -o yut_test
-
-yut_test.o: yut_test.c yut.h
-	$(CC) $(CFLAGS) yut_test.c -c -o yut_test.o
+test: yut_test memory_test value_test skip_list_test hash_map_test
+	./memory_test && ./value_test && ./skip_list_test && ./hash_map_test
 
 memory_test: $(OBJT) memory_test.o
 	$(CC) $(OBJT) memory_test.o -o memory_test
@@ -34,8 +28,23 @@ skip_list_test: $(OBJT) skip_list_test.o
 skip_list_test.o: skip_list_test.c value.h memory.h state.h
 	$(CC) $(CFLAGS) skip_list_test.c -c -o skip_list_test.o
 
+hash_map_test: $(OBJT) hash_map_test.o
+	$(CC) $(OBJT) hash_map_test.o -o hash_map_test
+
+hash_map_test.o: hash_map_test.c value.h memory.h state.h
+	$(CC) $(CFLAGS) hash_map_test.c -c -o hash_map_test.o
+
 main_test.o: main_test.c state.h yut.h
 	$(CC) $(CFLAGS) main_test.c -c -o main_test.o
+
+yut_test: yut_test.o yut_rand.o yut.o
+	$(CC) yut_test.o yut_rand.o yut.o -o yut_test
+
+yut_test.o: yut_test.c yut_rand.h yut.h
+	$(CC) $(CFLAGS) yut_test.c -c -o yut_test.o
+
+yut_rand.o: yut_rand.c yut_rand.h yut.h
+	$(CC) $(CFLAGS) yut_rand.c -c -o yut_rand.o
 
 yut.o: yut.c yut.h
 	$(CC) $(CFLAGS) yut.c -c -o yut.o

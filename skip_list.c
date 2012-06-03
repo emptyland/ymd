@@ -75,7 +75,7 @@ static const struct variable *skfind(const struct skls *list,
 		}
 	}
 	x = x->fwd[0];
-	return equal(&x->k, key) ? &x->v : knax; // `knax` means not found;
+	return (x && equal(&x->k, key)) ? &x->v : knax; // `knax` means not found;
 }
 
 struct skls *skls_new() {
@@ -85,55 +85,36 @@ struct skls *skls_new() {
 	return x;
 }
 
-// Recursive delete node.
-static void delnd(struct sknd *x) {
-	int i = x->n;
-	while (i-- && x->fwd[i])
-		delnd(x->fwd[i]);
-	vm_free(x);
+void skls_final(struct skls *list) {
+	struct sknd *i = list->head, *p = i;
+	assert(i != NULL);
+	while (i) {
+		p = i;
+		i = i->fwd[0];
+		vm_free(p);
+	}
 }
 
-// Recursive test node equals.
-static int eqund(const struct sknd *x, const struct skls *lhs) {
-	int i = x->n;
-	while (i-- && x->fwd[i]) {
-		if (!equal(&x->k, skfind(lhs, &x->k)))
+int skls_equal(const struct skls *list, const struct skls *lhs) {
+	const struct sknd *i = list->head;
+	if (list == lhs)
+		return 1;
+	assert(i != NULL);
+	while ((i = i->fwd[0]) != NULL) {
+		if (!equal(&i->v, skfind(lhs, &i->k)))
 			return 0;
-		eqund(x->fwd[i], lhs);
 	}
 	return 1;
 }
 
-// Recursive compare node.
-static void cmpnd(const struct sknd *x, const struct skls *lhs, int *rv) {
-	int i = x->n;
-	while (i-- && x->fwd[i]) {
-		*rv += compare(&x->k, skfind(lhs, &x->k));
-		cmpnd(x->fwd[i], lhs, rv);
-	}
-}
-
-void skls_final(struct skls *list) {
-	struct sknd *x = list->head;
-	assert(x != NULL);
-	delnd(x);
-}
-
-int skls_equal(const struct skls *list, const struct skls *lhs) {
-	const struct sknd *x = list->head;
-	assert(x != NULL);
-	if (list == lhs)
-		return 1;
-	return eqund(x, lhs);
-}
-
 int skls_compare(const struct skls *list, const struct skls *lhs) {
-	const struct sknd *x = list->head;
+	const struct sknd *i = list->head;
 	int rv = 0;
-	assert(x != NULL);
 	if (list == lhs)
 		return 0;
-	cmpnd(x, lhs, &rv);
+	assert(i != NULL);
+	while ((i = i->fwd[0]) != NULL)
+		rv += compare(&i->v, skfind(lhs, &i->k));
 	return rv;
 }
 
@@ -142,30 +123,4 @@ struct variable *skls_get(struct skls *list, const struct variable *key) {
 	x->k = *key;
 	return &x->v;
 }
-
-/*
-struct variable *skls_getz(struct skls *list, const char *z, int n) {
-	// Make a fake key.
-	struct variable fake;
-	struct sknd *x;
-	struct kstr *kz;
-	char chunk[sizeof(struct kstr) + MAX_CHUNK_LEN];
-	int lzn = n >= 0 ? n : (int)strlen(z);
-	if (lzn > MAX_CHUNK_LEN)
-		kz = vm_zalloc(sizeof(struct kstr) + lzn);
-	else
-		kz = (struct kstr *)chunk;
-	kz->len = lzn;
-	kz->hash = kz_hash(z, kz->len);
-	memcpy(kz->land, z, kz->len + 1);
-	fake.type = T_KSTR;
-	fake.value.ref = (struct gc_node *)kz;
-	// Find position
-	x = skindex(list, &fake);
-	if (!equal(&x->k, &fake))
-		x->k.value.ref = (struct gc_node *)kstr_new(z, kz->len);
-	if (kz->len > MAX_CHUNK_LEN) vm_free(kz);
-	return &x->v;
-}
-*/
 

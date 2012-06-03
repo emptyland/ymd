@@ -1,4 +1,23 @@
+#include "yut_rand.h"
 #include "yut.h"
+
+static int test_rand() {
+	int i = 10000;
+	RAND_BEGIN(NORMAL)
+		while (i--) {
+			unsigned long long rv;
+			ASSERT_LE(ularge, RAND_RANGE(ularge, 0, 10000), 10000);
+			rv = RAND_RANGE(ularge, 1, 2);
+			ASSERT_LE(ularge, rv, 2);
+			ASSERT_GE(ularge, rv, 1);
+		}
+		i = 16;
+		while (i--) {
+			printf("[ RAND ] %s\n", RANDz());
+		}
+	RAND_END
+	return 0;
+}
 
 static int test_string() {
 	EXPECT_STREQ("123", "123");
@@ -38,6 +57,7 @@ TEST_BEGIN
 	TEST_ENTRY(foo, normal)
 	TEST_ENTRY(condition, normal)
 	TEST_ENTRY(string, normal)
+	TEST_ENTRY(rand, benchmark)
 TEST_END
 
 int main(int argc, char *argv[]) {

@@ -4,18 +4,10 @@
 #include <assert.h>
 #include <stdio.h>
 
-static int track(struct gc_struct *gc, struct gc_node *x) {
-	if (gc->n_alloced >= (1 << gc->shift)) {
-		size_t cap = (1 << (gc->shift + 1));
-		struct gc_node **bak = vm_zalloc(
-			sizeof(*bak) * cap);
-		memcpy(bak, gc->alloced, sizeof(*bak) * gc->n_alloced);
-		vm_free(gc->alloced);
-		gc->alloced = bak;
-		gc->shift <<= 1;
-	}
-	gc->alloced[gc->n_alloced++] = x;
-	return gc->n_alloced;
+static inline int track(struct gc_struct *gc, struct gc_node *x) {
+	x->next = gc->alloced;
+	gc->alloced = x;
+	return ++gc->n_alloced;
 }
 
 void *gc_alloc(struct gc_struct *gc, size_t size,
@@ -28,18 +20,16 @@ void *gc_alloc(struct gc_struct *gc, size_t size,
 }
 
 int gc_init(struct gc_struct *gc, int k) {
-	gc->shift = 10;
-	gc->alloced = vm_zalloc(sizeof(struct gc_node*) * (1 << gc->shift));
+	gc->alloced = NULL;
+	gc->weak = NULL;
 	gc->n_alloced = 0;
 	gc->k_alloced = k;
 	return 0;
 }
 
 void gc_final(struct gc_struct *gc) {
-	int k = gc->n_alloced;
-	//printf("==GC final:\n>gc end: %d\n", gc->n_alloced);
-	while (k--) {
-		struct gc_node *i = gc->alloced[k];
+	struct gc_node *i = gc->alloced, *p = i;
+	while (i) {
 		switch (i->type) {
 		case T_FUNC:
 			func_final((struct func *)i);
@@ -54,11 +44,11 @@ void gc_final(struct gc_struct *gc) {
 			skls_final((struct skls *)i);
 			break;
 		}
-		vm_free(i);
+		p = i;
+		i = i->next;
+		vm_free(p);
 		--gc->n_alloced;
 	}
-	vm_free(gc->alloced);
-	//printf(">gc final: %d\n", gc->n_alloced);
 }
 
 void *mm_need(void *raw, int n, int align, size_t chunk) {

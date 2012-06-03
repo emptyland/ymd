@@ -66,32 +66,25 @@ int equal(const struct variable *lhs, const struct variable *rhs) {
 	return 0;
 }
 
-#define safe_compare(r, l) do {\
-	if ((r) < (l))      \
-		return -1;      \
-	else if ((r) > (l)) \
-		return 1;       \
-	return 0;           \
-} while (0)
+#define safe_compare(l, r) \
+	(((l) < (r)) ? -1 : (((l) > (r)) ? 1 : 0))
 
 int compare(const struct variable *lhs, const struct variable *rhs) {
 	if (lhs == rhs)
 		return 0;
-	if (lhs->type != rhs->type) {
-		safe_compare(lhs->type, rhs->type);
-	}
+	if (lhs->type != rhs->type)
+		return safe_compare(lhs->type, rhs->type);
 	switch (lhs->type) {
 	case T_NIL:
-		return 0;
+		return 0; // Do not compare a nil value.
 	case T_INT:
 	case T_BOOL:
-		safe_compare(lhs->value.i, rhs->value.i);
+		return safe_compare(lhs->value.i, rhs->value.i);
 	case T_KSTR:
 		return kstr_compare(kstr_k(lhs), kstr_k(rhs));
 	//case T_CLOSURE:
 	//	break;
 	case T_EXT:
-		//safe_compare(lhs->value.ext, rhs->value.ext);
 		return 0; // Do not compare a pointer.
 	//case T_DYAY:
 	//	break;

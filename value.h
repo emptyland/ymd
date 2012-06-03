@@ -104,7 +104,7 @@ struct sknd {
 
 struct skls {
 	GC_HEAD;
-	unsigned short count;
+	int count;
 	unsigned short lv;
 	struct sknd *head;
 };
