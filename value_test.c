@@ -72,8 +72,23 @@ static int test_kstr_comparation_2() {
 	return 0;
 }
 
+static int test_kstr_kpool() {
+	struct kstr *kz = ymd_kstr("a", -1);
+	ASSERT_STREQ(kz->land, "a");
+	ASSERT_STREQ(ymd_kstr("a", -1)->land, "a");
+	ASSERT_TRUE(kz == ymd_kstr("a", -1));
+
+	kz = ymd_kstr("aa", -1);
+	ASSERT_STREQ(kz->land, "aa");
+	ASSERT_STREQ(ymd_kstr("aa", -1)->land, "aa");
+	ASSERT_TRUE(kz == ymd_kstr("aa", -1));
+	ASSERT_FALSE(kz == ymd_kstr("a", -1));
+	return 0;
+}
+
 TEST_BEGIN
 	TEST_ENTRY(kstr_creation, normal)
 	TEST_ENTRY(kstr_comparation_1, posative)
 	TEST_ENTRY(kstr_comparation_2, negative)
+	TEST_ENTRY(kstr_kpool, normal)
 TEST_END

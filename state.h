@@ -9,6 +9,8 @@ struct mach {
 	struct hmap *global;
 	struct hmap *kpool;
 	struct gc_struct gc;
+	struct func **fn;
+	unsigned short n_fn;
 	//lock
 	void *(*zalloc)(struct mach *, size_t);
 	void *(*realloc)(struct mach *, void *, size_t);
@@ -45,16 +47,26 @@ static inline void vm_die(const char *msg) {
 
 #define MAX_LOCAL 128
 #define MAX_STACK 128
+#define FUNC_ALIGN 128
+
+struct call_info {
+	struct call_info *chain;
+	struct func *run;
+	int pc;
+};
 
 struct context {
-	struct func *run;
+	struct call_info *info;
 	struct variable loc[MAX_LOCAL];
 	struct variable stk[MAX_STACK];
 	struct variable *top;
 };
 
 //-----------------------------------------------------------------------------
-// Generic mapping functions:
+// Function table:
+// ----------------------------------------------------------------------------
+struct func *ymd_spawnf(unsigned short *id);
+
 // ----------------------------------------------------------------------------
 struct variable *ymd_get(struct variable *var, const struct variable *key);
 
@@ -122,6 +134,12 @@ static inline void ymd_push_skls(struct context *l) {
 	struct variable *v = ymd_push(l);
 	v->value.ref = (struct gc_node *)skls_new();
 	v->type = T_SKLS;
+}
+
+static inline void ymd_push_func(struct context *l) {
+	struct variable *v = ymd_push(l);
+	v->value.ref = (struct gc_node *)func_new(NULL);
+	v->type = T_FUNC;
 }
 
 static inline void ymd_setf(struct context *l, int n) {

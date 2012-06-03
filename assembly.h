@@ -4,13 +4,13 @@
 // Instructions:
 #define I_PANIC   0
 #define I_CLOSURE 5
-#define I_STORE   10
+#define I_STORE   10 // store local|off
 #define I_RET     15 // ret n
 #define I_JNE     20 // jne label
 #define I_JMP     25 // jmp label
 #define I_FOREACH 30 // foreach label
 #define I_SETF    35 // setf n
-#define I_PUSH    40 // push "string"|true|false|nil|number|local
+#define I_PUSH    40 // push "string"|true|false|nil|number|local|off
 #define I_TEST    45 // test gt|ge|lt|le|eq|ne
 #define I_LOGC    50 // logc and|or|not
 #define I_INDEX   55 // index
@@ -29,18 +29,24 @@
 #define I_SHIFT   120 // shift l|r, a|l
 #define I_CALL    125 // call n
 #define I_NEWMAP  130 // newmap n
+#define I_NEWSKL  135 // newskl
+#define I_NEWDYA  140 // newdya
+#define I_BIND    145 // bind local|off
+#define I_LOAD    150 // load id
 
 // jne/jmp
 #define F_FORWARD  0 // param: Number of instructions
 #define F_BACKWARD 1 // param: Number of instructions
+#define F_UNDEF    2 // param: Ignore
 
 // push
-#define F_INT    0 // param: 16bit integer
-#define F_PARTAL 1 // param: Partal integer
-#define F_ZSTR   2 // param: `kstr` offset
-#define F_LOCAL  3 // param: `loc` offset
-#define F_BOOL   4 // param: 0 true other false
-#define F_NIL    5 // param: ignore
+#define F_INT     0 // param: 16bit integer
+#define F_PARTAL  1 // param: Partal integer
+#define F_ZSTR    2 // param: `kz` offset
+#define F_LOCAL   3 // param: `loc` offset
+#define F_BOOL    4 // param: 0 true other false
+#define F_NIL     5 // param: Ignore
+#define F_OFF     6 // param: `kz` offset
 
 // test
 // param: Ignore all
@@ -75,10 +81,10 @@ static inline uint_t asm_build(
 	return ((uint_t)op) << 24 | ((uint_t)flag) << 16 | ((uint_t)param);
 }
 
-#define emitAfP(a, f, p) asm_build(a, f, p)
-#define emitAf(a, f)     asm_build(a, f, 0)
-#define emitAP(a, p)     asm_build(a, 0, p)
-#define emitA(a)         asm_build(a, 0, 0)
+#define emitAfP(a, f, p) asm_build(I_##a, F_##f, p)
+#define emitAf(a, f)     asm_build(I_##a, F_##f, 0)
+#define emitAP(a, p)     asm_build(I_##a, 0, p)
+#define emitA(a)         asm_build(I_##a, 0, 0)
 
 static inline uchar_t asm_op(uint_t inst) {
 	return (uchar_t)((inst & 0xff000000U) >> 24);

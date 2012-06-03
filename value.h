@@ -3,6 +3,7 @@
 
 #include "memory.h"
 #include <assert.h>
+#include <stdio.h>
 
 //-----------------------------------------------------------------------
 // Type defines:
@@ -52,13 +53,12 @@ struct func {
 	ymd_nafn_t nafn;  // Native function
 	ymd_inst_t *inst; // Instructions
 	int n_inst;
-	int pc;
 	struct kstr **kz; // Local constant strings
 	struct kstr **lz; // Local variable mapping
 	struct kstr *proto; // Prototype
 	unsigned short n_kz;
 	unsigned short n_lz;
-	unsigned char n_bind;
+	unsigned short n_bind;
 };
 
 // Constant String:
@@ -167,8 +167,12 @@ void func_final(struct func *fn);
 int func_emit(struct func *fn, ymd_inst_t inst);
 int func_kz(struct func *fn, const char *z, int n);
 int func_lz(struct func *fn, const char *z, int n);
+int func_find_lz(struct func *fn, const char *z);
+int func_add_lz(struct func *fn, const char *z);
 int func_bind(struct func *fn, const struct variable *var);
 void func_shrink(struct func *fn);
-
+int func_call(struct func *fn, int argc);
+struct func *func_compile(FILE *fp);
+void func_dump(struct func *fn, FILE *fp);
 
 #endif // YMD_VALUE_H

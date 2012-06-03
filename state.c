@@ -72,12 +72,14 @@ int vm_init() {
 }
 
 void vm_final() {
+	if (mach_state.fn)
+		vm_free(mach_state.fn);
 	gc_final(&mach_state.gc);
 }
 
 int vm_init_context() {
 	owned_ctx = vm_zalloc(sizeof(*owned_ctx));
-	owned_ctx->run = func_new(NULL);
+	//owned_ctx->run = func_new(NULL);
 	owned_ctx->top = owned_ctx->stk;
 	return 0;
 }
@@ -103,17 +105,12 @@ struct variable *ymd_get(struct variable *var, const struct variable *key) {
 	return knax;
 }
 
-/*
-struct variable *ymd_getz(struct variable *var, const char *z, int n) {
-	switch (var->type) {
-	case T_SKLS:
-		return skls_getz(skls_x(var), z, n);
-	case T_HMAP:
-		return hmap_getz(hmap_x(var), z, n);
-	default:
-		vm_die("Variable is not a mapping container");
-		break;
-	}
-	return knax;
+//-----------------------------------------------------------------------------
+// Function table:
+// ----------------------------------------------------------------------------
+struct func *ymd_spawnf(unsigned short *id) {
+	vm()->fn = mm_need(vm()->fn, vm()->n_fn, FUNC_ALIGN, sizeof(struct func*));
+	*id = vm()->n_fn;
+	vm()->fn[vm()->n_fn++] = func_new(NULL);
+	return vm()->fn[vm()->n_fn - 1];
 }
-*/

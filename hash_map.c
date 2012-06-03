@@ -288,22 +288,26 @@ struct kvi *kz_index(struct hmap *map, const char *z, int n) {
 	struct kstr *kz;
 	char chunk[sizeof(struct kstr) + MAX_CHUNK_LEN];
 	int lzn = n >= 0 ? n : (int)strlen(z);
-	if (lzn > MAX_CHUNK_LEN)
+	if (lzn > MAX_CHUNK_LEN) {
 		kz = vm_zalloc(sizeof(struct kstr) + lzn);
-	else
+	} else {
+		memset(chunk, 0, sizeof(struct kstr) + lzn);
 		kz = (struct kstr *)chunk;
+	}
 	kz->next = NULL;
 	kz->color = 0;
 	kz->type = T_KSTR;
 	kz->len = lzn;
 	kz->hash = kz_hash(z, kz->len);
-	memcpy(kz->land, z, kz->len + 1);
+	memcpy(kz->land, z, kz->len);
 	fake.type = T_KSTR;
 	fake.value.ref = (struct gc_node *)kz;
 	// Find position
 	x = hindex(map, &fake);
-	if (!equal(&x->k, &fake))
+	if (!equal(&x->k, &fake)) {
+		x->k.type = T_KSTR;
 		x->k.value.ref = (struct gc_node *)kstr_new(z, kz->len);
+	}
 	if (kz->len > MAX_CHUNK_LEN) vm_free(kz);
 	return x;
 }

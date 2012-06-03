@@ -81,6 +81,46 @@ static int test_hmap_search() {
 	return 0;
 }
 
+static struct hmap *build_hmap(struct hmap *x, const int *raw, long i) {
+	while (i--) {
+		struct variable k, *rv;
+		k.type = T_INT;
+		k.value.i = raw[i];
+		rv = hmap_get(x, &k);
+		rv->type = T_INT;
+		rv->value.i = i;
+	}
+	return x;
+}
+
+static int test_hmap_comparation() {
+	struct hmap *rhs;
+	int *raw = calloc(BENCHMARK_COUNT, sizeof(*raw));
+	long k = BENCHMARK_COUNT, i = k;
+	RAND_BEGIN(NORMAL)
+		while (i--)
+			raw[i] = RAND(int);
+	RAND_END
+	map = build_hmap(map, raw, k);
+	rhs = build_hmap(hmap_new(-1), raw, k);
+	free(raw);
+
+	EXPECT_TRUE(hmap_equal(map, map));
+	TIME_RECORD_BEGIN(equals)
+	EXPECT_TRUE(hmap_equal(map, rhs));
+	TIME_RECORD_END
+	
+	EXPECT_EQ(int, hmap_compare(map, map), 0);
+	TIME_RECORD_BEGIN(compare)
+	EXPECT_EQ(int, hmap_compare(map, rhs), 0);
+	TIME_RECORD_END
+	
+	rhs = hmap_new(-1);
+	EXPECT_FALSE(hmap_equal(map, rhs));
+	EXPECT_LT(int, hmap_compare(map, rhs), 0);
+	return 0;
+}
+
 static int test_hmap_setup() {
 	map = hmap_new(-1);
 	return 0;
@@ -90,4 +130,5 @@ TEST_BEGIN_WITH(test_hmap_setup, NULL)
 	TEST_ENTRY(hmap_creation_1, normal)
 	TEST_ENTRY(hmap_creation_2, benchmark)
 	TEST_ENTRY(hmap_search, benchmark)
+	TEST_ENTRY(hmap_comparation, benchmark)
 TEST_END

@@ -1,14 +1,12 @@
-# lex.yy.c
-# y.tab.c
-# par.l
-# par.y
 CC=clang
 CFLAGS=-O0 -g -Wall -Wextra
-OBJS=state.o value.o memory.o hash_map.o skip_list.o closure.o
+OBJS=state.o value.o memory.o hash_map.o skip_list.o closure.o call.o
 OBJT=$(OBJS) yut_rand.o yut.o main_test.o
 
-test: yut_test memory_test value_test skip_list_test hash_map_test
-	./memory_test && ./value_test && ./skip_list_test && ./hash_map_test
+test: yut_test memory_test value_test skip_list_test hash_map_test \
+      closure_test
+	./memory_test && ./value_test && ./skip_list_test && ./hash_map_test && \
+	./closure_test
 
 memory_test: $(OBJT) memory_test.o
 	$(CC) $(OBJT) memory_test.o -o memory_test
@@ -34,6 +32,18 @@ hash_map_test: $(OBJT) hash_map_test.o
 hash_map_test.o: hash_map_test.c value.h memory.h state.h
 	$(CC) $(CFLAGS) hash_map_test.c -c -o hash_map_test.o
 
+closure_test: $(OBJT) closure_test.o
+	$(CC) $(OBJT) closure_test.o -o closure_test
+
+closure_test.o: closure_test.c value.h memory.h state.h
+	$(CC) $(CFLAGS) closure_test.c -c -o closure_test.o
+
+call_test: $(OBJT) call_test.o parser.o lexer.o symbol.o
+	$(CC) $(OBJT) call_test.o parser.o lexer.o symbol.o -o call_test
+
+call_test.o: call_test.c value.h memory.h state.h
+	$(CC) $(CFLAGS) call_test.c -c -o call_test.o
+
 main_test.o: main_test.c state.h yut.h
 	$(CC) $(CFLAGS) main_test.c -c -o main_test.o
 
@@ -49,6 +59,9 @@ yut_rand.o: yut_rand.c yut_rand.h yut.h
 yut.o: yut.c yut.h
 	$(CC) $(CFLAGS) yut.c -c -o yut.o
 
+symbol.o: symbol.c symbol.h state.h value.h
+	$(CC) $(CFLAGS) symbol.c -c -o symbol.o
+
 state.o: state.c state.h value.h memory.h
 	$(CC) $(CFLAGS) state.c -c -o state.o
 
@@ -61,26 +74,26 @@ skip_list.o: skip_list.c state.h value.h memory.h
 hash_map.o: hash_map.c state.h value.h memory.h
 	$(CC) $(CFLAGS) hash_map.c -c -o hash_map.o
 
+call.o: call.c state.h value.h memory.h
+	$(CC) $(CFLAGS) call.c -c -o call.o
+
 value.o: value.c value.h state.h
 	$(CC) $(CFLAGS) value.c -c -o value.o
 
 memory.o: memory.c memory.h state.h
 	$(CC) $(CFLAGS) memory.c -c -o memory.o
 
-par: lex.yy.o y.tab.o
-	$(CC) lex.yy.o y.tab.o -o par
+parser.o: y.tab.c y.tab.h
+	$(CC) $(CFLAGS) -DYYERROR_VERBOSE -DDISASM y.tab.c -c -o parser.o
 
-y.tab.o: y.tab.c y.tab.h
-	gcc -g -DYYERROR_VERBOSE y.tab.c -c -o y.tab.o
+lexer.o: lex.yy.c y.tab.c
+	$(CC) $(CFLAGS) -DYYERROR_VERBOSE lex.yy.c -c -o lexer.o
 
-lex.yy.o: lex.yy.c y.tab.c
-	gcc -g -DYYERROR_VERBOSE lex.yy.c -c -o lex.yy.o
+y.tab.c: parser.y
+	yacc parser.y -d
 
-y.tab.c: par.y
-	yacc par.y -d
-
-lex.yy.c: par.l
-	lex par.l
+lex.yy.c: parser.l
+	lex parser.l
 
 clean:
 	rm *.o *_test y.tab.c y.tab.h lex.yy.c par 2&> /dev/null

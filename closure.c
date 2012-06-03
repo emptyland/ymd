@@ -71,9 +71,25 @@ int func_lz(struct func *fn, const char *z, int n) {
 	return i;
 }
 
+// Only find
+int func_find_lz(struct func *fn, const char *z) {
+	int rv = kz_find(fn->lz, fn->n_lz, z, -1);
+	return rv >= fn->n_lz ? -1 : rv;
+}
+
+// Only add
+int func_add_lz(struct func *fn, const char *z) {
+	int rv = func_find_lz(fn, z);
+	if (rv >= 0)
+		return -1;
+	fn->lz = mm_need(fn->lz, fn->n_lz, LVAR_ALIGN, sizeof(*fn->lz));
+	fn->lz[fn->n_lz++] = ymd_kstr(z, -1);
+	return fn->n_lz - 1;
+}
+
 int func_bind(struct func *fn, const struct variable *var) {
 	fn->bind = mm_need(fn->bind, fn->n_bind, BIND_ALIGN,
-	                      sizeof(*fn->bind));
+	                   sizeof(*fn->bind));
 	fn->bind[fn->n_bind++] = *var;
 	return fn->n_bind;
 }
@@ -91,4 +107,18 @@ void func_shrink(struct func *fn) {
 	if (fn->bind)
 		fn->bind = mm_shrink(fn->bind, fn->n_bind, BIND_ALIGN,
 		                     sizeof(*fn->bind));
+}
+
+void func_dump(struct func *fn, FILE *fp) {
+	int i;
+	fprintf(fp, "Constant string:\n");
+	for (i = 0; i < fn->n_kz; ++i)
+		fprintf(fp, "[%d] %s\n", i, fn->kz[i]->land);
+	fprintf(fp, "Local variable:\n");
+	for (i = 0; i < fn->n_lz; ++i)
+		fprintf(fp, "[%d] %s\n", i, fn->lz[i]->land);
+	fprintf(fp, "Instructions:\n");
+	for (i = 0; i < fn->n_inst; ++i)
+		fprintf(fp, "%08x ", fn->inst[i]);
+	fprintf(fp, "\n");
 }

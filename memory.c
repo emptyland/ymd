@@ -55,7 +55,7 @@ void *mm_need(void *raw, int n, int align, size_t chunk) {
 	char *rv;
 	if (n % align)
 		return raw;
-	assert(raw != NULL);
+	//assert(raw != NULL);
 	rv = vm_realloc(raw, chunk * (n + align));
 	memset(rv + chunk * n, 0, chunk * align);
 	return rv;
