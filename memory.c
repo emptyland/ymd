@@ -43,6 +43,9 @@ void gc_final(struct gc_struct *gc) {
 		case T_SKLS:
 			skls_final((struct skls *)i);
 			break;
+		case T_MAND:
+			mand_final((struct mand *)i);
+			break;
 		}
 		p = i;
 		i = i->next;

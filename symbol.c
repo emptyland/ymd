@@ -2,6 +2,7 @@
 #include "value.h"
 #include "state.h"
 #include "assembly.h"
+#include "memory.h"
 #include <string.h>
 #include <stdio.h>
 
@@ -28,13 +29,18 @@ struct scopes {
 	char err[MAX_ERR];
 	int rv;
 };
-struct offset {
-	unsigned short nested[MAX_SCOPE];
-	int n;
+struct info_keeped {
+	struct symbol *sym;
+	struct loop_info *loop;
+	struct cond_info *cond;
+	struct scopes sok;
 };
-static struct symbol *sym;
-static struct scopes sok;
-static struct offset ofk;
+static struct info_keeped infk;
+
+#define sym  (infk.sym)
+#define loop (infk.loop)
+#define cond (infk.cond)
+#define sok  (infk.sok)
 
 int sym_push(const char *z, int n) {
 	if (n >= 0) {
@@ -144,37 +150,34 @@ void sop_error(const char *err, int rv) {
 	printf("%s", err);
 }
 
-void sop_fillback(int dict) {
-	unsigned short off = index_off(-1);
-	uint_t i = sop()->inst[off];
-	uchar_t op = asm_op(i);
-	assert(dict != 0);
-	if (dict > 0)
-		i = asm_build(op, F_FORWARD, sop()->n_inst - off);
-	else if (dict < 0)
-		i = asm_build(op, F_BACKWARD, sop()->n_inst - off);
-	sop()->inst[off] = i;
+// Compiling information functions:
+void info_loop_push(ushort_t pos) {
+	struct loop_info *x = calloc(sizeof(*x), 1);
+	x->chain = loop;
+	x->enter = pos;
+	loop = x;
 }
 
-// Offset functions:
-int push_off(unsigned short off) {
-	if (ofk.n >= MAX_SCOPE) {
-		vm_die("So many for/if/elif nested");
-		return -1;
+ushort_t info_loop_off(const struct func *fn) {
+	assert(fn->n_inst >= loop->enter);
+	return fn->n_inst - loop->enter;
+}
+
+void info_loop_back(const struct func *fn);
+void info_loop_pop();
+void info_loop_rcd(char flag, ushort_t pos) {
+	assert(loop != NULL);
+	assert(loop->nrcd <= MAX_NRCD);
+	switch (flag) {
+	case 'b':
+		loop->rcd[loop->nrcd++] = (0x80000000 | pos);
+		break;
+	case 'c':
+		loop->rcd[loop->nrcd++] = pos;
+		break;
+	default:
+		assert(0);
+		break;
 	}
-	ofk.nested[ofk.n++] = off;
-	return ofk.n;
 }
 
-unsigned short pop_off() {
-	assert(ofk.n > 0);
-	return ofk.nested[--ofk.n];
-}
-
-unsigned short index_off(int i) {
-	if (i > 0)
-		assert(i < ofk.n);
-	else
-		assert(i >= -ofk.n);
-	return i < 0 ? ofk.nested[ofk.n + i] : ofk.nested[i];
-}

@@ -1,4 +1,4 @@
-CC=clang
+CC=gcc
 CFLAGS=-O0 -g -Wall -Wextra
 OBJS=state.o value.o memory.o hash_map.o skip_list.o closure.o call.o
 OBJT=$(OBJS) yut_rand.o yut.o main_test.o disassembly.o

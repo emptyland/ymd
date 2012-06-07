@@ -108,6 +108,28 @@ size_t kz_hash(const char *z, int i) {
 	return n;
 }
 
+static int kz_compare(const unsigned char *z1, int n1,
+                      const unsigned char *z2, int n2) {
+	int i, n;
+	if (z1 == z2)
+		return 0;
+	if (n1 <= n2)
+		n = n1;
+	else
+		n = n2;
+	for (i = 0; i < n; ++i) {
+		if (z1[i] < z2[i])
+			return -1;
+		else if(z1[i] > z2[i])
+			return 1;
+	}
+	if (n1 < n2)
+		return -1;
+	else if(n1 > n2)
+		return 1;
+	return 0;
+}
+
 struct kstr *kstr_new(const char *z, int count) {
 	struct kstr *x = NULL;
 	if (count < 0)
@@ -133,23 +155,44 @@ int kstr_equal(const struct kstr *kz, const struct kstr *rhs) {
 }
 
 int kstr_compare(const struct kstr *kz, const struct kstr *rhs) {
-	int i, n;
-	if (kz == rhs)
-		return 0;
-	if (kz->len <= rhs->len)
-		n = kz->len;
-	else
-		n = rhs->len;
-	for (i = 0; i < n; ++i) {
-		if (kz->land[i] < rhs->land[i])
-			return -1;
-		else if(kz->land[i] > rhs->land[i])
+	return kz_compare((const unsigned char *)kz->land,
+	                  kz->len,
+					  (const unsigned char *)rhs->land,
+					  rhs->len);
+}
+
+//-------------------------------------------------------------------------
+// Managed data: `mand` functions:
+//-------------------------------------------------------------------------
+struct mand *mand_new(const void *data, int size, int (*final)(void *)) {
+	struct mand *x = NULL;
+	assert(size >= 0);
+	x = gc_alloc(&vm()->gc, sizeof(*x) + size, T_MAND);
+	x->len = size;
+	x->final = final;
+	if (data)
+		memcpy(x->land, data, size);
+	return x;
+}
+
+void mand_final(struct mand *pm) {
+	int rv = 0;
+	if (pm->final)
+		rv = (*pm->final)(pm->land);
+	if (rv < 0)
+		vm_die("Managed data finalize failed.");
+}
+
+int mand_equal(const struct mand *pm, const struct mand *rhs) {
+	if (pm == rhs)
+		return 1;
+	if (pm->len == rhs->len && pm->final == rhs->final) {
+		if (memcmp(pm->land, rhs->land, pm->len) == 0)
 			return 1;
 	}
-	if (kz->len < rhs->len)
-		return -1;
-	else if(kz->len > rhs->len)
-		return 1;
 	return 0;
 }
 
+int mand_compare(const struct mand *pm, const struct mand *rhs) {
+	return kz_compare(pm->land, pm->len, rhs->land, rhs->len);
+}

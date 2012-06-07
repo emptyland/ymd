@@ -17,14 +17,16 @@
 #define T_DYAY    6 // Dynamic array
 #define T_HMAP    7 // Hash map
 #define T_SKLS    8 // Skip list
-#define KNAX      9 // Flag value
+#define T_MAND    9 // Managed data(from C/C++)
+#define KNAX     10 // Flag value
 
 #define DECL_TREF(v) \
 	v(func, T_FUNC)  \
 	v(kstr, T_KSTR)  \
 	v(dyay, T_DYAY)  \
 	v(hmap, T_HMAP)  \
-	v(skls, T_SKLS)
+	v(skls, T_SKLS)  \
+	v(mand, T_MAND)
 
 #define MAX_CHUNK_LEN 512
 
@@ -109,6 +111,14 @@ struct skls {
 	struct sknd *head;
 };
 
+// Managed data (must be from C/C++)
+struct mand {
+	GC_HEAD;
+	int len; // land length
+	int (*final)(void *); // Release function, call in deleted
+	unsigned char land[1]; // Payload data
+};
+
 // A flag fake variable:
 extern struct variable *knax;
 
@@ -160,6 +170,12 @@ struct variable *skls_get(struct skls *list, const struct variable *key);
 
 // Dynamic array: `dyay` functions:
 struct dyay *dyay_new(int count);
+
+// Managed data: `mand` functions:
+struct mand *mand_new(const void *data, int size, int (*final)(void *));
+void mand_final(struct mand *pm);
+int mand_equal(const struct mand *pm, const struct mand *rhs);
+int mand_compare(const struct mand *pm, const struct mand *rhs);
 
 // Closure functions:
 struct func *func_new(ymd_nafn_t nafn);

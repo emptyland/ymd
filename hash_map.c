@@ -61,20 +61,20 @@ static size_t hash_hmap(const struct hmap *map) {
 	return h;
 }
 
-static void hash_sknd(const struct sknd *x, size_t *seed) {
-	int i = x->n;
-	while (i-- && x->fwd[i]) {
-		*seed += hash(&x->k);
-		*seed ^= hash(&x->v);
-		hash_sknd(x, seed);
-	}
-}
-
 static size_t hash_skls(const struct skls *list) {
 	size_t h = 0;
-	assert(list->head);
-	hash_sknd(list->head, &h);
+	struct sknd *x = list->head;
+	assert(x != NULL);
+	while ((x = x->fwd[0]) != NULL) {
+		h += hash(&x->k);
+		h ^= hash(&x->v);
+	}
 	return h;
+}
+
+static size_t hash_mand(const struct mand *pm) {
+	size_t h = hash_ext((void *)pm->final);
+	return h ^ kz_hash((const char *)pm->land, pm->len);
 }
 
 static size_t hash(const struct variable *v) {
@@ -87,8 +87,8 @@ static size_t hash(const struct variable *v) {
 		return hash_bool(v->value.i);
 	case T_KSTR:
 		return kstr_k(v)->hash;
-	//case T_CLOSURE:
-	//	return hash_closure(closure_k(v));
+	//case T_FUNC:
+	//	return hash_func(func_k(v));
 	case T_EXT:
 		return hash_ext(v->value.ext);
 	//case T_DYAY:
@@ -97,8 +97,11 @@ static size_t hash(const struct variable *v) {
 		return hash_hmap(hmap_k(v));
 	case T_SKLS:
 		return hash_skls(skls_k(v));
+	case T_MAND:
+		return hash_mand(mand_k(v));
 	default:
 		assert(0);
+		break;
 	}
 	return 0;
 }

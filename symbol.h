@@ -1,7 +1,7 @@
 #ifndef YMD_SYMBOL_H
 #define YMD_SYMBOL_H
 
-#include "value.h"
+#include "assembly.h"
 
 struct func;
 
@@ -31,11 +31,30 @@ int sop_count();
 int sop_result();
 void sop_error(const char *err, int rv);
 void sop_fillback(int dict);
-
 // Get last scope func:
 static inline struct func *sop() { return sop_index(-1); }
-static inline unsigned short sop_off() {
-	return sop()->n_inst - pop_off();
-}
+
+struct loop_info {
+	struct loop_info *chain;
+	ushort_t enter;
+	ushort_t leave;
+	uint_t *rcd;
+	int n_rcd;
+};
+
+struct cond_info {
+	struct cond_info *chain;
+	ushort_t enter;
+	ushort_t leave;
+	ushort_t last_branch;
+	ushort_t *branch;
+	int n_branch;
+};
+
+void info_loop_push(ushort_t pos);
+ushort_t info_loop_off(const struct func *fn);
+void info_loop_back(const struct func *fn);
+void info_loop_pop();
+void info_loop_rcd(char flag, ushort_t pos);
 
 #endif // YMD_SYMBOL_H

@@ -53,7 +53,6 @@ func_decl:
 func_prototype begin EL block end {
 	func_emit(sop(), emitAP(RET, 0));
 	sop_pop();
-	DEMIT0("fn_end\n");
 }
 ;
 
@@ -61,13 +60,10 @@ func_prototype:
 func SYMBOL lparen params rparen {
 	int i = func_kz(sop(), sym_index(0), -1);
 	func_emit(sop(), emitAfP(STORE, OFF, i));
-	DEMIT1("store @%s\n", sym_index(0));
 }
 | VAR func SYMBOL lparen params rparen {
 	int i = func_add_lz(sop(), sym_index(0));
 	func_emit(sop(), emitAfP(STORE, LOCAL, i));
-	DEMIT1("local %s\n", sym_index(0));
-	DEMIT1("store @%s\n", sym_index(0));
 }
 ;
 
@@ -82,18 +78,15 @@ FUNC {
 	struct func *fn = ymd_spawnf(&id);
 	func_emit(sop(), emitAP(LOAD, id));
 	sop_push(fn);
-	DEMIT0("new_fn\n");
 }
 ;
 
 bind_list:
 SYMBOL {
 	emit_bind(sym_index(-1));
-	DEMIT1("bind @%s\n", sym_index(-1));
 }
 | bind_list COMMA SYMBOL {
 	emit_bind(sym_index(-1));
-	DEMIT1("bind @%s\n", sym_index(-1));
 }
 ;
 
@@ -107,8 +100,6 @@ param:
 SYMBOL {
 	int i = func_add_lz(sop(), sym_index(-1));
 	func_emit(sop(), emitAfP(STORE, LOCAL, i));
-	DEMIT1("local %s\n", sym_index(-1));
-	DEMIT1("store @%s\n", sym_index(-1));
 	sym_slot(I_PARAMS, +1);
 }
 ;
@@ -142,7 +133,6 @@ return_stmt
 return_stmt:
 return args endl {
 	func_emit(sop(), emitAP(RET, sym_last_slot(I_ARGS, 0)));
-	DEMIT1("ret %d\n", sym_last_slot(I_ARGS, 0));
 }
 ;
 
@@ -161,7 +151,6 @@ EL {
 
 if_stmt:
 if_test block end elif_block else_block {
-	DEMIT0(".label_out:\n");
 	sym_pop();
 }
 ;
@@ -179,55 +168,46 @@ elif_test block end
 
 if_test:
 IF cond begin EL {
-	DEMIT0("jne label_exit\n");
 }
 ;
 
 elif_test:
 elif cond begin EL {
-	DEMIT0("jne label_exit\n");
 }
 ;
 
 else:
 ELSE {
-	DEMIT0(".label_exit\n");	
 }
 ;
 
 elif:
 ELIF {
-	DEMIT0(".label_exit\n");
 }
 ;
 
 for_stmt:
 for begin EL block end {
-	func_emit(sop(), emitAfP(JMP, BACKWARD, sop_off()));
-	DEMIT0("jmp label_loop\n");
-	DEMIT0(".label_out\n");
+	func_emit(sop(), emitAfP(JMP, BACKWARD, info_loop_off(sop())));
+	info_loop_back(sop());
+	info_loop_pop();
 }
 | for_each block end {
-	sop_fillback(1);
-	func_emit(sop(), emitAfP(JMP, BACKWARD, sop_off()));
-	DEMIT0("jmp label_loop\n");
-	DEMIT0(".label_out\n");
+	func_emit(sop(), emitAfP(JMP, BACKWARD, info_loop_off(sop())));
+	info_loop_back(sop());
+	info_loop_pop();
 }
 ;
 
 for_each:
 FOR for_index COLON call begin EL {
-	//emit_access(I_PUSH, sym_index(0));
-	push_off(sop()->n_inst);
+	info_push_loop(sop()->n_inst);
 	func_emit(sop(), emitAf(FOREACH, UNDEF));
-	DEMIT0(".label_loop\n");
-	DEMIT0("foreach label_out\n");
 }
 ;
 
 for_index:
 SYMBOL {
-	//emit_access(I_PUSH, sym_index(-1));
 	//TODO:
 }
 | VAR SYMBOL {
@@ -238,20 +218,21 @@ SYMBOL {
 
 for:
 FOR {
-	push_off(sop()->n_inst);
-	DEMIT0(".label_loop\n");
+	info_loop_push(sop()->n_inst);
 }
 ;
 
 break_stmt:
 BREAK {
-	DEMIT0("jmp label_out\n");
+	info_loop_rcd('b', sop()->n_inst);
+	func_emit(sop(), emitAf(JMP, UNDEF));
 }
 ;
 
 continue_stmt:
 CONTINUE {
-	DEMIT0("jmp label_loop\n");
+	info_loop_rcd('c', sop()->n_inst);
+	func_emit(sop(), emitAf(JMP, UNDEF));
 }
 ;
 
@@ -267,14 +248,11 @@ decl_expr
 decl_expr:
 SYMBOL {
 	func_add_lz(sop(), sym_index(0));
-	DEMIT1("local %s\n", sym_index(0));
 	sym_pop();
 }
 | SYMBOL ASSIGN rval {
 	int i = func_add_lz(sop(), sym_index(0));
 	func_emit(sop(), emitAfP(STORE, LOCAL, i));
-	DEMIT1("local %s\n", sym_index(0));
-	DEMIT1("store @%s\n", sym_index(0));
 	sym_pop();
 }
 ;
@@ -282,12 +260,10 @@ SYMBOL {
 assign_stmt:
 lval_field ASSIGN rval {
 	func_emit(sop(), emitAP(SETF, 1));
-	DEMIT0("setf 1\n");
 	sym_pop();
 }
 | SYMBOL ASSIGN rval {
 	emit_access(I_STORE, sym_index(0));
-	DEMIT1("store @%s\n", sym_index(0));
 	sym_pop();
 }
 ;
@@ -296,7 +272,6 @@ lval_field:
 accl DOT SYMBOL {
 	int i = func_kz(sop(), sym_index(-1), -1);
 	func_emit(sop(), emitAfP(PUSH, ZSTR, i));
-	DEMIT1("push '%s'\n", sym_index(-1));
 }
 | accl LBRACK expr RBRACK
 ;
@@ -304,47 +279,36 @@ accl DOT SYMBOL {
 cond:
 TRUE {
 	func_emit(sop(), emitAfP(PUSH, BOOL, 1));
-	DEMIT0("push true\n");
 }
 | FALSE {
 	func_emit(sop(), emitAfP(PUSH, BOOL, 0));
-	DEMIT0("push false\n");
 }
 | expr GT expr {
 	func_emit(sop(), emitAf(TEST, GT));
-	DEMIT0("test gt\n");
 }
 | expr GE expr {
 	func_emit(sop(), emitAf(TEST, GE));
-	DEMIT0("test ge\n");
 }
 | expr LT expr {
 	func_emit(sop(), emitAf(TEST, LT));
-	DEMIT0("test lt\n");
 }
 | expr LE expr {
 	func_emit(sop(), emitAf(TEST, LE));
-	DEMIT0("test le\n");
 }
 | expr EQ expr {
 	func_emit(sop(), emitAf(TEST, EQ));
-	DEMIT0("test eq\n");
 }
 | expr NE expr {
 	func_emit(sop(), emitAf(TEST, NE));
-	DEMIT0("test ne\n");
 }
 | cond AND cond {
 	func_emit(sop(), emitAf(LOGC, AND));
-	DEMIT0("logc and\n");
 }
 | cond OR cond {
 	func_emit(sop(), emitAf(LOGC, OR));
-	DEMIT0("logc or\n");
 }
 | NOT cond {
 	func_emit(sop(), emitAf(LOGC, NOT));
-	DEMIT0("logc not\n");
 }
 | id
 | LPAREN cond RPAREN
@@ -354,21 +318,17 @@ expr:
 number {
 	// TODO:
 	func_emit(sop(), emitAfP(PUSH, INT, atoi(sym_index(-1))));
-	DEMIT1("push %s\n", sym_index(-1));
 }
 | NIL {
 	func_emit(sop(), emitAf(PUSH, NIL));
-	DEMIT0("push nil\n");
 }
 | STRING {
 	int i = func_kz(sop(), sym_index(-1), -1);
 	func_emit(sop(), emitAfP(PUSH, ZSTR, i));
-	DEMIT1("push '%s'\n", sym_index(-1));
 }
 | closure_prototype begin EL block end {
 	func_emit(sop(), emitAP(RET, 0));
 	sop_pop();
-	DEMIT0("fn_end\n");
 }
 | map
 | accl
@@ -388,16 +348,12 @@ accl DOT SYMBOL {
 	int i = func_kz(sop(), sym_index(-1), -1);
 	func_emit(sop(), emitAfP(PUSH, ZSTR, i));
 	func_emit(sop(), emitA(INDEX));
-	DEMIT1("push '%s'\n", sym_index(-1));
-	DEMIT0("index\n");
 }
 | accl LBRACK expr RBRACK {
 	func_emit(sop(), emitA(INDEX));
-	DEMIT0("index\n");
 }
 | TYPEOF LPAREN rval RPAREN {
 	func_emit(sop(), emitA(TYPEOF));
-	DEMIT0("typeof\n");
 }
 | id
 | call
@@ -406,77 +362,60 @@ accl DOT SYMBOL {
 calc:
 SUB expr {
 	func_emit(sop(), emitA(INV));
-	DEMIT0("inv\n");
 }
 | expr MUL expr {
 	func_emit(sop(), emitA(MUL));
-	DEMIT0("mul\n");
 }
 | expr DIV expr {
 	func_emit(sop(), emitA(DIV));
-	DEMIT0("div\n");
 }
 | expr ADD expr {
 	func_emit(sop(), emitA(ADD));
-	DEMIT0("add\n");
 }
 | expr SUB expr {
 	func_emit(sop(), emitA(SUB));
-	DEMIT0("sub\n");
 }
 | expr MOD expr {
 	func_emit(sop(), emitA(MOD));
-	DEMIT0("mod\n");
 }
 | expr POW expr {
 	func_emit(sop(), emitA(POW));
-	DEMIT0("pow\n");
 }
 | expr AND_BIT expr {
 	func_emit(sop(), emitA(ANDB));
-	DEMIT0("andb\n");
 }
 | expr OR_BIT expr {
 	func_emit(sop(), emitA(ORB));
-	DEMIT0("orb\n");
 }
 | expr XOR_BIT expr {
 	func_emit(sop(), emitA(XORB));
-	DEMIT0("xorb\n");
 }
 | NOT_BIT expr {
 	func_emit(sop(), emitA(INVB));
-	DEMIT0("invb\n");
 }
 | expr LSHIFT expr {
 	func_emit(sop(), emitAf(SHIFT, LEFT));
-	DEMIT0("shift l\n");
 }
 | expr RSHIFT_ALG expr {
 	func_emit(sop(), emitAf(SHIFT, RIGHT_A));
-	DEMIT0("shift r, a\n");
 }
 | expr RSHIFT_LOG expr {
 	func_emit(sop(), emitAf(SHIFT, RIGHT_L));
-	DEMIT0("shift r, l\n");
 }
 ;
 
 call:
 accl lparen args rparen {
 	func_emit(sop(), emitAP(CALL, sym_last_slot(I_ARGS, 0)));
-	DEMIT1("call %d\n", sym_last_slot(I_ARGS, 0));
 }
 | id lparen args rparen {
 	func_emit(sop(), emitAP(CALL, sym_last_slot(I_ARGS, 0)));
-	DEMIT1("call %d\n", sym_last_slot(I_ARGS, 0));
 }
 ;
 
 id:
 SYMBOL {
 	emit_access(I_PUSH, sym_index(-1));
-	DEMIT1("push @%s\n", sym_index(-1));
 }
 ;
 
@@ -499,26 +438,21 @@ expr COMMA args {
 map:
 begin EL def_list end {
 	func_emit(sop(), emitAP(NEWMAP, sym_last_slot(I_DEFS, 1)));
-	DEMIT1("newmap %d\n", sym_last_slot(I_DEFS, 1));
 }
 | begin def_list end {
 	func_emit(sop(), emitAP(NEWMAP, sym_last_slot(I_DEFS, 1)));
-	DEMIT1("newmap %d\n", sym_last_slot(I_DEFS, 1));
 }
 | ordered EL def_list end {
 	func_emit(sop(), emitAP(NEWSKL, sym_last_slot(I_DEFS, 1)));
-	DEMIT1("newskl %d\n", sym_last_slot(I_DEFS, 1));
 }
 | ordered def_list end {
 	func_emit(sop(), emitAP(NEWSKL, sym_last_slot(I_DEFS, 1)));
-	DEMIT1("newskl %d\n", sym_last_slot(I_DEFS, 1));
 }
 ;
 
 with_stmt:
 expr WITH begin EL def_list end {
 	func_emit(sop(), emitAP(SETF, sym_last_slot(I_DEFS, 1)));
-	DEMIT1("setf %d\n", sym_last_slot(I_DEFS, 1));
 }
 ;
 
@@ -543,7 +477,6 @@ key:
 SYMBOL {
 	int i = func_kz(sop(), sym_index(-1), -1);
 	func_emit(sop(), emitAfP(PUSH, ZSTR, i));
-	DEMIT1("push '%s'\n", sym_index(-1));
 }
 ;
 
