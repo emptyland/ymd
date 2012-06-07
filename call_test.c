@@ -1,3 +1,4 @@
+#include "disassembly.h"
 #include "value.h"
 #include "memory.h"
 #include "state.h"
@@ -7,8 +8,8 @@
 static int test_call_run() {
 	struct func *fn = func_compile(stdin);
 	ASSERT_NOTNULL(fn);
-	
-	func_dump(fn, stdout);
+	//func_dump(fn, stdout);
+	dis_func(stdout, fn);
 	return 0;
 }
 

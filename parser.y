@@ -203,24 +203,42 @@ ELIF {
 
 for_stmt:
 for begin EL block end {
+	func_emit(sop(), emitAfP(JMP, BACKWARD, sop_off()));
 	DEMIT0("jmp label_loop\n");
 	DEMIT0(".label_out\n");
 }
 | for_each block end {
+	sop_fillback(1);
+	func_emit(sop(), emitAfP(JMP, BACKWARD, sop_off()));
 	DEMIT0("jmp label_loop\n");
 	DEMIT0(".label_out\n");
 }
 ;
 
 for_each:
-FOR key COLON call begin EL {
+FOR for_index COLON call begin EL {
+	//emit_access(I_PUSH, sym_index(0));
+	push_off(sop()->n_inst);
+	func_emit(sop(), emitAf(FOREACH, UNDEF));
 	DEMIT0(".label_loop\n");
 	DEMIT0("foreach label_out\n");
 }
 ;
 
+for_index:
+SYMBOL {
+	//emit_access(I_PUSH, sym_index(-1));
+	//TODO:
+}
+| VAR SYMBOL {
+	int i = func_add_lz(sop(), sym_index(-1));
+	func_emit(sop(), emitAfP(PUSH, INT, i));
+}
+;
+
 for:
 FOR {
+	push_off(sop()->n_inst);
 	DEMIT0(".label_loop\n");
 }
 ;
@@ -480,19 +498,19 @@ expr COMMA args {
 
 map:
 begin EL def_list end {
-	func_emit(sop(), emitAP(NEWMAP, 32));
+	func_emit(sop(), emitAP(NEWMAP, sym_last_slot(I_DEFS, 1)));
 	DEMIT1("newmap %d\n", sym_last_slot(I_DEFS, 1));
 }
 | begin def_list end {
-	func_emit(sop(), emitAP(NEWMAP, 32));
+	func_emit(sop(), emitAP(NEWMAP, sym_last_slot(I_DEFS, 1)));
 	DEMIT1("newmap %d\n", sym_last_slot(I_DEFS, 1));
 }
 | ordered EL def_list end {
-	func_emit(sop(), emitA(NEWSKL));
+	func_emit(sop(), emitAP(NEWSKL, sym_last_slot(I_DEFS, 1)));
 	DEMIT1("newskl %d\n", sym_last_slot(I_DEFS, 1));
 }
 | ordered def_list end {
-	func_emit(sop(), emitA(NEWSKL));
+	func_emit(sop(), emitAP(NEWSKL, sym_last_slot(I_DEFS, 1)));
 	DEMIT1("newskl %d\n", sym_last_slot(I_DEFS, 1));
 }
 ;

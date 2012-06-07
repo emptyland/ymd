@@ -1,7 +1,7 @@
 CC=clang
 CFLAGS=-O0 -g -Wall -Wextra
 OBJS=state.o value.o memory.o hash_map.o skip_list.o closure.o call.o
-OBJT=$(OBJS) yut_rand.o yut.o main_test.o
+OBJT=$(OBJS) yut_rand.o yut.o main_test.o disassembly.o
 
 test: yut_test memory_test value_test skip_list_test hash_map_test \
       closure_test
@@ -59,6 +59,9 @@ yut_rand.o: yut_rand.c yut_rand.h yut.h
 yut.o: yut.c yut.h
 	$(CC) $(CFLAGS) yut.c -c -o yut.o
 
+disassembly.o: disassembly.c disassembly.h assembly.h value.h
+	$(CC) $(CFLAGS) disassembly.c -c -o disassembly.o
+
 symbol.o: symbol.c symbol.h state.h value.h
 	$(CC) $(CFLAGS) symbol.c -c -o symbol.o
 
@@ -84,7 +87,7 @@ memory.o: memory.c memory.h state.h
 	$(CC) $(CFLAGS) memory.c -c -o memory.o
 
 parser.o: y.tab.c y.tab.h
-	$(CC) $(CFLAGS) -DYYERROR_VERBOSE -DDISASM y.tab.c -c -o parser.o
+	$(CC) $(CFLAGS) -DYYERROR_VERBOSE y.tab.c -c -o parser.o
 
 lexer.o: lex.yy.c y.tab.c
 	$(CC) $(CFLAGS) -DYYERROR_VERBOSE lex.yy.c -c -o lexer.o
