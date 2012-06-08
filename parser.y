@@ -19,6 +19,7 @@ int yyerror(const char *e);
 #define DEMIT1(fmt, arg1)
 #define DEMIT2(fmt, arg1, arg2)
 #endif
+static int index_access(const char *z);
 static void emit_access(unsigned char inst, const char *z);
 static void emit_bind(const char *z);
 %}
@@ -42,6 +43,12 @@ static void emit_bind(const char *z);
 %left NOT_BIT
 %left LSHIFT RSHIFT_ALG RSHIFT_LOG
 %%
+
+file:
+block {
+	func_emit(sop(), emitAP(RET, 0));
+}
+;
 
 block:
 block stmt
@@ -151,6 +158,8 @@ EL {
 
 if_stmt:
 if_test block end elif_block else_block {
+	info_cond_back(sop());
+	info_cond_pop();
 	sym_pop();
 }
 ;
@@ -168,21 +177,31 @@ elif_test block end
 
 if_test:
 IF cond begin EL {
+	info_cond_push(sop()->n_inst);
+	func_emit(sop(), emitAf(JNE, UNDEF));
 }
 ;
 
 elif_test:
 elif cond begin EL {
+	info_cond_rcd('b', sop()->n_inst);
+	func_emit(sop(), emitAf(JNE, UNDEF));
 }
 ;
 
 else:
 ELSE {
+	info_cond_rcd('o', sop()->n_inst);
+	func_emit(sop(), emitAf(JMP, UNDEF));
+	info_cond_rcd('b', sop()->n_inst);
 }
 ;
 
 elif:
 ELIF {
+	info_cond_rcd('o', sop()->n_inst);
+	func_emit(sop(), emitAf(JMP, UNDEF));
+	info_cond_rcd('b', sop()->n_inst);
 }
 ;
 
@@ -201,14 +220,15 @@ for begin EL block end {
 
 for_each:
 FOR for_index COLON call begin EL {
-	info_push_loop(sop()->n_inst);
+	info_loop_push(sop()->n_inst);
 	func_emit(sop(), emitAf(FOREACH, UNDEF));
 }
 ;
 
 for_index:
 SYMBOL {
-	//TODO:
+	int i = index_access(sym_index(-1));
+	func_emit(sop(), emitAfP(PUSH, INT, i));
 }
 | VAR SYMBOL {
 	int i = func_add_lz(sop(), sym_index(-1));
@@ -537,6 +557,11 @@ int do_compile(FILE *fp, struct func *fn) {
 	sym_scope_end();
 	sop_pop();
 	return sop_result();
+}
+
+static int index_access(const char *z) {
+	int i = func_find_lz(sop(), z);
+	return i < 0 ? func_kz(sop(), z, -1) : i;
 }
 
 static void emit_access(unsigned char inst, const char *z) {

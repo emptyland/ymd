@@ -34,27 +34,16 @@ void sop_fillback(int dict);
 // Get last scope func:
 static inline struct func *sop() { return sop_index(-1); }
 
-struct loop_info {
-	struct loop_info *chain;
-	ushort_t enter;
-	ushort_t leave;
-	uint_t *rcd;
-	int n_rcd;
-};
-
-struct cond_info {
-	struct cond_info *chain;
-	ushort_t enter;
-	ushort_t leave;
-	ushort_t last_branch;
-	ushort_t *branch;
-	int n_branch;
-};
-
+// Compiling Information functions:
 void info_loop_push(ushort_t pos);
 ushort_t info_loop_off(const struct func *fn);
-void info_loop_back(const struct func *fn);
+void info_loop_back(struct func *fn);
 void info_loop_pop();
 void info_loop_rcd(char flag, ushort_t pos);
+
+void info_cond_push(ushort_t pos);
+void info_cond_back(struct func *fn);
+void info_cond_pop();
+void info_cond_rcd(char which, ushort_t pos);
 
 #endif // YMD_SYMBOL_H

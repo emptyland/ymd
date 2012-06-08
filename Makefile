@@ -1,7 +1,7 @@
-CC=gcc
+CC=clang
 CFLAGS=-O0 -g -Wall -Wextra
 OBJS=state.o value.o memory.o hash_map.o skip_list.o closure.o call.o
-OBJT=$(OBJS) yut_rand.o yut.o main_test.o disassembly.o
+OBJT=$(OBJS) yut_rand.o yut.o main_test.o disassembly.o parser.o lexer.o symbol.o
 
 test: yut_test memory_test value_test skip_list_test hash_map_test \
       closure_test
@@ -38,7 +38,7 @@ closure_test: $(OBJT) closure_test.o
 closure_test.o: closure_test.c value.h memory.h state.h
 	$(CC) $(CFLAGS) closure_test.c -c -o closure_test.o
 
-call_test: $(OBJT) call_test.o parser.o lexer.o symbol.o
+call_test: $(OBJT) call_test.o 
 	$(CC) $(OBJT) call_test.o parser.o lexer.o symbol.o -o call_test
 
 call_test.o: call_test.c value.h memory.h state.h
