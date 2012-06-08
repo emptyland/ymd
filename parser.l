@@ -49,9 +49,12 @@
 "[" { return LBRACK; }
 "]" { return RBRACK; }
 "@{" { return OBRACE; }
-"^{" { return ABRACE; }
 "{" { return LBRACE; }
 "}" { return RBRACE; }
+"{}" { return EMAP; }
+"{:}" { return EMAP; }
+"{@}" { return ESKL; }
+"{^}" { return EDYA; }
 "," { return COMMA; }
 ":" { return COLON; }
 "->" { return DICT; }

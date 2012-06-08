@@ -10,6 +10,7 @@ int yyerror(const char *e);
 #define I_PARAMS 0
 #define I_ARGS 1
 #define I_DEFS 2
+#define I_ELEM 3
 #if defined(DISASM)
 #define DEMIT0(fmt)             printf("ASM: "fmt)
 #define DEMIT1(fmt, arg1)       printf("ASM: "fmt, arg1)
@@ -24,7 +25,7 @@ static void emit_access(unsigned char inst, const char *z);
 static void emit_bind(const char *z);
 %}
 %token NUMBER SYMBOL LBRACK RBRACK TRUE FALSE
-%token EL NIL STRING FUNC COMMA
+%token EL NIL STRING FUNC COMMA EMAP ESKL EDYA
 %token RETURN DICT FOR IN OBRACE ABRACE
 %token LBRACE RBRACE COLON WITH VAR
 %token CONTINUE BREAK LITERAL_DEC LITERAL_HEX
@@ -359,6 +360,9 @@ number {
 | closure_prototype begin EL block end {
 	sop_pop();
 }
+| TYPEOF LPAREN rval RPAREN {
+	func_emit(sop(), emitA(TYPEOF));
+}
 | map
 | array
 | accl
@@ -368,8 +372,10 @@ number {
 
 number:
 LITERAL_DEC {
+	// TODO:
 }
 | LITERAL_HEX {
+	// TODO:
 }
 ;
 
@@ -379,11 +385,8 @@ accl DOT SYMBOL {
 	func_emit(sop(), emitAfP(PUSH, ZSTR, i));
 	func_emit(sop(), emitA(INDEX));
 }
-| accl LBRACK expr RBRACK {
+| expr LBRACK expr RBRACK {
 	func_emit(sop(), emitA(INDEX));
-}
-| TYPEOF LPAREN rval RPAREN {
-	func_emit(sop(), emitA(TYPEOF));
 }
 | id
 | call
@@ -450,36 +453,56 @@ SYMBOL {
 ;
 
 args:
-expr COMMA args {
-	sym_slot(I_ARGS, +1);
-}
-| cond COMMA args {
-	sym_slot(I_ARGS, +1);
-}
-| expr {
+arg COMMA args
+| arg
+|
+;
+
+arg:
+expr {
 	sym_slot(I_ARGS, +1);
 }
 | cond {
 	sym_slot(I_ARGS, +1);
 }
-|
 ;
 
 array:
-repeated args end {
-	func_emit(sop(), emitAP(NEWDYA, sym_last_slot(I_ARGS, 1)));
+EDYA {
+	func_emit(sop(), emitAP(NEWDYA, 0));
+}
+| begin elems end {
+	func_emit(sop(), emitAP(NEWDYA, sym_last_slot(I_ELEM, 1)));
+}
+| begin EL elems end {
+	func_emit(sop(), emitAP(NEWDYA, sym_last_slot(I_ELEM, 1)));
 }
 ;
 
-repeated:
-ABRACE {
-	sym_scope_begin();
-	sym_slot_begin();
+elems:
+elem COMMA EL elems
+| elem COMMA elems
+| elem EL
+| elem
+;
+
+elem:
+expr {
+	sym_slot(I_ELEM, +1);
+}
+| cond {
+	sym_slot(I_ELEM, +1);
 }
 ;
 
 map:
-begin EL def_list end {
+EMAP {
+	func_emit(sop(), emitAP(NEWMAP, 0));
+}
+| ESKL {
+	func_emit(sop(), emitAP(NEWSKL, 0));
+}
+| begin EL def_list end {
 	func_emit(sop(), emitAP(NEWMAP, sym_last_slot(I_DEFS, 1)));
 }
 | begin def_list end {
@@ -504,7 +527,6 @@ def COMMA EL def_list
 | def COMMA def_list
 | def EL
 | def
-|
 ;
 
 def:
