@@ -1,0 +1,13 @@
+func foo(a,b,c) {
+	if a {
+		print(a)
+	} elif b {
+		print(b)
+	} elif c {
+		print(c)
+	} else {
+		print("No!")
+	}
+	return a and b or c
+}
+boolean = foo(true, false, true)

@@ -45,7 +45,7 @@ static inline void vm_die(const char *msg) {
 #define UNUSED(useless) ((void)useless)
 #define IF_DIE(expr, msg) if (expr) vm_die(msg)
 
-#define MAX_LOCAL 128
+#define MAX_LOCAL 1024
 #define MAX_STACK 128
 #define FUNC_ALIGN 128
 
@@ -53,6 +53,7 @@ struct call_info {
 	struct call_info *chain;
 	struct func *run;
 	int pc;
+	struct variable *loc;
 };
 
 struct context {
@@ -75,6 +76,7 @@ static inline struct kstr *ymd_kstr(const char *z, int n) {
 	return kstr_x(&x->k);
 }
 
+struct kstr *ymd_format(const char *fmt, ...);
 
 //-----------------------------------------------------------------------------
 // Stack functions:

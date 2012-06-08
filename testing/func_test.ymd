@@ -1,4 +1,3 @@
-
 func foo(a, b, c) {
 	return a1, call(1, 2, f(1, 2, 3)), a2, a3
 }
@@ -8,4 +7,9 @@ var func bar(a, b, c, d, e, f) {
 		var i = 0
 		return a + i
 	}
+}
+
+var func baz() {
+	a = argv[0]
+	b = argv[1]
 }

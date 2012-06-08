@@ -49,6 +49,7 @@
 "[" { return LBRACK; }
 "]" { return RBRACK; }
 "@{" { return OBRACE; }
+"^{" { return ABRACE; }
 "{" { return LBRACE; }
 "}" { return RBRACE; }
 "," { return COMMA; }

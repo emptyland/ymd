@@ -9,7 +9,12 @@ int func_call(struct func *fn, int argc) {
 	int rv;
 	struct call_info scope;
 
+	// TODO:
 	scope.pc = 0;
+	if (!ioslate()->info)
+		scope.loc = ioslate()->loc;
+	else
+		scope.loc = ioslate()->info->loc + fn->n_lz;
 	scope.run = fn;
 	scope.chain = ioslate()->info;
 	ioslate()->info = &scope;
@@ -17,7 +22,8 @@ int func_call(struct func *fn, int argc) {
 		rv = (*fn->nafn)(ioslate());
 		goto ret;
 	}
-
+	(void)argc;
+	//rv = vm_run(fn, argc);
 ret:
 	ioslate()->info = ioslate()->info->chain;
 	return rv;

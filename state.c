@@ -1,5 +1,6 @@
 #include "state.h"
 #include "value.h"
+#include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -113,4 +114,14 @@ struct func *ymd_spawnf(unsigned short *id) {
 	*id = vm()->n_fn;
 	vm()->fn[vm()->n_fn++] = func_new(NULL);
 	return vm()->fn[vm()->n_fn - 1];
+}
+
+struct kstr *ymd_format(const char *fmt, ...) {
+	va_list ap;
+	int rv;
+	char buf[1024];
+	va_start(ap, fmt);
+	rv = vsnprintf(buf, sizeof(buf), fmt, ap);
+	va_end(ap);
+	return ymd_kstr(buf, -1);
 }

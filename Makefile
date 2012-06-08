@@ -86,10 +86,10 @@ value.o: value.c value.h state.h
 memory.o: memory.c memory.h state.h
 	$(CC) $(CFLAGS) memory.c -c -o memory.o
 
-parser.o: y.tab.c y.tab.h
+parser.o: y.tab.c y.tab.h parser.y
 	$(CC) $(CFLAGS) -DYYERROR_VERBOSE y.tab.c -c -o parser.o
 
-lexer.o: lex.yy.c y.tab.c
+lexer.o: lex.yy.c y.tab.c parser.l
 	$(CC) $(CFLAGS) -DYYERROR_VERBOSE lex.yy.c -c -o lexer.o
 
 y.tab.c: parser.y

@@ -122,3 +122,10 @@ void func_dump(struct func *fn, FILE *fp) {
 		fprintf(fp, "%08x ", fn->inst[i]);
 	fprintf(fp, "\n");
 }
+
+const struct kstr *func_proto(struct func *fn) {
+	fn->proto = ymd_format("func [*%d] (*%d)",
+	                       fn->n_bind, fn->kargs);
+	func_add_lz(fn, "argv"); // Reserved var(s)
+	return fn->proto;
+}

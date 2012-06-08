@@ -1,0 +1,11 @@
+func foo(a,b,c) {
+	if a > b {
+		return a
+	}
+	if b > c {
+		return b
+	}
+	return a + b + c
+}
+i = foo(1, 2, 3)
+

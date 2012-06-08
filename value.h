@@ -58,6 +58,7 @@ struct func {
 	struct kstr **kz; // Local constant strings
 	struct kstr **lz; // Local variable mapping
 	struct kstr *proto; // Prototype
+	unsigned short kargs; // Prototype number of arguments
 	unsigned short n_kz;
 	unsigned short n_lz;
 	unsigned short n_bind;
@@ -179,6 +180,7 @@ int mand_compare(const struct mand *pm, const struct mand *rhs);
 
 // Closure functions:
 struct func *func_new(ymd_nafn_t nafn);
+const struct kstr *func_proto(struct func *fn);
 void func_final(struct func *fn);
 int func_emit(struct func *fn, ymd_inst_t inst);
 int func_kz(struct func *fn, const char *z, int n);

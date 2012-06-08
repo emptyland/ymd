@@ -26,13 +26,6 @@ struct symbol {
 	int last_elem[MAX_SLOT];
 };
 
-struct scopes {
-	struct func *nested[MAX_SCOPE];
-	int n;
-	char err[MAX_ERR];
-	int rv;
-};
-
 struct loop_info {
 	struct loop_info *chain;
 	ushort_t enter;
@@ -49,18 +42,33 @@ struct cond_info {
 	int nbranch;
 };
 
-struct info_keeped {
-	struct symbol *sym;
+struct scope_entry {
+	struct func *fn;
 	struct loop_info *loop;
 	struct cond_info *cond;
-	struct scopes sok;
+};
+
+struct scope_info {
+	struct scope_entry nested[MAX_SCOPE];
+	int n;
+	char err[MAX_ERR];
+	int rv;
+};
+
+struct info_keeped {
+	struct symbol *sym;
+	struct scope_info sok;
 };
 static struct info_keeped infk;
 
-#define sym  (infk.sym)
-#define loop (infk.loop)
-#define cond (infk.cond)
-#define sok  (infk.sok)
+static inline struct scope_entry *sop_curr() {
+	return infk.sok.nested + infk.sok.n - 1;
+}
+
+#define sym    (infk.sym)
+#define loop_i (sop_curr()->loop)
+#define cond_i (sop_curr()->cond)
+#define sok    (infk.sok)
 
 int sym_push(const char *z, int n) {
 	if (n >= 0) {
@@ -141,15 +149,29 @@ int sop_push(struct func *fn) {
 		vm_die("So many function nested");
 		return -1;
 	}
-	sok.nested[sok.n++] = fn;
+	sok.nested[sok.n++].fn = fn;
 	return sok.n;
+}
+
+void sop_final(struct scope_entry *x) {
+	x->fn = NULL;
+	while (x->loop) {
+		struct loop_info *i = x->loop;
+		x->loop = x->loop->chain;
+		free(i);
+	}
+	while (x->cond) {
+		struct cond_info *i = x->cond;
+		x->cond = x->cond->chain;
+		free(i);
+	}
 }
 
 struct func *sop_pop() {
 	struct func *x;
 	assert(sok.n > 0);
-	x = sok.nested[sok.n - 1];
-	sok.nested[--sok.n] = NULL;
+	x = sok.nested[sok.n - 1].fn;
+	sop_final(&sok.nested[--sok.n]);
 	return x;
 }
 
@@ -161,13 +183,27 @@ struct func *sop_index(int i) {
 		assert(i < sok.n);
 	else
 		assert(i >= -sok.n);
-	return i < 0 ? sok.nested[sok.n + i] : sok.nested[i];
+	return i < 0 ? sok.nested[sok.n + i].fn : sok.nested[i].fn;
 }
 
 void sop_error(const char *err, int rv) {
 	strncpy(sok.err, err, sizeof(sok.err));
 	sok.rv = rv;
 	printf("%s", err);
+}
+
+void sop_adjust(struct func *fn) {
+	int i = fn->n_inst;
+	if (i < 2)
+		return;
+	i >>= 1;
+	while (i--) {
+		uint_t tmp = fn->inst[i];
+		uchar_t op = asm_op(fn->inst[i]);
+		assert(op == I_STORE);
+		fn->inst[i] = fn->inst[fn->n_inst - i - 1];
+		fn->inst[fn->n_inst - i - 1] = tmp;
+	}
 }
 
 static uint_t hack_fill(uint_t inst, int dict, ushort_t off) {
@@ -180,61 +216,61 @@ static uint_t hack_fill(uint_t inst, int dict, ushort_t off) {
 // Compiling information functions:
 void info_loop_push(ushort_t pos) {
 	struct loop_info *x = calloc(sizeof(*x), 1);
-	x->chain = loop;
+	x->chain = loop_i;
 	x->enter = pos;
-	loop = x;
+	loop_i = x;
 }
 
 ushort_t info_loop_off(const struct func *fn) {
-	assert(fn->n_inst >= loop->enter);
-	return fn->n_inst - loop->enter;
+	assert(fn->n_inst >= loop_i->enter);
+	return fn->n_inst - loop_i->enter;
 }
 
 void info_loop_back(struct func *fn, int death) {
 	int i;
 	uint_t k, old;
 	// Fill enter
-	loop->leave = fn->n_inst;
+	loop_i->leave = fn->n_inst;
 	if (!death) {
-		old = fn->inst[loop->enter];
-		assert(loop->leave >= loop->enter);
-		fn->inst[loop->enter] = hack_fill(old, 1, loop->leave - loop->enter);
+		old = fn->inst[loop_i->enter];
+		assert(loop_i->leave >= loop_i->enter);
+		fn->inst[loop_i->enter] = hack_fill(old, 1, loop_i->leave - loop_i->enter);
 	}
 	// Fill break statment or continue statment
-	i = loop->nrcd;
+	i = loop_i->nrcd;
 	while (i--) {
-		k = loop->rcd[i] & 0xffff;
+		k = loop_i->rcd[i] & 0xffff;
 		old = fn->inst[k];
-		if (loop->rcd[i] & 0x80000000) { // break
-			assert(loop->leave >= k);
-			fn->inst[k] = hack_fill(old,  1, loop->leave - k);
+		if (loop_i->rcd[i] & 0x80000000) { // break
+			assert(loop_i->leave >= k);
+			fn->inst[k] = hack_fill(old,  1, loop_i->leave - k);
 		} else {
-			assert(loop->enter <= k);
-			fn->inst[k] = hack_fill(old, -1, k - loop->enter);
+			assert(loop_i->enter <= k);
+			fn->inst[k] = hack_fill(old, -1, k - loop_i->enter);
 		}
 	}
 }
 
 void info_loop_pop() {
 	struct loop_info *x;
-	assert(loop != NULL);
-	x = loop->chain;
-	free(loop);
-	loop = x;
+	assert(loop_i != NULL);
+	x = loop_i->chain;
+	free(loop_i);
+	loop_i = x;
 }
 
 void info_loop_rcd(char flag, ushort_t pos) {
-	assert(loop != NULL);
-	if (loop->nrcd >= MAX_RCD) {
+	assert(loop_i != NULL);
+	if (loop_i->nrcd >= MAX_RCD) {
 		vm_die("So many break/continue statments");
 		return;
 	}
 	switch (flag) {
 	case 'b':
-		loop->rcd[loop->nrcd++] = (0x80000000 | pos);
+		loop_i->rcd[loop_i->nrcd++] = (0x80000000 | pos);
 		break;
 	case 'c':
-		loop->rcd[loop->nrcd++] = pos;
+		loop_i->rcd[loop_i->nrcd++] = pos;
 		break;
 	default:
 		assert(0);
@@ -244,9 +280,9 @@ void info_loop_rcd(char flag, ushort_t pos) {
 
 void info_cond_push(ushort_t pos) {
 	struct cond_info *x = calloc(sizeof(*x), 1);
-	x->chain = cond;
+	x->chain = cond_i;
 	x->enter = pos;
-	cond = x;
+	cond_i = x;
 }
 
 void info_cond_back(struct func *fn) {
@@ -254,23 +290,23 @@ void info_cond_back(struct func *fn) {
 	int i, n = 0;
 	uint_t k, p, old;
 
-	cond->leave = fn->n_inst;
-	bak[n++] = cond->enter;
+	cond_i->leave = fn->n_inst;
+	bak[n++] = cond_i->enter;
 	// 8: out
 	// 4: branch
 	// 2: last
-	for (i = 0; i < cond->nbranch; ++i) {
-		if (cond->branch[i] & 0x80000000) {
-			k = cond->branch[i] & 0xffff;
+	for (i = 0; i < cond_i->nbranch; ++i) {
+		if (cond_i->branch[i] & 0x80000000) {
+			k = cond_i->branch[i] & 0xffff;
 			old = fn->inst[k];
-			assert(cond->leave >= k);
-			fn->inst[k] = hack_fill(old, 1, cond->leave - k);
+			assert(cond_i->leave >= k);
+			fn->inst[k] = hack_fill(old, 1, cond_i->leave - k);
 		} else
-			bak[n++] = cond->branch[i] & 0xffff;
+			bak[n++] = cond_i->branch[i] & 0xffff;
 	}
 	// Last label is not last `else` stmt
 	if (n % 2 == 1)
-		bak[n++] = cond->leave;
+		bak[n++] = cond_i->leave;
 	for (i = 0; i < n; i += 2) {
 		k = bak[i];
 		p = bak[i + 1];
@@ -282,30 +318,28 @@ void info_cond_back(struct func *fn) {
 
 void info_cond_pop() {
 	struct cond_info *x;
-	assert(cond != NULL);
-	x = cond->chain;
-	free(cond);
-	cond = x;
+	assert(cond_i != NULL);
+	x = cond_i->chain;
+	free(cond_i);
+	cond_i = x;
 }
 
 // 8: out
 // 4: branch
 // 2: last
 void info_cond_rcd(char which, ushort_t pos) {
-	assert(cond != NULL);
-	if (cond->nbranch >= MAX_RCD) {
+	assert(cond_i != NULL);
+	if (cond_i->nbranch >= MAX_RCD) {
 		vm_die("So many if/else/elif statments");
 		return;
 	}
 	switch (which) {
 	case 'o': // [o]ut
-		cond->branch[cond->nbranch++] = (0x80000000 | pos);
+		cond_i->branch[cond_i->nbranch++] = (0x80000000 | pos);
 		break;
 	case 'b': // [b]ranch
-		cond->branch[cond->nbranch++] = (0x40000000 | pos);
+		cond_i->branch[cond_i->nbranch++] = (0x40000000 | pos);
 		break;
-	case 'l': // [l]ast
-		cond->branch[cond->nbranch++] = (0x20000000 | pos);
 	default:
 		assert(0);
 		break;

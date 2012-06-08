@@ -30,9 +30,10 @@ struct func *sop_index(int i);
 int sop_count();
 int sop_result();
 void sop_error(const char *err, int rv);
-void sop_fillback(int dict);
 // Get last scope func:
 static inline struct func *sop() { return sop_index(-1); }
+// Function frame adjust:
+void sop_adjust(struct func *fn);
 
 // Compiling Information functions:
 void info_loop_push(ushort_t pos);

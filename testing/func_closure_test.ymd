@@ -1,0 +1,9 @@
+func generate(a, b, c) {
+	return func [a] (b, c) {
+		a = a + 1
+		return a
+	}
+}
+var generator = generate(1, 2, 3)
+var i = generator()
+

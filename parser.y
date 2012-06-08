@@ -25,7 +25,7 @@ static void emit_bind(const char *z);
 %}
 %token NUMBER SYMBOL LBRACK RBRACK TRUE FALSE
 %token EL NIL STRING FUNC COMMA
-%token RETURN DICT FOR IN OBRACE
+%token RETURN DICT FOR IN OBRACE ABRACE
 %token LBRACE RBRACE COLON WITH VAR
 %token CONTINUE BREAK LITERAL_DEC LITERAL_HEX
 %nonassoc IF ELSE ELIF
@@ -58,29 +58,39 @@ block stmt
 
 func_decl:
 func_prototype begin EL block end {
-	func_emit(sop(), emitAP(RET, 0));
 	sop_pop();
 }
 ;
 
 func_prototype:
 func SYMBOL lparen params rparen {
-	int i = func_kz(sop(), sym_index(0), -1);
-	func_emit(sop(), emitAfP(STORE, OFF, i));
+	int i = func_kz(sop_index(-2), sym_index(0), -1);
+	func_emit(sop_index(-2), emitAfP(STORE, OFF, i));
+	func_proto(sop());
+	sym_scope_end();
 }
 | VAR func SYMBOL lparen params rparen {
-	int i = func_add_lz(sop(), sym_index(0));
-	func_emit(sop(), emitAfP(STORE, LOCAL, i));
+	int i = func_add_lz(sop_index(-2), sym_index(0));
+	func_emit(sop_index(-2), emitAfP(STORE, LOCAL, i));
+	func_proto(sop());
+	sym_scope_end();
 }
 ;
 
 closure_prototype:
-func lparen params rparen
-| func lbrack bind_list rbrack lparen params rparen
+func lparen params rparen {
+	func_proto(sop());
+	sym_scope_end();
+}
+| func lbrack bind_list rbrack lparen params rparen {
+	func_proto(sop());
+	sym_scope_end();
+}
 ;
 
 func:
 FUNC {
+	sym_scope_begin();
 	unsigned short id;
 	struct func *fn = ymd_spawnf(&id);
 	func_emit(sop(), emitAP(LOAD, id));
@@ -105,8 +115,8 @@ param COMMA params
 
 param:
 SYMBOL {
-	int i = func_add_lz(sop(), sym_index(-1));
-	func_emit(sop(), emitAfP(STORE, LOCAL, i));
+	func_add_lz(sop(), sym_index(-1));
+	++sop()->kargs;
 	sym_slot(I_PARAMS, +1);
 }
 ;
@@ -347,10 +357,10 @@ number {
 	func_emit(sop(), emitAfP(PUSH, ZSTR, i));
 }
 | closure_prototype begin EL block end {
-	func_emit(sop(), emitAP(RET, 0));
 	sop_pop();
 }
 | map
+| array
 | accl
 | calc
 | LPAREN calc RPAREN
@@ -455,6 +465,19 @@ expr COMMA args {
 |
 ;
 
+array:
+repeated args end {
+	func_emit(sop(), emitAP(NEWDYA, sym_last_slot(I_ARGS, 1)));
+}
+;
+
+repeated:
+ABRACE {
+	sym_scope_begin();
+	sym_slot_begin();
+}
+;
+
 map:
 begin EL def_list end {
 	func_emit(sop(), emitAP(NEWMAP, sym_last_slot(I_DEFS, 1)));
@@ -512,17 +535,17 @@ LBRACE {
 }
 ;
 
-ordered:
-OBRACE {
-	sym_scope_begin();
-	sym_slot_begin();
-}
-;
-
 end:
 RBRACE {
 	sym_slot_end();
 	sym_scope_end();
+}
+;
+
+ordered:
+OBRACE {
+	sym_scope_begin();
+	sym_slot_begin();
 }
 ;
 
