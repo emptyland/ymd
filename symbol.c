@@ -190,14 +190,16 @@ ushort_t info_loop_off(const struct func *fn) {
 	return fn->n_inst - loop->enter;
 }
 
-void info_loop_back(struct func *fn) {
+void info_loop_back(struct func *fn, int death) {
 	int i;
 	uint_t k, old;
 	// Fill enter
 	loop->leave = fn->n_inst;
-	old = fn->inst[loop->enter];
-	assert(loop->leave >= loop->enter);
-	fn->inst[loop->enter] = hack_fill(old, 1, loop->leave - loop->enter);
+	if (!death) {
+		old = fn->inst[loop->enter];
+		assert(loop->leave >= loop->enter);
+		fn->inst[loop->enter] = hack_fill(old, 1, loop->leave - loop->enter);
+	}
 	// Fill break statment or continue statment
 	i = loop->nrcd;
 	while (i--) {
@@ -267,12 +269,8 @@ void info_cond_back(struct func *fn) {
 			bak[n++] = cond->branch[i] & 0xffff;
 	}
 	// Last label is not last `else` stmt
-	//if (cond->nbranch == 0 ||
-	//	(cond->branch[i - 1] & 0x80000000)) {
 	if (n % 2 == 1)
 		bak[n++] = cond->leave;
-	//}
-	// Link all branch stmt
 	for (i = 0; i < n; i += 2) {
 		k = bak[i];
 		p = bak[i + 1];

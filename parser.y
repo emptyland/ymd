@@ -208,12 +208,12 @@ ELIF {
 for_stmt:
 for begin EL block end {
 	func_emit(sop(), emitAfP(JMP, BACKWARD, info_loop_off(sop())));
-	info_loop_back(sop());
+	info_loop_back(sop(), 1);
 	info_loop_pop();
 }
 | for_each block end {
 	func_emit(sop(), emitAfP(JMP, BACKWARD, info_loop_off(sop())));
-	info_loop_back(sop());
+	info_loop_back(sop(), 0);
 	info_loop_pop();
 }
 ;

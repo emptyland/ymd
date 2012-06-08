@@ -37,7 +37,7 @@ static inline struct func *sop() { return sop_index(-1); }
 // Compiling Information functions:
 void info_loop_push(ushort_t pos);
 ushort_t info_loop_off(const struct func *fn);
-void info_loop_back(struct func *fn);
+void info_loop_back(struct func *fn, int death);
 void info_loop_pop();
 void info_loop_rcd(char flag, ushort_t pos);
 
