@@ -33,8 +33,8 @@
 struct context;
 struct mach;
 
-typedef unsigned long long ymd_int_t;
-typedef unsigned int       ymd_inst_t;
+typedef long long    ymd_int_t;
+typedef unsigned int ymd_inst_t;
 typedef int (*ymd_nafn_t)(struct context *);
 
 
@@ -75,8 +75,8 @@ struct kstr {
 // Dynamic Array:
 struct dyay {
 	GC_HEAD;
-	short count;
-	unsigned char shift;
+	int count;
+	int max;
 	struct variable *elem;
 };
 
@@ -145,12 +145,12 @@ struct name *name##_of(struct variable *var);
 DECL_TREF(DECL_REFOF)
 #undef DECL_REFOF
 
-int equal(const struct variable *lhs, const struct variable *rhs);
+int equals(const struct variable *lhs, const struct variable *rhs);
 int compare(const struct variable *lhs, const struct variable *rhs);
 
 // Constant string: `kstr`
 struct kstr *kstr_new(const char *z, int n);
-int kstr_equal(const struct kstr *kz, const struct kstr *rhs);
+int kstr_equals(const struct kstr *kz, const struct kstr *rhs);
 int kstr_compare(const struct kstr *kz, const struct kstr *rhs);
 size_t kz_hash(const char *z, int n);
 struct kvi *kz_index(struct hmap *map, const char *z, int n);
@@ -158,24 +158,29 @@ struct kvi *kz_index(struct hmap *map, const char *z, int n);
 // Hash map: `hmap` functions:
 struct hmap *hmap_new(int count);
 void hmap_final(struct hmap *map);
-int hmap_equal(const struct hmap *map, const struct hmap *rhs);
+int hmap_equals(const struct hmap *map, const struct hmap *rhs);
 int hmap_compare(const struct hmap *map, const struct hmap *rhs);
 struct variable *hmap_get(struct hmap *map, const struct variable *key);
 
 // Skip list: `skls` functions:
 struct skls *skls_new();
 void skls_final(struct skls *list);
-int skls_equal(const struct skls *list, const struct skls *rhs);
+int skls_equals(const struct skls *list, const struct skls *rhs);
 int skls_compare(const struct skls *list, const struct skls *rhs);
 struct variable *skls_get(struct skls *list, const struct variable *key);
 
 // Dynamic array: `dyay` functions:
 struct dyay *dyay_new(int count);
+void dyay_final(struct dyay *arr);
+int dyay_equals(const struct dyay *arr, const struct dyay *rhs);
+int dyay_compare(const struct dyay *arr, const struct dyay *rhs);
+struct variable *dyay_get(struct dyay *arr, ymd_int_t i);
+struct variable *dyay_add(struct dyay *arr);
 
 // Managed data: `mand` functions:
 struct mand *mand_new(const void *data, int size, int (*final)(void *));
 void mand_final(struct mand *pm);
-int mand_equal(const struct mand *pm, const struct mand *rhs);
+int mand_equals(const struct mand *pm, const struct mand *rhs);
 int mand_compare(const struct mand *pm, const struct mand *rhs);
 
 // Closure functions:
@@ -192,5 +197,8 @@ void func_shrink(struct func *fn);
 int func_call(struct func *fn, int argc);
 struct func *func_compile(FILE *fp);
 void func_dump(struct func *fn, FILE *fp);
+static inline int func_nlocal(const struct func *fn) {
+	return fn->n_lz - fn->n_bind;
+}
 
 #endif // YMD_VALUE_H

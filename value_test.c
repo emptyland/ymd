@@ -31,7 +31,7 @@ static int test_kstr_comparation_1() {
 	ASSERT_FALSE(kz == zz);
 	ASSERT_EQ(ulong, kz->hash, zz->hash);
 	ASSERT_STREQ(kz->land, zz->land);
-	ASSERT_TRUE(kstr_equal(kz, zz));
+	ASSERT_TRUE(kstr_equals(kz, zz));
 	ASSERT_EQ(int, kstr_compare(kz, zz), 0);
 
 	kz = kstr_new("", 0);
@@ -40,7 +40,7 @@ static int test_kstr_comparation_1() {
 	ASSERT_FALSE(kz == zz);
 	ASSERT_EQ(ulong, kz->hash, zz->hash);
 	ASSERT_STREQ(kz->land, zz->land);
-	ASSERT_TRUE(kstr_equal(kz, zz));
+	ASSERT_TRUE(kstr_equals(kz, zz));
 	ASSERT_EQ(int, kstr_compare(kz, zz), 0);
 	return 0;
 }
@@ -49,8 +49,8 @@ static int test_kstr_comparation_2() {
 	const struct kstr *kz = kstr_new("aaaaa", -1);
 	const struct kstr *zz = kstr_new("aaaaaa", 6);
 
-	ASSERT_TRUE(kstr_equal(kz, kz));
-	ASSERT_TRUE(kstr_equal(zz, zz));
+	ASSERT_TRUE(kstr_equals(kz, kz));
+	ASSERT_TRUE(kstr_equals(zz, zz));
 	ASSERT_EQ(int, kstr_compare(kz, kz), 0);
 	ASSERT_EQ(int, kstr_compare(zz, zz), 0);
 
@@ -58,7 +58,7 @@ static int test_kstr_comparation_2() {
 	ASSERT_NE(ulong, kz->hash, zz->hash);
 	ASSERT_LT(int, kz->len, zz->len);
 	ASSERT_STRNE(kz->land, zz->land);
-	ASSERT_FALSE(kstr_equal(kz, zz));
+	ASSERT_FALSE(kstr_equals(kz, zz));
 	ASSERT_LT(int, kstr_compare(kz, zz), 0);
 
 	kz = kstr_new("aaaaab", -1);
@@ -67,7 +67,7 @@ static int test_kstr_comparation_2() {
 	ASSERT_NE(ulong, kz->hash, zz->hash);
 	ASSERT_EQ(int, kz->len, zz->len);
 	ASSERT_STRNE(kz->land, zz->land);
-	ASSERT_FALSE(kstr_equal(kz, zz));
+	ASSERT_FALSE(kstr_equals(kz, zz));
 	ASSERT_GT(int, kstr_compare(kz, zz), 0);
 	return 0;
 }

@@ -38,9 +38,7 @@ static inline void *vm_realloc(void *p, size_t size) {
 static inline void vm_free(void *p) {
 	vm()->free(vm(), p);
 }
-static inline void vm_die(const char *msg) {
-	vm()->die(vm(), msg);
-}
+void vm_die(const char *fmt, ...);
 
 #define UNUSED(useless) ((void)useless)
 #define IF_DIE(expr, msg) if (expr) vm_die(msg)

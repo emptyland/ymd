@@ -36,7 +36,7 @@ DECL_TREF(DEFINE_REFOF)
 //-------------------------------------------------------------------------
 // Generic functions:
 //-------------------------------------------------------------------------
-int equal(const struct variable *lhs, const struct variable *rhs) {
+int equals(const struct variable *lhs, const struct variable *rhs) {
 	if (lhs == rhs)
 		return 1;
 	if (lhs->type != rhs->type)
@@ -48,17 +48,19 @@ int equal(const struct variable *lhs, const struct variable *rhs) {
 	case T_BOOL:
 		return lhs->value.i == rhs->value.i;
 	case T_KSTR:
-		return kstr_equal(kstr_k(lhs), kstr_k(rhs));
+		return kstr_equals(kstr_k(lhs), kstr_k(rhs));
 	//case T_CLOSURE:
 	//	break;
 	case T_EXT:
 		return lhs->value.ext == rhs->value.ext;
-	//case T_DYAY:
-	//	break;
+	case T_DYAY:
+		return dyay_equals(dyay_k(lhs), dyay_k(rhs));
 	case T_HMAP:
-		return hmap_equal(hmap_k(lhs), hmap_k(lhs));
+		return hmap_equals(hmap_k(lhs), hmap_k(lhs));
 	case T_SKLS:
-		return skls_equal(skls_k(rhs), skls_k(lhs));
+		return skls_equals(skls_k(rhs), skls_k(lhs));
+	//case T_MAND:
+	//	return mand_equals(mand_k(lhs), mand_k(rhs));
 	default:
 		assert(0);
 		break;
@@ -86,12 +88,14 @@ int compare(const struct variable *lhs, const struct variable *rhs) {
 	//	break;
 	case T_EXT:
 		return 0; // Do not compare a pointer.
-	//case T_DYAY:
-	//	break;
+	case T_DYAY:
+		return dyay_compare(dyay_k(lhs), dyay_k(rhs));
 	case T_HMAP:
 		return hmap_compare(hmap_k(lhs), hmap_k(rhs));
 	case T_SKLS:
 		return skls_compare(skls_k(lhs), skls_k(rhs));
+	//case T_MAND:
+	//	return mand_compare(mand_k(lhs), mand_k(rhs));
 	default:
 		assert(0);
 		break;
@@ -145,7 +149,7 @@ struct kstr *kstr_new(const char *z, int count) {
 	return x;
 }
 
-int kstr_equal(const struct kstr *kz, const struct kstr *rhs) {
+int kstr_equals(const struct kstr *kz, const struct kstr *rhs) {
 	if (kz == rhs)
 		return 1;
 	if (kz->len == rhs->len &&
@@ -183,7 +187,7 @@ void mand_final(struct mand *pm) {
 		vm_die("Managed data finalize failed.");
 }
 
-int mand_equal(const struct mand *pm, const struct mand *rhs) {
+int mand_equals(const struct mand *pm, const struct mand *rhs) {
 	if (pm == rhs)
 		return 1;
 	if (pm->len == rhs->len && pm->final == rhs->final) {

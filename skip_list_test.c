@@ -100,14 +100,14 @@ static int test_skls_comparation() {
 	x = build_skls(raw, k);
 	rhs = build_skls(raw, k);
 
-	EXPECT_TRUE(skls_equal(x, x));
-	EXPECT_TRUE(skls_equal(x, rhs));
+	EXPECT_TRUE(skls_equals(x, x));
+	EXPECT_TRUE(skls_equals(x, rhs));
 
 	EXPECT_EQ(int, skls_compare(x, x), 0);
 	EXPECT_EQ(int, skls_compare(x, rhs), 0);
 
 	rhs = skls_new();
-	EXPECT_FALSE(skls_equal(x, rhs));
+	EXPECT_FALSE(skls_equals(x, rhs));
 	EXPECT_LT(int, skls_compare(x, rhs), 0);
 	return 0;
 }

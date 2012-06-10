@@ -6,6 +6,8 @@
 #include <stdlib.h>
 #include <assert.h>
 
+#define MAX_MSG_LEN 1024
+
 static void *default_zalloc(struct mach *m, size_t size) {
 	void *chunk = calloc(size, 1);
 	if (!chunk)
@@ -119,9 +121,22 @@ struct func *ymd_spawnf(unsigned short *id) {
 struct kstr *ymd_format(const char *fmt, ...) {
 	va_list ap;
 	int rv;
-	char buf[1024];
+	char buf[MAX_MSG_LEN];
 	va_start(ap, fmt);
 	rv = vsnprintf(buf, sizeof(buf), fmt, ap);
 	va_end(ap);
 	return ymd_kstr(buf, -1);
+}
+
+//-----------------------------------------------------------------------------
+// Mach:
+// ----------------------------------------------------------------------------
+void vm_die(const char *fmt, ...) {
+	va_list ap;
+	int rv;
+	char buf[MAX_MSG_LEN];
+	va_start(ap, fmt);
+	rv = vsnprintf(buf, sizeof(buf), fmt, ap);
+	va_end(ap);
+	return vm()->die(vm(), buf);
 }

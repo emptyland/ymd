@@ -105,9 +105,9 @@ static int test_hmap_comparation() {
 	rhs = build_hmap(hmap_new(-1), raw, k);
 	free(raw);
 
-	EXPECT_TRUE(hmap_equal(map, map));
+	EXPECT_TRUE(hmap_equals(map, map));
 	TIME_RECORD_BEGIN(equals)
-	EXPECT_TRUE(hmap_equal(map, rhs));
+	EXPECT_TRUE(hmap_equals(map, rhs));
 	TIME_RECORD_END
 	
 	EXPECT_EQ(int, hmap_compare(map, map), 0);
@@ -116,7 +116,7 @@ static int test_hmap_comparation() {
 	TIME_RECORD_END
 	
 	rhs = hmap_new(-1);
-	EXPECT_FALSE(hmap_equal(map, rhs));
+	EXPECT_FALSE(hmap_equals(map, rhs));
 	EXPECT_LT(int, hmap_compare(map, rhs), 0);
 	return 0;
 }

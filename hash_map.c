@@ -49,6 +49,18 @@ static size_t hash_ext(void *p) {
 	return h;
 }
 
+static size_t hash_dyay(const struct dyay *arr) {
+	int i = arr->count;
+	size_t h = i * i;
+	while (i--) {
+		if (i % 2)
+			h ^= hash(arr->elem + i);
+		else
+			h += hash(arr->elem + i);
+	}
+	return h;
+}
+
 static size_t hash_hmap(const struct hmap *map) {
 	int i = (1 << map->shift);
 	size_t h = 0;
@@ -91,8 +103,8 @@ static size_t hash(const struct variable *v) {
 	//	return hash_func(func_k(v));
 	case T_EXT:
 		return hash_ext(v->value.ext);
-	//case T_DYAY:
-	//	return hash_array(array_k(v));
+	case T_DYAY:
+		return hash_dyay(dyay_k(v));
 	case T_HMAP:
 		return hash_hmap(hmap_k(v));
 	case T_SKLS:
@@ -113,7 +125,7 @@ static struct variable *hfind(struct hmap *map,
 	switch (slot->flag) {
 	case KVI_SLOT:
 		for (i = slot; i != NULL; i = i->next) {
-			if (i->hash == h && equal(&i->k, key))
+			if (i->hash == h && equals(&i->k, key))
 				return &i->v;
 		}
 		break;
@@ -140,7 +152,7 @@ struct hmap *hmap_new(int count) {
 	return x;
 }
 
-int hmap_equal(const struct hmap *map, const struct hmap *lhs) {
+int hmap_equals(const struct hmap *map, const struct hmap *lhs) {
 	int i;
 	if (map == lhs)
 		return 1;
@@ -148,7 +160,7 @@ int hmap_equal(const struct hmap *map, const struct hmap *lhs) {
 	while (i--) {
 		if (map->item[i].flag != KVI_FREE) {
 			const struct kvi *it = map->item + i;
-			if (!equal(&it->v, hfind((struct hmap*)lhs, &it->k)))
+			if (!equals(&it->v, hfind((struct hmap*)lhs, &it->k)))
 				return 0;
 		}
 	}
@@ -188,7 +200,7 @@ struct kvi *get_head(struct hmap *map, const struct variable *key,
 	struct kvi *i, *fnd;
 	for (i = slot; i != NULL; i = i->next) {
 		pos = i;
-		if (i->hash == h && equal(&i->k, key))
+		if (i->hash == h && equals(&i->k, key))
 			return i;
 	}
 	fnd = alloc_free(map);
@@ -307,7 +319,7 @@ struct kvi *kz_index(struct hmap *map, const char *z, int n) {
 	fake.value.ref = (struct gc_node *)kz;
 	// Find position
 	x = hindex(map, &fake);
-	if (!equal(&x->k, &fake)) {
+	if (!equals(&x->k, &fake)) {
 		x->k.type = T_KSTR;
 		x->k.value.ref = (struct gc_node *)kstr_new(z, kz->len);
 	}
