@@ -93,7 +93,7 @@ static inline struct variable *ymd_top(struct context *l, int i) {
 }
 
 static inline void ymd_pop(struct context *l, int n) {
-	IF_DIE(l->top == l->stk, "Stack empty!");
+	IF_DIE(n > 0 && l->top == l->stk, "Stack empty!");
 	IF_DIE(n > l->top - l->stk, "Bad pop");
 	while (n--) {
 		memset(l->top, 0, sizeof(*l->top));
@@ -150,13 +150,13 @@ static inline void ymd_setf(struct context *l, int n) {
 		struct variable *v = ymd_get(var, ymd_top(l, i + 1));
 		*v = *ymd_top(l, i);
 	}
-	ymd_pop(l, n);
+	ymd_pop(l, n + 1);
 }
 
 static inline void ymd_index(struct context *l) {
 	struct variable *k = ymd_top(l, 0);
 	struct variable *v = ymd_get(ymd_top(l, 1), k);
-	ymd_pop(l, 1);
+	ymd_pop(l, 2);
 	*ymd_push(l) = *v;
 }
 
