@@ -1,7 +1,7 @@
 CC=clang
 DFLAGS=-O0 -g
 CFLAGS=$(DFLAGS) -Wall -Wextra
-OBJS=state.o value.o memory.o dynamic_array.o hash_map.o skip_list.o closure.o call.o
+OBJS=state.o value.o memory.o dynamic_array.o hash_map.o skip_list.o closure.o call.o libc.o
 OBJT=$(OBJS) yut_rand.o yut.o main_test.o disassembly.o parser.o lexer.o symbol.o
 INCS=state.h value.h memory.h
 INCT=$(INCS) yut.h yut_rand.h
@@ -54,7 +54,7 @@ closure_test.o: $(INCT) closure_test.c
 call_test: $(OBJT) call_test.o 
 	$(CC) $(OBJT) call_test.o -o call_test
 
-call_test.o: $(INCT) call_test.c 
+call_test.o: $(INCT) libc.h call_test.c 
 	$(CC) $(CFLAGS) call_test.c -c -o call_test.o
 
 main_test.o: main_test.c state.h yut.h
@@ -99,6 +99,9 @@ hash_map.o: $(INCS) hash_map.c
 
 call.o: $(INCS) call.c
 	$(CC) $(CFLAGS) call.c -c -o call.o
+
+libc.o: $(INCS) libc.c
+	$(CC) $(CFLAGS) libc.c -c -o libc.o
 
 value.o: value.c value.h state.h
 	$(CC) $(CFLAGS) value.c -c -o value.o

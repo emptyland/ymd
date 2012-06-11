@@ -22,6 +22,9 @@ void dyay_final(struct dyay *arr) {
 	if (arr->elem) {
 		assert(arr->max > 0);
 		vm_free(arr->elem);
+		arr->elem = NULL;
+		arr->count = 0;
+		arr->max = 0;
 	}
 }
 
@@ -66,7 +69,10 @@ struct variable *dyay_get(struct dyay *arr, ymd_int_t i) {
 
 static inline void resize(struct dyay *arr) {
 	arr->max = arr->count * 3 / 2 + MAX_ADD;
-	arr->elem = vm_realloc(arr->elem, sizeof(*arr->elem) * arr->max);
+	if (arr->elem)
+		arr->elem = vm_realloc(arr->elem, sizeof(*arr->elem) * arr->max);
+	else
+		arr->elem = vm_zalloc(sizeof(*arr->elem) * arr->max);
 }
 
 struct variable *dyay_add(struct dyay *arr) {

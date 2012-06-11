@@ -17,7 +17,7 @@ struct variable *knax = &knax_fake_var;
 //-------------------------------------------------------------------------
 // Type casting define:
 //-------------------------------------------------------------------------
-ymd_int_t int_of(struct variable *var) {
+ymd_int_t int_of(const struct variable *var) {
 	if (var->type != T_INT)
 		vm_die("Variable is not `int`");
 	return var->value.i;

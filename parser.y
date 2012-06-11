@@ -440,9 +440,11 @@ SUB expr {
 call:
 accl lparen args rparen {
 	func_emit(sop(), emitAP(CALL, sym_last_slot(I_ARGS, 0)));
+	sym_pop();
 }
 | id lparen args rparen {
 	func_emit(sop(), emitAP(CALL, sym_last_slot(I_ARGS, 0)));
+	sym_pop();
 }
 ;
 

@@ -6,6 +6,23 @@
 
 extern int do_compile(FILE *fp, struct func *fn);
 
+struct typeof_z {
+	int len;
+	const char *name;
+};
+static const struct typeof_z typeof_name[] = {
+	{ 3, "nil", },
+	{ 3, "int", },
+	{ 4, "bool", },
+	{ 4, "lite", },
+	{ 6, "string", },
+	{ 8, "function", },
+	{ 5, "array", },
+	{ 7, "hashmap", },
+	{ 8, "skiplist", },
+	{ 7, "managed", },
+};
+
 // +----------------------+
 // |  bind  |    local    |
 // +--------+-------------+
@@ -37,7 +54,6 @@ static inline struct variable *vm_global(struct func *fn, int i) {
 	key.value.ref = (struct gc_node *)k;
 	return hmap_get(vm()->global, &key);
 }
-
 
 //-----------------------------------------------------------------------------
 // Stack functions:
@@ -127,9 +143,14 @@ int vm_run(struct func *fn, int argc) {
 		case I_INDEX:
 			ymd_index(l);
 			break;
-		case I_TYPEOF:
-			// TODO:
-			break;
+		case I_TYPEOF: {
+			const unsigned tt = ymd_top(l, 0)->type;
+			struct kstr *kz;
+			assert(tt < KNAX);
+			kz = ymd_kstr(typeof_name[tt].name, typeof_name[tt].len);
+			ymd_top(l, 0)->type = T_KSTR;
+			ymd_top(l, 0)->value.ref = (struct gc_node *)kz;
+			} break;
 		case I_INV:
 			// TODO:
 			break;
@@ -171,7 +192,6 @@ int vm_run(struct func *fn, int argc) {
 			int argc = param, nrt = 0;
 			called = func_of(ymd_top(l, argc));
 			nrt = func_call(called, argc);
-			ymd_pop(l, 1); // Pop the function
 			} break;
 		case I_NEWMAP: {
 			struct hmap *map = hmap_new(param);
@@ -231,46 +251,57 @@ static void copy_args(struct func *fn, int argc) {
 	struct context *l = ioslate();
 	// Set argv nil
 	argv->type = T_NIL;
-	argv->value.i = 0;
+	argv->value.i = 0LL;
 	// Copy args
 	i = k;
 	while (i--) // Copy to local variable
 		*vm_local(fn, k - i - 1) = *ymd_top(l, i);
 	// Fill variable: `argv`
 	if (argc > 0) {
-		struct dyay *arr = dyay_new(argc);
+		// Lazy creating
+		fn->argv = !fn->argv ? dyay_new(0) : fn->argv;
 		i = argc;
 		while (i--)
-			*dyay_get(arr, argc - i - 1) = *ymd_top(l, i);
+			*dyay_add(fn->argv) = *ymd_top(l, i);
 		argv->type = T_DYAY;
-		argv->value.ref = (struct gc_node *)arr;
+		argv->value.ref = (struct gc_node *)fn->argv;
 	}
-	// Pop all args
-	ymd_pop(l, argc);
 }
 
 int func_call(struct func *fn, int argc) {
 	int rv;
 	struct call_info scope;
 	struct context *l = ioslate();
+	int main_fn = (l->info == NULL);
 
+	// Initialize local variable
+	if (main_fn) {
+		struct variable *p = ymd_push(l);
+		p->type = T_FUNC;
+		p->value.ref = (struct gc_node *)fn;
+		scope.loc = l->loc;
+	} else {
+		int n = l->info->run->n_lz - l->info->run->n_bind;
+		scope.loc = l->info->loc + n;
+		memset(scope.loc, 0,
+		       (fn->n_lz - fn->n_bind) * sizeof(*scope.loc));
+	}
 	// Link the call info
 	scope.pc = 0;
-	if (!l->info)
-		scope.loc = l->loc;
-	else
-		scope.loc = l->info->loc + fn->n_lz;
 	scope.run = fn;
 	scope.chain = l->info;
 	l->info = &scope;
-	memset(l->info->loc, 0, fn->n_lz * sizeof(struct variable));
 	copy_args(fn, argc);
+	// Pop all args
+	ymd_pop(l, argc + 1);
 	if (fn->nafn) {
 		rv = (*fn->nafn)(ioslate());
 		goto ret;
 	}
 	rv = vm_run(fn, argc);
 ret:
+	if (fn->argv)
+		dyay_final(fn->argv);
 	l->info = l->info->chain;
 	return rv;
 }

@@ -58,6 +58,7 @@ struct func {
 	struct kstr **kz; // Local constant strings
 	struct kstr **lz; // Local variable mapping
 	struct kstr *proto; // Prototype
+	struct dyay *argv;  // Arguments
 	unsigned short kargs; // Prototype number of arguments
 	unsigned short n_kz;
 	unsigned short n_lz;
@@ -139,7 +140,7 @@ DECL_TREF(DEFINE_REFCAST)
 static inline int is_nil(const struct variable *v) {
 	return v->type == T_NIL;
 }
-ymd_int_t int_of(struct variable *var);
+ymd_int_t int_of(const struct variable *var);
 #define DECL_REFOF(name, tt) \
 struct name *name##_of(struct variable *var);
 DECL_TREF(DECL_REFOF)

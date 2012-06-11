@@ -19,7 +19,7 @@ static void resize(struct hmap *map, int shift);
 static int log2x(int n) {
 	int i;
 	for (i = 0; i < (int)sizeof(n)*8; ++i)
-		if ((1 << i) >= n)
+		if ((1 << i) > n)
 			return i;
 	assert(0);
 	return -1;

@@ -76,6 +76,16 @@ static inline struct kstr *ymd_kstr(const char *z, int n) {
 
 struct kstr *ymd_format(const char *fmt, ...);
 
+static inline struct func *ymd_called(struct context *l) {
+	assert(l->info);
+	assert(l->info->run);
+	return l->info->run;
+}
+
+static inline struct dyay *ymd_argv(struct context *l) {
+	return ymd_called(l)->argv;
+}
+
 //-----------------------------------------------------------------------------
 // Stack functions:
 // ----------------------------------------------------------------------------
@@ -95,10 +105,8 @@ static inline struct variable *ymd_top(struct context *l, int i) {
 static inline void ymd_pop(struct context *l, int n) {
 	IF_DIE(n > 0 && l->top == l->stk, "Stack empty!");
 	IF_DIE(n > l->top - l->stk, "Bad pop");
-	while (n--) {
-		memset(l->top, 0, sizeof(*l->top));
-		--l->top;
-	}
+	l->top -= n;
+	memset(l->top, 0, sizeof(*l->top) * n);
 }
 
 static inline void ymd_push_int(struct context *l, ymd_int_t i) {

@@ -101,6 +101,8 @@ struct variable *ymd_get(struct variable *var, const struct variable *key) {
 		return skls_get(skls_x(var), key);
 	case T_HMAP:
 		return hmap_get(hmap_x(var), key);
+	case T_DYAY:
+		return dyay_get(dyay_x(var), int_of(key));
 	default:
 		vm_die("Variable is not a mapping container");
 		break;
