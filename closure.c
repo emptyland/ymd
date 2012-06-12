@@ -13,7 +13,7 @@
 #define INST_ALIGN 128
 #define KSTR_ALIGN 64
 #define LVAR_ALIGN 32
-#define BIND_ALIGN 32
+//#define BIND_ALIGN 32
 
 static int kz_find(struct kstr **kz, int count, const char *z, int n) {
 	int i, lzn = (n >= 0) ? n : (int)strlen(z);
@@ -87,11 +87,11 @@ int func_add_lz(struct func *fn, const char *z) {
 	return fn->n_lz - 1;
 }
 
-int func_bind(struct func *fn, const struct variable *var) {
-	fn->bind = mm_need(fn->bind, fn->n_bind, BIND_ALIGN,
-	                   sizeof(*fn->bind));
-	fn->bind[fn->n_bind++] = *var;
-	return fn->n_bind;
+int func_bind(struct func *fn, int i, const struct variable *var) {
+	assert(i >= 0);
+	assert(i < fn->n_bind);
+	fn->bind[i] = *var;
+	return i;
 }
 
 void func_shrink(struct func *fn) {
@@ -104,9 +104,9 @@ void func_shrink(struct func *fn) {
 	if (fn->lz)
 		fn->lz = mm_shrink(fn->lz, fn->n_lz, LVAR_ALIGN,
 		                   sizeof(*fn->lz));
-	if (fn->bind)
-		fn->bind = mm_shrink(fn->bind, fn->n_bind, BIND_ALIGN,
-		                     sizeof(*fn->bind));
+	//if (fn->bind)
+	//	fn->bind = mm_shrink(fn->bind, fn->n_bind, BIND_ALIGN,
+	//	                     sizeof(*fn->bind));
 }
 
 void func_dump(struct func *fn, FILE *fp) {
@@ -124,12 +124,15 @@ void func_dump(struct func *fn, FILE *fp) {
 }
 
 const struct kstr *func_proto(struct func *fn) {
+	assert(fn->proto == NULL);
 	if (fn->nafn)
 		fn->proto = ymd_format("func [*%d] (*%d) {[native:%p]}",
 							   fn->n_bind, fn->kargs, fn->nafn);
 	else
-		fn->proto = ymd_format("func [*%d] (*%d)",
+		fn->proto = ymd_format("func [*%d] (*%d) {...}",
 							   fn->n_bind, fn->kargs);
 	func_add_lz(fn, "argv"); // Reserved var(s)
+	if (fn->n_bind > 0)
+		fn->bind = vm_zalloc(sizeof(*fn->bind) * fn->n_bind);
 	return fn->proto;
 }

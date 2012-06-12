@@ -368,9 +368,14 @@ retry:
 			var->type = T_DYAY;
 			var->value.ref = (struct gc_node *)map;
 			} break;
-		case I_BIND:
-			// TODO:
-			break;
+		case I_BIND: {
+			struct func *clos = func_of(ymd_top(l, param));
+			int i = param;
+			assert(clos->n_bind == param);
+			while (i--)
+				func_bind(clos, param - i - 1, ymd_top(l, i));
+			ymd_pop(l, param);
+			} break;
 		case I_LOAD: {
 			struct variable *var = ymd_push(l);
 			struct func *land = vm()->fn[param];

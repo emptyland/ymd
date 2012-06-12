@@ -68,6 +68,7 @@ static int test_func_local_constant_2() {
 
 #define gc(x) ((struct gc_node *)x)
 
+/*
 static int test_func_bind_1() {
 	struct variable var;
 
@@ -97,7 +98,9 @@ static int test_func_bind_1() {
 	ASSERT_EQ(uint, fn->bind[3].type, T_SKLS);
 	return 0;
 }
+*/
 
+/*
 static int test_func_bind_2() {
 #define BATCH_COUNT 300
 	int i = BATCH_COUNT;
@@ -114,6 +117,7 @@ static int test_func_bind_2() {
 #undef BATCH_COUNT
 	return 0;
 }
+*/
 
 static int test_func_emit_1() {
 	func_emit(fn, emitAfP(PUSH, INT, 0));
@@ -145,8 +149,8 @@ static int test_func_emit_2() {
 TEST_BEGIN_WITH(test_func_setup, NULL)
 	TEST_ENTRY(func_local_constant_1, normal)
 	TEST_ENTRY(func_local_constant_2, batch)
-	TEST_ENTRY(func_bind_1, normal)
-	TEST_ENTRY(func_bind_2, batch)
+	//TEST_ENTRY(func_bind_1, normal)
+	//TEST_ENTRY(func_bind_2, batch)
 	TEST_ENTRY(func_emit_1, normal)
 	TEST_ENTRY(func_emit_2, batch)
 TEST_END

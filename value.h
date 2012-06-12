@@ -115,6 +115,7 @@ struct skls {
 struct mand {
 	GC_HEAD;
 	int len; // land length
+	const char *tt; // Type name
 	int (*final)(void *); // Release function, call in deleted
 	unsigned char land[1]; // Payload data
 };
@@ -193,7 +194,7 @@ int func_kz(struct func *fn, const char *z, int n);
 int func_lz(struct func *fn, const char *z, int n);
 int func_find_lz(struct func *fn, const char *z);
 int func_add_lz(struct func *fn, const char *z);
-int func_bind(struct func *fn, const struct variable *var);
+int func_bind(struct func *fn, int i, const struct variable *var);
 void func_shrink(struct func *fn);
 int func_call(struct func *fn, int argc);
 struct func *func_compile(FILE *fp);

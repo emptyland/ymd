@@ -31,7 +31,7 @@
 #define I_NEWMAP  130 // newmap n
 #define I_NEWSKL  135 // newskl
 #define I_NEWDYA  140 // newdya
-#define I_BIND    145 // bind local|off
+#define I_BIND    145 // bind n
 #define I_LOAD    150 // load id
 
 // jne/jmp

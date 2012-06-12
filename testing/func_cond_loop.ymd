@@ -11,3 +11,4 @@ func foo(a,b,c) {
 	return a and b or c
 }
 boolean = foo(true, false, true)
+print("boolean:", boolean)

@@ -83,7 +83,7 @@ func lparen params rparen {
 	func_proto(sop());
 	sym_scope_end();
 }
-| func lbrack bind_list rbrack lparen params rparen {
+| func bind_decl lparen params rparen {
 	func_proto(sop());
 	sym_scope_end();
 }
@@ -96,6 +96,12 @@ FUNC {
 	struct func *fn = ymd_spawnf(&id);
 	func_emit(sop(), emitAP(LOAD, id));
 	sop_push(fn);
+}
+;
+
+bind_decl:
+lbrack bind_list rbrack {
+	func_emit(sop_index(-2), emitAP(BIND, sop()->n_bind));
 }
 ;
 
@@ -136,11 +142,17 @@ RBRACK {
 
 stmt:
 return_stmt
-| call
-| assign_stmt
+| call {
+	sym_pop();
+}
+| assign_stmt {
+	sym_pop();
+}
+| if_stmt {
+	sym_pop();
+}
 | decl_stmt
 | with_stmt
-| if_stmt
 | for_stmt
 | break_stmt
 | continue_stmt
@@ -171,7 +183,6 @@ if_stmt:
 if_test block end elif_block else_block {
 	info_cond_back(sop());
 	info_cond_pop();
-	sym_pop();
 }
 ;
 
@@ -291,11 +302,9 @@ SYMBOL {
 assign_stmt:
 lval_field ASSIGN rval {
 	func_emit(sop(), emitAP(SETF, 1));
-	sym_pop();
 }
 | SYMBOL ASSIGN rval {
 	emit_access(I_STORE, sym_index(0));
-	sym_pop();
 }
 ;
 
@@ -440,11 +449,9 @@ SUB expr {
 call:
 accl lparen args rparen {
 	func_emit(sop(), emitAP(CALL, sym_last_slot(I_ARGS, 0)));
-	sym_pop();
 }
 | id lparen args rparen {
 	func_emit(sop(), emitAP(CALL, sym_last_slot(I_ARGS, 0)));
-	sym_pop();
 }
 ;
 
@@ -626,9 +633,10 @@ static void emit_bind(const char *z) {
 	int i = func_find_lz(up, z);
 	if (i < 0) {
 		int k = func_kz(up, z, -1);
-		func_emit(up, emitAfP(BIND, OFF, k));
+		func_emit(up, emitAfP(PUSH, OFF, k));
 	} else {
-		func_emit(up, emitAfP(BIND, LOCAL, i));
+		func_emit(up, emitAfP(PUSH, LOCAL, i));
 	}
+	++sop()->n_bind;
 	func_add_lz(sop(), z); // FIXME
 }

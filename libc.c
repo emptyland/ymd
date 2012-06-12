@@ -23,6 +23,9 @@ static int print_var(const struct variable *var) {
 	case T_KSTR:
 		printf("%s", kstr_k(var)->land);
 		break;
+	case T_FUNC:
+		printf("%s", func_k(var)->proto->land);
+		break;
 	case T_DYAY: {
 		int i;
 		const struct dyay *arr = dyay_k(var);
@@ -61,7 +64,7 @@ static int print_var(const struct variable *var) {
 		putchar('}');
 		} break;
 	default:
-		assert(0);
+		vm_die("Bad type: %d", var->type);
 		break;
 	}
 	return 0;

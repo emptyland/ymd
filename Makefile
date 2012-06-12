@@ -1,4 +1,4 @@
-CC=clang
+CC=gcc
 DFLAGS=-O0 -g
 CFLAGS=$(DFLAGS) -Wall -Wextra
 OBJS=state.o value.o memory.o dynamic_array.o hash_map.o skip_list.o closure.o call.o libc.o
@@ -74,6 +74,15 @@ yut_rand.o: yut_rand.c yut_rand.h yut.h
 yut.o: yut.c yut.h
 	$(CC) $(CFLAGS) yut.c -c -o yut.o
 
+# ymd_main
+#-------------------------------------------------------------------------------
+ymd_main: $(OBJS) ymd_main.o disassembly.o parser.o lexer.o symbol.o
+	$(CC) $(OBJS) ymd_main.o disassembly.o parser.o lexer.o symbol.o -o ymd_main
+
+ymd_main.o: $(INCS) disassembly.h libc.h ymd_main.c
+	$(CC) $(CFLAGS) ymd_main.c -c -o ymd_main.o
+
+# Objects rules:
 #-------------------------------------------------------------------------------
 # Objects rules:
 disassembly.o: disassembly.c disassembly.h assembly.h value.h

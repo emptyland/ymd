@@ -153,7 +153,7 @@ int dis_inst(FILE *fp, const struct func *fn, uint_t inst) {
 		rv = fprintf(fp, "newdya %d", asm_param(inst));
 		break;
 	case I_BIND:
-		rv = fprintf(fp, "bind %s", address(fn, inst, BUF));
+		rv = fprintf(fp, "bind %d", asm_param(inst));
 		break;
 	case I_LOAD:
 		rv = fprintf(fp, "load [func]:<%d>", asm_param(inst));
