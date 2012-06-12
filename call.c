@@ -66,12 +66,12 @@ int vm_run(struct func *fn, int argc) {
 	(void)argc;
 	assert(fn == info->run);
 
+retry:
 	while (info->pc < fn->n_inst) {
 		inst = fn->inst[info->pc];
 		uchar_t op = asm_op(inst);
 		uchar_t flag = asm_flag(inst);
 		ushort_t param = asm_param(inst);
-
 		switch (op) {
 		case I_PANIC:
 			vm_die("%s Panic!", fn->proto->land);
@@ -92,10 +92,32 @@ int vm_run(struct func *fn, int argc) {
 		case I_RET:
 			return param; // return!
 		case I_JNE:
-			// TODO:
+			if (bool_of(ymd_top(l, 0)))
+				break;
+			switch (flag) {
+			case F_FORWARD:
+				info->pc += param;
+				goto retry;
+			case F_BACKWARD:
+				info->pc -= param;
+				goto retry;
+			default:
+				assert(0);
+				break;
+			}
 			break;
 		case I_JMP:
-			// TODO:
+			switch (flag) {
+			case F_FORWARD:
+				info->pc += param;
+				goto retry;
+			case F_BACKWARD:
+				info->pc -= param;
+				goto retry;
+			default:
+				assert(0);
+				break;
+			}
 			break;
 		case I_FOREACH:
 			// TODO:
@@ -134,12 +156,56 @@ int vm_run(struct func *fn, int argc) {
 			}
 			*ymd_push(l) = var;
 			} break;
-		case I_TEST:
-			// TODO:
-			break;
-		case I_LOGC:
-			// TODO:
-			break;
+		case I_TEST: {
+			struct variable *rhs = ymd_top(l, 1),
+							*lhs = ymd_top(l, 0);
+			switch (flag) {
+			case F_EQ:
+				rhs->value.i = equals(rhs, lhs);
+				break;
+			case F_NE:
+				rhs->value.i = !equals(rhs, lhs);
+				break;
+			case F_GT:
+				rhs->value.i = compare(rhs, lhs) > 0;
+				break;
+			case F_GE:
+				rhs->value.i = compare(rhs, lhs) >= 0;
+				break;
+			case F_LT:
+				rhs->value.i = compare(rhs, lhs) < 0;
+				break;
+			case F_LE:
+				rhs->value.i = compare(rhs, lhs) <= 0;
+				break;
+			default:
+				assert(0);
+				break;
+			}
+			rhs->type = T_BOOL;
+			ymd_pop(l, 1);
+			} break;
+		case I_LOGC: {
+			struct variable *opd0, *opd1 = ymd_top(l, 0);
+			switch (flag) {
+			case F_NOT:
+				opd1->value.i = !bool_of(opd1);
+				break;
+			case F_AND:
+				opd0 = ymd_top(l, 1);
+				opd0->value.i = bool_of(opd0) && bool_of(opd1);
+				break;
+			case F_OR:
+				opd0 = ymd_top(l, 1);
+				opd0->value.i = bool_of(opd0) || bool_of(opd1);
+				break;
+			default:
+				assert(0);
+				break;
+			}
+			if (flag != F_NOT)
+				ymd_pop(l, 1);
+			} break;
 		case I_INDEX:
 			ymd_index(l);
 			break;
@@ -151,42 +217,118 @@ int vm_run(struct func *fn, int argc) {
 			ymd_top(l, 0)->type = T_KSTR;
 			ymd_top(l, 0)->value.ref = (struct gc_node *)kz;
 			} break;
-		case I_INV:
-			// TODO:
-			break;
-		case I_MUL:
-			// TODO:
-			break;
-		case I_DIV:
-			// TODO:
-			break;
-		case I_ADD:
-			// TODO:
-			break;
-		case I_SUB:
-			// TODO:
-			break;
-		case I_MOD:
-			// TODO:
-			break;
-		case I_POW:
-			// TODO:
-			break;
-		case I_ANDB:
-			// TODO:
-			break;
-		case I_ORB:
-			// TODO:
-			break;
-		case I_XORB:
-			// TODO:
-			break;
-		case I_INVB:
-			// TODO:
-			break;
-		case I_SHIFT:
-			// TODO:
-			break;
+		case I_INV: {
+			struct variable *opd = ymd_top(l, 0);
+			opd->value.i = -int_of(opd);
+			} break;
+		case I_MUL: {
+			struct variable *rhs = ymd_top(l, 1),
+							*lhs = ymd_top(l, 0);
+			rhs->value.i = int_of(rhs) * int_of(lhs);
+			ymd_pop(l, 1);
+			} break;
+		case I_DIV: {
+			struct variable *rhs = ymd_top(l, 1),
+							*lhs = ymd_top(l, 0);
+			ymd_int_t opd2 = int_of(lhs);
+			if (opd2 == 0LL)
+				vm_die("Div to zero");
+			rhs->value.i = int_of(rhs) / opd2;
+			ymd_pop(l, 1);
+			} break;
+		case I_ADD: {
+			struct variable *rhs = ymd_top(l, 1),
+							*lhs = ymd_top(l, 0);
+			switch (rhs->type) {
+			case T_INT:
+				rhs->value.i = rhs->value.i + int_of(lhs);
+				break;
+			case T_KSTR:
+				// TODO:
+				break;
+			default:
+				vm_die("Operator + don't support this type");
+				break;
+			}
+			ymd_pop(l, 1);
+			} break;
+		case I_SUB: {
+			struct variable *rhs = ymd_top(l, 1),
+							*lhs = ymd_top(l, 0);
+			rhs->value.i = int_of(rhs) - int_of(lhs);
+			ymd_pop(l, 1);
+			} break;
+		case I_MOD: {
+			struct variable *rhs = ymd_top(l, 1),
+							*lhs = ymd_top(l, 0);
+			ymd_int_t opd1 = int_of(lhs);
+			if (opd1 == 0LL)
+				vm_die("Mod to zero");
+			rhs->value.i = int_of(rhs) % int_of(lhs);
+			ymd_pop(l, 1);
+			} break;
+		case I_POW: {
+			struct variable *rhs = ymd_top(l, 1),
+							*lhs = ymd_top(l, 0);
+			ymd_int_t opd0 = int_of(rhs), opd1 = int_of(lhs);
+			if (opd1 < 0) {
+				vm_die("Pow must be great or equals 0");
+			} else if (opd1 == 0) {
+				rhs->value.i = 1;
+			} else if (opd0 == 1) {
+				rhs->value.i = 1;
+			} else if (opd0 == 0) {
+				rhs->value.i = 0;
+			} else { 
+				--opd1;
+				while (opd1--)
+					rhs->value.i *= opd0;
+			}
+			ymd_pop(l, 1);
+			} break;
+		case I_ANDB: {
+			struct variable *rhs = ymd_top(l, 1),
+							*lhs = ymd_top(l, 0);
+			rhs->value.i = int_of(rhs) & int_of(lhs);
+			ymd_pop(l, 1);
+			} break;
+		case I_ORB: {
+			struct variable *rhs = ymd_top(l, 1),
+							*lhs = ymd_top(l, 0);
+			rhs->value.i = int_of(rhs) | int_of(lhs);
+			ymd_pop(l, 1);
+			} break;
+		case I_XORB: {
+			struct variable *rhs = ymd_top(l, 1),
+							*lhs = ymd_top(l, 0);
+			rhs->value.i = int_of(rhs) ^ int_of(lhs);
+			ymd_pop(l, 1);
+			} break;
+		case I_INVB: {
+			struct variable *opd0 = ymd_top(l, 0);
+			opd0->value.i = ~opd0->value.i;
+			} break;
+		case I_SHIFT: {
+			struct variable *rhs = ymd_top(l, 1),
+							*lhs = ymd_top(l, 0);
+			if (int_of(lhs) < 0)
+				vm_die("Shift must be great than 0");
+			switch (flag) {
+			case F_LEFT:
+				rhs->value.i = int_of(rhs) << int_of(lhs);
+				break;
+			case F_RIGHT_L:
+				rhs->value.i = ((unsigned long long)int_of(rhs)) >> int_of(lhs);
+				break;
+			case F_RIGHT_A:
+				rhs->value.i = int_of(rhs) >> int_of(lhs);
+				break;
+			default:
+				assert(0);
+				break;
+			}
+			ymd_pop(l, 1);
+			} break;
 		case I_CALL: {
 			struct func *called;
 			int argc = param, nrt = 0;
@@ -241,7 +383,6 @@ int vm_run(struct func *fn, int argc) {
 		}
 		++info->pc;
 	}
-
 	return 0;
 }
 
@@ -281,10 +422,9 @@ int func_call(struct func *fn, int argc) {
 		p->value.ref = (struct gc_node *)fn;
 		scope.loc = l->loc;
 	} else {
-		int n = l->info->run->n_lz - l->info->run->n_bind;
+		int n = func_nlocal(l->info->run);
 		scope.loc = l->info->loc + n;
-		memset(scope.loc, 0,
-		       (fn->n_lz - fn->n_bind) * sizeof(*scope.loc));
+		memset(scope.loc, 0, n * sizeof(*scope.loc));
 	}
 	// Link the call info
 	scope.pc = 0;
@@ -309,5 +449,6 @@ ret:
 struct func *func_compile(FILE *fp) {
 	struct func *fn = func_new(NULL);
 	int rv = do_compile(fp, fn);
+	func_proto(fn);
 	return rv < 0 ? NULL : fn;
 }

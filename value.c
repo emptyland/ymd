@@ -23,6 +23,12 @@ ymd_int_t int_of(const struct variable *var) {
 	return var->value.i;
 }
 
+ymd_int_t bool_of(const struct variable *var) {
+	if (var->type != T_BOOL)
+		vm_die("Variable is not `bool`");
+	return var->value.i;
+}
+
 #define DEFINE_REFOF(name, tt)                     \
 	struct name *name##_of(struct variable *var) { \
 		if (var->type != tt)                       \

@@ -124,8 +124,12 @@ void func_dump(struct func *fn, FILE *fp) {
 }
 
 const struct kstr *func_proto(struct func *fn) {
-	fn->proto = ymd_format("func [*%d] (*%d)",
-	                       fn->n_bind, fn->kargs);
+	if (fn->nafn)
+		fn->proto = ymd_format("func [*%d] (*%d) {[native:%p]}",
+							   fn->n_bind, fn->kargs, fn->nafn);
+	else
+		fn->proto = ymd_format("func [*%d] (*%d)",
+							   fn->n_bind, fn->kargs);
 	func_add_lz(fn, "argv"); // Reserved var(s)
 	return fn->proto;
 }

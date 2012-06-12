@@ -49,12 +49,10 @@ struct variable {
 
 struct func {
 	GC_HEAD;
-	struct func *chain; // Call chain[==prev]
 	struct variable *bind; // Binded values
-	struct variable *up; // == this
 	ymd_nafn_t nafn;  // Native function
 	ymd_inst_t *inst; // Instructions
-	int n_inst;
+	int n_inst; // Number of instructions
 	struct kstr **kz; // Local constant strings
 	struct kstr **lz; // Local variable mapping
 	struct kstr *proto; // Prototype
@@ -141,11 +139,13 @@ static inline int is_nil(const struct variable *v) {
 	return v->type == T_NIL;
 }
 ymd_int_t int_of(const struct variable *var);
+ymd_int_t bool_of(const struct variable *var);
 #define DECL_REFOF(name, tt) \
 struct name *name##_of(struct variable *var);
 DECL_TREF(DECL_REFOF)
 #undef DECL_REFOF
 
+// Generic comparing
 int equals(const struct variable *lhs, const struct variable *rhs);
 int compare(const struct variable *lhs, const struct variable *rhs);
 

@@ -19,6 +19,7 @@ arr = {
 		return a + b
 	}
 }
+print(arr)
 
 map = {}
 map = {:}
