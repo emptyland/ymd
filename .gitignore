@@ -1,6 +1,7 @@
 *.o
 *_test
 *.swp
+*.log
 lex.yy.c
 y.tab.c
 y.tab.h
