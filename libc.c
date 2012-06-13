@@ -5,6 +5,7 @@
 #include <stdio.h>
 
 #define PRINT_SPLIT " "
+static void *const kend = (void *)-1;
 
 static int print_var(const struct variable *var) {
 	switch (var->type) {
@@ -117,11 +118,157 @@ static int libx_len(struct context *l) {
 	return 1;
 }
 
+static int libx_end(struct context *l) {
+	vset_ext(ymd_push(l), kend);
+	return 1;
+}
+
+static int step_iter(struct context *l) {
+	struct variable *i = ymd_bval(l, 0),
+					*m = ymd_bval(l, 1),
+					*s = ymd_bval(l, 2),
+					rv;
+	rv.type = T_EXT;
+	rv.value.ext = kend;
+	if (s->value.i > 0 && i->value.i <= m->value.i) {
+		rv.type = T_INT;
+		rv.value.i = i->value.i;
+	} else if (s->value.i < 0 && i->value.i >= m->value.i) {
+		rv.type = T_INT;
+		rv.value.i = i->value.i;
+	}
+	i->value.i += s->value.i;
+	*ymd_push(l) = rv;
+	return 1;
+}
+
+static struct func *new_step_iter(struct context *l,
+                                  ymd_int_t i, ymd_int_t m, ymd_int_t s) {
+	struct func *iter;
+	(void)l;
+	if ((s == 0) || (i > m && s > 0) || (i < m && s < 0))
+		return func_new(libx_end);
+	iter = func_new(step_iter);
+	iter->n_bind = 3;
+	func_init(iter);
+	vset_int(func_bval(iter, 0), i);
+	vset_int(func_bval(iter, 1), m);
+	vset_int(func_bval(iter, 2), s);
+	return iter;
+}
+
+#define ITER_KEY   0
+#define ITER_VALUE 1
+#define ITER_KV    2
+static int dyay_iter(struct context *l) {
+	struct variable *i = ymd_bval(l, 0)->value.ext,
+	                *m = ymd_bval(l, 1)->value.ext;
+	(void)l;
+	if (i >= m) {
+		vset_ext(ymd_push(l), kend);
+		return 1;
+	}
+	switch (int_of(ymd_bval(l, 3))) {
+	case ITER_KEY: {
+		ymd_int_t idx = int_of(ymd_bval(l, 2));
+		vset_int(ymd_push(l), idx);
+		vset_int(ymd_bval(l, 2), idx + 1);
+		} break;
+	case ITER_VALUE: {
+		*ymd_push(l) = *i;
+		} break;
+	case ITER_KV: {
+		struct dyay *rv = dyay_new(0);
+		ymd_int_t idx = int_of(ymd_bval(l, 2));
+		vset_int(dyay_add(rv), idx);
+		*dyay_add(rv) = *i;
+		vset_dyay(ymd_push(l), rv);
+		vset_int(ymd_bval(l, 2), idx + 1);
+		} break;
+	default:
+		assert(0);
+		break;
+	}
+	vset_ext(ymd_bval(l, 0), i + 1);
+	return 1;
+}
+
+static struct func *new_contain_iter(
+	struct context *l,
+	const struct variable *obj,
+	int flag) {
+	struct func *iter;
+	(void)l;
+	switch (obj->type) {
+	case T_DYAY:
+		iter = func_new(dyay_iter);
+		iter->n_bind = 4;
+		func_init(iter);
+		vset_ext(func_bval(iter, 0), dyay_k(obj)->elem);
+		vset_ext(func_bval(iter, 1), dyay_k(obj)->elem + dyay_k(obj)->count);
+		vset_int(func_bval(iter, 2), 0);
+		vset_int(func_bval(iter, 3), flag);
+		break;
+	case T_HMAP:
+		iter = func_new(hmap_iter);
+		iter->n_bind = 3;
+		func_init(iter);
+		vset_ext(func_bval(iter, 0), hmap_k(obj)->slot);
+		vset_ext(func_bval(iter, 1),
+		         hmap_k(obj)->slot + (1 << hmap_k(obj)->shift));
+		vset_int(func_bval(iter, 2), flag);
+		break;
+	default:
+		break;
+	}
+	return iter;
+}
+
 static int libx_range(struct context *l) {
-	// TODO:
 	// range(1,100) = {1,2,3,...100}
 	// range(1,100,2) = {1,3,5,...100}
 	// range({9,8,7}) = {9,8,7}
+	struct func *iter;
+	const struct dyay *argv = ymd_argv(l);
+	if (!argv)
+		vm_die("Void argument, need less 1");
+	switch (argv->count) {
+	case 1:
+		iter = new_contain_iter(l, argv->elem, ITER_VALUE);
+		break;
+	case 2: {
+		ymd_int_t i = int_of(argv->elem),
+				  m = int_of(argv->elem + 1);
+		iter = new_step_iter(l, i, m, i > m ? -1 : +1);
+		} break;
+	case 3:
+		iter = new_step_iter(l, int_of(argv->elem),
+		                     int_of(argv->elem + 1),
+							 int_of(argv->elem + 2));
+		break;
+	default:
+		vm_die("Bad arguments, need 1 to 3");
+		break;
+	}
+	ymd_push_func(l, iter);
+	return 1;
+}
+
+static int libx_done(struct context *l) {
+	const struct dyay *argv = ymd_argv(l);
+	if (!argv || argv->count != 1)
+		vm_die("Bad argument 1, need 1");
+	if (argv->elem[0].type == T_EXT &&
+		argv->elem[0].value.ext == kend)
+		ymd_push_bool(l, 1);
+	else
+		ymd_push_bool(l, 0);
+	return 1;
+}
+
+static int libx_panic(struct context *l) {
+	(void)l;
+	vm_die("Unknown");
 	return 0;
 }
 
@@ -129,6 +276,10 @@ LIBC_BEGIN(Builtin)
 	LIBC_ENTRY(print)
 	LIBC_ENTRY(add)
 	LIBC_ENTRY(len)
+	LIBC_ENTRY(range)
+	LIBC_ENTRY(end)
+	LIBC_ENTRY(done)
+	LIBC_ENTRY(panic)
 LIBC_END
 
 

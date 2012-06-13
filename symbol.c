@@ -28,10 +28,15 @@ struct symbol {
 
 struct loop_info {
 	struct loop_info *chain;
-	ushort_t enter;
-	ushort_t leave;
+	int enter;
+	int leave;
+	int retry;
+	int jcond;
 	uint_t rcd[MAX_RCD];
 	int nrcd;
+	int seq;
+	char id[260];
+	char iter[64];
 };
 
 struct cond_info {
@@ -214,39 +219,47 @@ static uint_t hack_fill(uint_t inst, int dict, ushort_t off) {
 }
 
 // Compiling information functions:
-void info_loop_push(ushort_t pos) {
+void info_loop_push(int pos) {
 	struct loop_info *x = calloc(sizeof(*x), 1);
 	x->chain = loop_i;
 	x->enter = pos;
+	x->retry = pos;
+	if (loop_i)
+		x->seq = loop_i->seq + 1;
+	else
+		x->seq = 0;
+	snprintf(x->iter, sizeof(x->iter), "__loop_seq_%d_xx__", x->seq);
 	loop_i = x;
 }
 
 ushort_t info_loop_off(const struct func *fn) {
 	assert(fn->u.core->kinst >= loop_i->enter);
-	return fn->u.core->kinst - loop_i->enter;
+	return (ushort_t)(fn->u.core->kinst - loop_i->retry);
 }
 
 void info_loop_back(struct func *fn, int death) {
 	int i;
 	uint_t k, old;
+	struct chunk *core = fn->u.core;
 	// Fill enter
-	loop_i->leave = fn->u.core->kinst;
+	loop_i->leave = core->kinst;
 	if (!death) {
-		old = fn->u.core->inst[loop_i->enter];
-		assert(loop_i->leave >= loop_i->enter);
-		fn->u.core->inst[loop_i->enter] = hack_fill(old, 1, loop_i->leave - loop_i->enter);
+		old = core->inst[loop_i->jcond];
+		assert(loop_i->leave >= loop_i->jcond);
+		core->inst[loop_i->jcond] = hack_fill(old, 1,
+			loop_i->leave - loop_i->jcond);
 	}
 	// Fill break statment or continue statment
 	i = loop_i->nrcd;
 	while (i--) {
 		k = loop_i->rcd[i] & 0xffff;
-		old = fn->u.core->inst[k];
+		old = core->inst[k];
 		if (loop_i->rcd[i] & 0x80000000) { // break
-			assert(loop_i->leave >= k);
-			fn->u.core->inst[k] = hack_fill(old,  1, loop_i->leave - k);
+			assert((uint_t)loop_i->leave >= k);
+			core->inst[k] = hack_fill(old,  1, loop_i->leave - k);
 		} else {
-			assert(loop_i->enter <= k);
-			fn->u.core->inst[k] = hack_fill(old, -1, k - loop_i->enter);
+			assert((uint_t)loop_i->enter <= k);
+			core->inst[k] = hack_fill(old, -1, k - loop_i->retry);
 		}
 	}
 }
@@ -259,7 +272,7 @@ void info_loop_pop() {
 	loop_i = x;
 }
 
-void info_loop_rcd(char flag, ushort_t pos) {
+void info_loop_rcd(char flag, int pos) {
 	assert(loop_i != NULL);
 	if (loop_i->nrcd >= MAX_RCD) {
 		vm_die("So many break/continue statments");
@@ -278,7 +291,27 @@ void info_loop_rcd(char flag, ushort_t pos) {
 	}
 }
 
-void info_cond_push(ushort_t pos) {
+void info_loop_set_retry(int pos) {
+	loop_i->retry = pos;
+}
+
+void info_loop_set_jcond(int pos) {
+	loop_i->jcond =pos;
+}
+
+const char *info_loop_iter_name() {
+	return loop_i->iter;
+}
+
+void info_loop_set_id(const char *id) {
+	strncpy(loop_i->id, id, sizeof(loop_i->id));
+}
+
+const char *info_loop_id() {
+	return loop_i->id;
+}
+
+void info_cond_push(int pos) {
 	struct cond_info *x = calloc(sizeof(*x), 1);
 	x->chain = cond_i;
 	x->enter = pos;
@@ -327,7 +360,7 @@ void info_cond_pop() {
 // 8: out
 // 4: branch
 // 2: last
-void info_cond_rcd(char which, ushort_t pos) {
+void info_cond_rcd(char which, int pos) {
 	assert(cond_i != NULL);
 	if (cond_i->nbranch >= MAX_RCD) {
 		vm_die("So many if/else/elif statments");

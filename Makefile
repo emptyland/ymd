@@ -1,4 +1,4 @@
-CC=clang
+CC=gcc
 DFLAGS=-O0 -g
 CFLAGS=$(DFLAGS) -Wall -Wextra
 OBJS=state.o value.o memory.o dynamic_array.o hash_map.o skip_list.o closure.o call.o libc.o
@@ -133,4 +133,4 @@ lex.yy.c: parser.l
 	lex parser.l
 
 clean:
-	rm *.o *_test y.tab.c y.tab.h lex.yy.c par 2&> /dev/null
+	rm *.o *_test y.tab.c y.tab.h lex.yy.c ymd_main 2&> /dev/null

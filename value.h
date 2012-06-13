@@ -4,6 +4,7 @@
 #include "memory.h"
 #include <assert.h>
 #include <stdio.h>
+#include <string.h>
 
 //-----------------------------------------------------------------------
 // Type defines:
@@ -155,6 +156,30 @@ struct name *name##_of(struct variable *var);
 DECL_TREF(DECL_REFOF)
 #undef DECL_REFOF
 
+static inline void vset_nil(struct variable *v) {
+	v->type = T_NIL;
+	v->value.i = 0;
+}
+static inline void vset_int(struct variable *v, ymd_int_t i) {
+	v->type = T_INT;
+	v->value.i = i;
+}
+static inline void vset_bool(struct variable *v, ymd_int_t i) {
+	v->type = T_BOOL;
+	v->value.i = i;
+}
+static inline void vset_ext(struct variable *v, void *p) {
+	v->type = T_EXT;
+	v->value.ext = p;
+}
+#define DEFINE_SETTER(name, tt) \
+static inline void vset_##name(struct variable *v, struct name *o) { \
+	v->type = tt; \
+	v->value.ref = gcx(o); \
+}
+DECL_TREF(DEFINE_SETTER)
+#undef DEFINE_SETTER
+
 // Generic comparing
 int equals(const struct variable *lhs, const struct variable *rhs);
 int compare(const struct variable *lhs, const struct variable *rhs);
@@ -212,6 +237,11 @@ void func_dump(struct func *fn, FILE *fp);
 static inline int func_nlocal(const struct func *fn) {
 	assert(!fn->is_c);
 	return fn->u.core->klz - fn->n_bind;
+}
+static inline struct variable *func_bval(struct func *fn, int i) {
+	struct variable nil; memset(&nil, 0, sizeof(nil));
+	func_bind(fn, i, &nil);
+	return fn->bind + i;
 }
 
 #endif // YMD_VALUE_H

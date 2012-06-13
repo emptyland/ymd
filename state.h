@@ -86,6 +86,12 @@ static inline struct dyay *ymd_argv(struct context *l) {
 	return ymd_called(l)->argv;
 }
 
+static inline struct variable *ymd_bval(struct context *l, int i) {
+	assert(i >= 0);
+	assert(i < ymd_called(l)->n_bind);
+	return ymd_called(l)->bind + i;
+}
+
 //-----------------------------------------------------------------------------
 // Stack functions:
 // ----------------------------------------------------------------------------
@@ -132,21 +138,21 @@ static inline void ymd_push_kstr(struct context *l, const char *z, int n) {
 	v->type = T_KSTR;
 }
 
-static inline void ymd_push_hmap(struct context *l, int n) {
+static inline void ymd_push_hmap(struct context *l, struct hmap *map) {
 	struct variable *v = ymd_push(l);
-	v->value.ref = gcx(hmap_new(n));
+	v->value.ref = gcx(map);
 	v->type = T_HMAP;
 }
 
-static inline void ymd_push_skls(struct context *l) {
+static inline void ymd_push_skls(struct context *l, struct skls *list) {
 	struct variable *v = ymd_push(l);
-	v->value.ref = gcx(skls_new());
+	v->value.ref = gcx(list);
 	v->type = T_SKLS;
 }
 
-static inline void ymd_push_func(struct context *l) {
+static inline void ymd_push_func(struct context *l, struct func *fn) {
 	struct variable *v = ymd_push(l);
-	v->value.ref = gcx(func_new(NULL));
+	v->value.ref = gcx(fn);
 	v->type = T_FUNC;
 }
 

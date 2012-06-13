@@ -20,7 +20,7 @@ int yyerror(const char *e);
 #define DEMIT1(fmt, arg1)
 #define DEMIT2(fmt, arg1, arg2)
 #endif
-static int index_access(const char *z);
+//static int index_access(const char *z);
 static void emit_access(unsigned char inst, const char *z);
 static void emit_bind(const char *z);
 %}
@@ -241,20 +241,34 @@ for begin EL block end {
 ;
 
 for_each:
-FOR for_index COLON call begin EL {
-	info_loop_push(sop()->u.core->kinst);
+for for_index COLON iter_call begin EL {
+	info_loop_set_retry(sop()->u.core->kinst);
+	emit_access(I_PUSH, info_loop_iter_name());
+	func_emit(sop(), emitAP(CALL, 0));
+	info_loop_set_jcond(sop()->u.core->kinst);
 	func_emit(sop(), emitAf(FOREACH, UNDEF));
+	emit_access(I_STORE, info_loop_id());
+}
+;
+
+iter_call:
+call {
+	int i = func_add_lz(sop(), info_loop_iter_name());
+	if (i < 0)
+		i = func_find_lz(sop(), info_loop_iter_name());
+	if (i < 0)
+		yyerror("Can not find iterator local name");
+	func_emit(sop(), emitAfP(STORE, LOCAL, i));
 }
 ;
 
 for_index:
 SYMBOL {
-	int i = index_access(sym_index(-1));
-	func_emit(sop(), emitAfP(PUSH, INT, i));
+	info_loop_set_id(sym_index(-1));
 }
 | VAR SYMBOL {
-	int i = func_add_lz(sop(), sym_index(-1));
-	func_emit(sop(), emitAfP(PUSH, INT, i));
+	func_add_lz(sop(), sym_index(-1));
+	info_loop_set_id(sym_index(-1));
 }
 ;
 
@@ -613,10 +627,11 @@ int do_compile(FILE *fp, struct func *fn) {
 	return sop_result();
 }
 
+/*
 static int index_access(const char *z) {
 	int i = func_find_lz(sop(), z);
 	return i < 0 ? func_kz(sop(), z, -1) : i;
-}
+}*/
 
 static void emit_access(unsigned char inst, const char *z) {
 	int i = func_find_lz(sop(), z); 

@@ -94,20 +94,23 @@ retry:
 		case I_RET:
 			return param; // return!
 		case I_JNE:
-			if (bool_of(ymd_top(l, 0)))
+			if (bool_of(ymd_top(l, 0))) {
+				ymd_pop(l, 1);
 				break;
+			}
 			switch (flag) {
 			case F_FORWARD:
 				info->pc += param;
-				goto retry;
+				break;
 			case F_BACKWARD:
 				info->pc -= param;
-				goto retry;
+				break;
 			default:
 				assert(0);
 				break;
 			}
-			break;
+			ymd_pop(l, 1);
+			goto retry;
 		case I_JMP:
 			switch (flag) {
 			case F_FORWARD:
@@ -121,9 +124,25 @@ retry:
 				break;
 			}
 			break;
-		case I_FOREACH:
-			// TODO:
-			break;
+		case I_FOREACH: {
+			struct variable *cond = ymd_top(l, 0);
+			if (cond->type == T_EXT &&
+				cond->value.ext == (void *)-1) {
+				switch (flag) {
+				case F_FORWARD:
+					info->pc += param;
+					break;
+				case F_BACKWARD:
+					info->pc -= param;
+					break;
+				default:
+					assert(0);
+					break;
+				}
+				ymd_pop(l, 1);
+				goto retry;
+			}
+			} break;
 		case I_SETF:
 			ymd_setf(l, param);
 			break;

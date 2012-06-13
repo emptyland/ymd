@@ -36,15 +36,20 @@ static inline struct func *sop() { return sop_index(-1); }
 void sop_adjust(struct func *fn);
 
 // Compiling Information functions:
-void info_loop_push(ushort_t pos);
+void info_loop_push(int pos);
 ushort_t info_loop_off(const struct func *fn);
 void info_loop_back(struct func *fn, int death);
 void info_loop_pop();
-void info_loop_rcd(char flag, ushort_t pos);
+void info_loop_rcd(char flag, int pos);
+void info_loop_set_retry(int pos);
+void info_loop_set_jcond(int pos);
+const char *info_loop_iter_name();
+void info_loop_set_id(const char *id);
+const char *info_loop_id();
 
-void info_cond_push(ushort_t pos);
+void info_cond_push(int pos);
 void info_cond_back(struct func *fn);
 void info_cond_pop();
-void info_cond_rcd(char which, ushort_t pos);
+void info_cond_rcd(char which, int pos);
 
 #endif // YMD_SYMBOL_H
