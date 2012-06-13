@@ -47,20 +47,29 @@ struct variable {
 	unsigned char type;
 };
 
-struct func {
-	GC_HEAD;
-	struct variable *bind; // Binded values
-	ymd_nafn_t nafn;  // Native function
+// Byte Function
+struct chunk {
+	int ref; // Reference counter
 	ymd_inst_t *inst; // Instructions
-	int n_inst; // Number of instructions
+	int kinst; // Number of instructions
 	struct kstr **kz; // Local constant strings
 	struct kstr **lz; // Local variable mapping
-	struct kstr *proto; // Prototype
-	struct dyay *argv;  // Arguments
+	unsigned short kkz;
+	unsigned short klz;
 	unsigned short kargs; // Prototype number of arguments
-	unsigned short n_kz;
-	unsigned short n_lz;
+};
+
+struct func {
+	GC_HEAD;
+	struct kstr *proto; // Prototype description
+	struct variable *bind; // Binded values
+	struct dyay *argv;  // Arguments
+	unsigned short is_c;
 	unsigned short n_bind;
+	union {
+		ymd_nafn_t nafn;  // Native function
+		struct chunk *core; // Byte code
+	} u;
 };
 
 // Constant String:
@@ -187,20 +196,22 @@ int mand_compare(const struct mand *pm, const struct mand *rhs);
 
 // Closure functions:
 struct func *func_new(ymd_nafn_t nafn);
-const struct kstr *func_proto(struct func *fn);
+const struct kstr *func_init(struct func *fn);
+struct func *func_clone(struct func *fn);
 void func_final(struct func *fn);
 int func_emit(struct func *fn, ymd_inst_t inst);
 int func_kz(struct func *fn, const char *z, int n);
-int func_lz(struct func *fn, const char *z, int n);
 int func_find_lz(struct func *fn, const char *z);
 int func_add_lz(struct func *fn, const char *z);
 int func_bind(struct func *fn, int i, const struct variable *var);
 void func_shrink(struct func *fn);
 int func_call(struct func *fn, int argc);
+int func_main(struct func *fn, int argc, char *argv[]);
 struct func *func_compile(FILE *fp);
 void func_dump(struct func *fn, FILE *fp);
 static inline int func_nlocal(const struct func *fn) {
-	return fn->n_lz - fn->n_bind;
+	assert(!fn->is_c);
+	return fn->u.core->klz - fn->n_bind;
 }
 
 #endif // YMD_VALUE_H

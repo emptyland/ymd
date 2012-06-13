@@ -128,25 +128,25 @@ static inline void ymd_push_nil(struct context *l) {
 
 static inline void ymd_push_kstr(struct context *l, const char *z, int n) {
 	struct variable *v = ymd_push(l);
-	v->value.ref = (struct gc_node *)ymd_kstr(z, n);
+	v->value.ref = gcx(ymd_kstr(z, n));
 	v->type = T_KSTR;
 }
 
 static inline void ymd_push_hmap(struct context *l, int n) {
 	struct variable *v = ymd_push(l);
-	v->value.ref = (struct gc_node *)hmap_new(n);
+	v->value.ref = gcx(hmap_new(n));
 	v->type = T_HMAP;
 }
 
 static inline void ymd_push_skls(struct context *l) {
 	struct variable *v = ymd_push(l);
-	v->value.ref = (struct gc_node *)skls_new();
+	v->value.ref = gcx(skls_new());
 	v->type = T_SKLS;
 }
 
 static inline void ymd_push_func(struct context *l) {
 	struct variable *v = ymd_push(l);
-	v->value.ref = (struct gc_node *)func_new(NULL);
+	v->value.ref = gcx(func_new(NULL));
 	v->type = T_FUNC;
 }
 

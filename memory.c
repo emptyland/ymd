@@ -35,7 +35,7 @@ void gc_final(struct gc_struct *gc) {
 			func_final((struct func *)i);
 			break;
 		case T_DYAY:
-			// TODO:
+			dyay_final((struct dyay *)i);
 			break;
 		case T_HMAP:
 			hmap_final((struct hmap *)i);
@@ -76,3 +76,8 @@ void *mm_shrink(void *raw, int n, int align, size_t chunk) {
 	return bak;
 }
 
+void mm_drop(void *p) {
+	int *ref = p;
+	--(*ref);
+	if (*ref == 0) vm_free(p);
+}

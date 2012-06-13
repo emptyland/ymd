@@ -13,7 +13,6 @@
 #define INST_ALIGN 128
 #define KSTR_ALIGN 64
 #define LVAR_ALIGN 32
-//#define BIND_ALIGN 32
 
 static int kz_find(struct kstr **kz, int count, const char *z, int n) {
 	int i, lzn = (n >= 0) ? n : (int)strlen(z);
@@ -28,111 +27,130 @@ static int kz_find(struct kstr **kz, int count, const char *z, int n) {
 struct func *func_new(ymd_nafn_t nafn) {
 	struct func *x = gc_alloc(&vm()->gc, sizeof(*x), T_FUNC);
 	if (nafn)
-		x->nafn = nafn;
+		x->u.nafn = nafn;
+	else
+		x->u.core = mm_grab(vm_zalloc(sizeof(*x->u.core)));
+	x->is_c = (nafn != NULL);
 	return x;
 }
 
 void func_final(struct func *fn) {
 	if (fn->bind)
 		vm_free(fn->bind);
-	if (fn->inst)
-		vm_free(fn->inst);
-	if (fn->kz)
-		vm_free(fn->kz);
-	if (fn->lz)
-		vm_free(fn->lz);
+	if (fn->is_c)
+		return;
+	if (fn->u.core->ref > 1) { // drop it!
+		--(fn->u.core->ref);
+		return;
+	}
+	if (fn->u.core->inst)
+		vm_free(fn->u.core->inst);
+	if (fn->u.core->kz)
+		vm_free(fn->u.core->kz);
+	if (fn->u.core->lz)
+		vm_free(fn->u.core->lz);
+	mm_drop(fn->u.core);
 }
 
 int func_emit(struct func *fn, ymd_inst_t inst) {
+	struct chunk *core = fn->u.core;
 	assert(asm_op(inst) % 5 == 0);
-	assert(fn->nafn == NULL);
-	fn->inst = mm_need(fn->inst, fn->n_inst, INST_ALIGN, sizeof(inst));
-	fn->inst[fn->n_inst++] = inst;
-	return fn->n_inst;
+	assert(!fn->is_c);
+	core->inst = mm_need(core->inst, core->kinst, INST_ALIGN, sizeof(inst));
+	core->inst[core->kinst++] = inst;
+	return core->kinst;
 }
 
 int func_kz(struct func *fn, const char *z, int n) {
-	int i = kz_find(fn->kz, fn->n_kz, z, n);
-	if (i >= fn->n_kz) {
-		fn->kz = mm_need(fn->kz, fn->n_kz, KSTR_ALIGN, sizeof(*fn->kz));
-		fn->kz[fn->n_kz++] = ymd_kstr(z, n);
-		return fn->n_kz - 1;
-	}
-	return i;
-}
-
-int func_lz(struct func *fn, const char *z, int n) {
-	int i = kz_find(fn->lz, fn->n_lz, z, n);
-	if (i >= fn->n_lz) {
-		fn->lz = mm_need(fn->lz, fn->n_lz, LVAR_ALIGN, sizeof(*fn->lz));
-		fn->lz[fn->n_lz++] = ymd_kstr(z, n);
-		return fn->n_lz - 1;
+	struct chunk *core = fn->u.core;
+	int i = kz_find(core->kz, core->kkz, z, n);
+	if (i >= core->kkz) {
+		core->kz = mm_need(core->kz, core->kkz, KSTR_ALIGN, sizeof(*core->kz));
+		core->kz[core->kkz++] = ymd_kstr(z, n);
+		return core->kkz - 1;
 	}
 	return i;
 }
 
 // Only find
 int func_find_lz(struct func *fn, const char *z) {
-	int rv = kz_find(fn->lz, fn->n_lz, z, -1);
-	return rv >= fn->n_lz ? -1 : rv;
+	struct chunk *core = fn->u.core;
+	int rv = kz_find(core->lz, core->klz, z, -1);
+	return rv >= core->klz ? -1 : rv;
 }
 
 // Only add
 int func_add_lz(struct func *fn, const char *z) {
+	struct chunk *core = fn->u.core;
 	int rv = func_find_lz(fn, z);
 	if (rv >= 0)
 		return -1;
-	fn->lz = mm_need(fn->lz, fn->n_lz, LVAR_ALIGN, sizeof(*fn->lz));
-	fn->lz[fn->n_lz++] = ymd_kstr(z, -1);
-	return fn->n_lz - 1;
+	core->lz = mm_need(core->lz, core->klz, LVAR_ALIGN, sizeof(*core->lz));
+	core->lz[core->klz++] = ymd_kstr(z, -1);
+	return core->klz - 1;
 }
 
 int func_bind(struct func *fn, int i, const struct variable *var) {
 	assert(i >= 0);
 	assert(i < fn->n_bind);
+	if (!fn->bind) // Lazy allocating
+		fn->bind = vm_zalloc(sizeof(*fn->bind) * fn->n_bind);
 	fn->bind[i] = *var;
 	return i;
 }
 
 void func_shrink(struct func *fn) {
-	if (fn->inst)
-		fn->inst = mm_shrink(fn->inst, fn->n_inst, INST_ALIGN,
-		                     sizeof(fn->inst));
-	if (fn->kz)
-		fn->kz = mm_shrink(fn->kz, fn->n_kz, KSTR_ALIGN,
-		                   sizeof(*fn->kz));
-	if (fn->lz)
-		fn->lz = mm_shrink(fn->lz, fn->n_lz, LVAR_ALIGN,
-		                   sizeof(*fn->lz));
-	//if (fn->bind)
-	//	fn->bind = mm_shrink(fn->bind, fn->n_bind, BIND_ALIGN,
-	//	                     sizeof(*fn->bind));
+	struct chunk *core = fn->u.core;
+	assert(!fn->is_c);
+	if (core->inst)
+		core->inst = mm_shrink(core->inst, core->kinst, INST_ALIGN,
+		                       sizeof(core->inst));
+	if (core->kz)
+		core->kz = mm_shrink(core->kz, core->kkz, KSTR_ALIGN,
+		                     sizeof(*core->kz));
+	if (core->lz)
+		core->lz = mm_shrink(core->lz, core->klz, LVAR_ALIGN,
+		                     sizeof(*core->lz));
 }
 
 void func_dump(struct func *fn, FILE *fp) {
 	int i;
+	struct chunk *core = fn->u.core;
+	assert(!fn->is_c);
 	fprintf(fp, "Constant string:\n");
-	for (i = 0; i < fn->n_kz; ++i)
-		fprintf(fp, "[%d] %s\n", i, fn->kz[i]->land);
+	for (i = 0; i < core->kkz; ++i)
+		fprintf(fp, "[%d] %s\n", i, core->kz[i]->land);
 	fprintf(fp, "Local variable:\n");
-	for (i = 0; i < fn->n_lz; ++i)
-		fprintf(fp, "[%d] %s\n", i, fn->lz[i]->land);
+	for (i = 0; i < core->klz; ++i)
+		fprintf(fp, "[%d] %s\n", i, core->lz[i]->land);
 	fprintf(fp, "Instructions:\n");
-	for (i = 0; i < fn->n_inst; ++i)
-		fprintf(fp, "%08x ", fn->inst[i]);
+	for (i = 0; i < core->kinst; ++i)
+		fprintf(fp, "%08x ", core->inst[i]);
 	fprintf(fp, "\n");
 }
 
-const struct kstr *func_proto(struct func *fn) {
+const struct kstr *func_init(struct func *fn) {
 	assert(fn->proto == NULL);
-	if (fn->nafn)
-		fn->proto = ymd_format("func [*%d] (*%d) {[native:%p]}",
-							   fn->n_bind, fn->kargs, fn->nafn);
-	else
+	if (fn->is_c) {
+		fn->proto = ymd_format("func (...) {[native:%p]}",
+							   fn->u.nafn);
+	} else {
 		fn->proto = ymd_format("func [*%d] (*%d) {...}",
-							   fn->n_bind, fn->kargs);
-	func_add_lz(fn, "argv"); // Reserved var(s)
-	if (fn->n_bind > 0)
-		fn->bind = vm_zalloc(sizeof(*fn->bind) * fn->n_bind);
+							   fn->n_bind, fn->u.core->kargs);
+		func_add_lz(fn, "argv"); // Reserved var(s)
+		// ...
+		//if (fn->n_bind > 0) // Allocate bind variable space
+		//	fn->bind = vm_zalloc(sizeof(*fn->bind) * fn->n_bind);
+	}
 	return fn->proto;
+}
+
+struct func *func_clone(struct func *fn) {
+	struct func *x = gc_alloc(&vm()->gc, sizeof(*x), T_FUNC);
+	assert(!fn->is_c);
+	x->proto = fn->proto;
+	x->is_c = fn->is_c;
+	x->n_bind = fn->n_bind;
+	x->u.core = mm_grab(fn->u.core);
+	return x;
 }

@@ -23,8 +23,8 @@ static const char *address(const struct func *fn, uint_t inst,
 		snprintf(buf, n, "[partal]:%04x", asm_param(inst));
 		break;
 	case F_ZSTR:
-		snprintf(buf, n, "[str]:%d:\"%s\"", fn->kz[asm_param(inst)]->len,
-				 fn->kz[asm_param(inst)]->land);
+		snprintf(buf, n, "[str]:%d:\"%s\"", fn->u.core->kz[asm_param(inst)]->len,
+				 fn->u.core->kz[asm_param(inst)]->land);
 		break;
 	case F_LOCAL:
 		snprintf(buf, n, "[local]:<%d>", asm_param(inst));
@@ -36,7 +36,7 @@ static const char *address(const struct func *fn, uint_t inst,
 		snprintf(buf, n, "nil");
 		break;
 	case F_OFF:
-		snprintf(buf, n, "[global]:@%s", fn->kz[asm_param(inst)]->land);
+		snprintf(buf, n, "[global]:@%s", fn->u.core->kz[asm_param(inst)]->land);
 		break;
 	default:
 		assert(0);
@@ -168,9 +168,9 @@ int dis_inst(FILE *fp, const struct func *fn, uint_t inst) {
 
 int dis_func(FILE *fp, const struct func *fn) {
 	int i, count = 0;
-	for (i = 0; i < fn->n_inst; ++i) {
+	for (i = 0; i < fn->u.core->kinst; ++i) {
 		fprintf(fp, "[%03d] ", i);
-		count += dis_inst(fp, fn, fn->inst[i]);
+		count += dis_inst(fp, fn, fn->u.core->inst[i]);
 		fprintf(fp, "\n");
 	}
 	return count;

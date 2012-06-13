@@ -7,9 +7,11 @@
 #include <stdlib.h>
 
 static struct func *fn;
+static struct chunk *core;
 
 static int test_func_setup() {
 	fn = func_new(NULL);
+	core = fn->u.core;
 	return 0;
 }
 
@@ -19,26 +21,26 @@ static int test_func_local_constant_1() {
 	ASSERT_EQ(int, func_kz(fn, "c", -1), 2);
 	ASSERT_EQ(int, func_kz(fn, "b", -1), 1);
 
-	ASSERT_EQ(int, func_lz(fn, "a", -1), 0);
-	ASSERT_EQ(int, func_lz(fn, "b", -1), 1);
-	ASSERT_EQ(int, func_lz(fn, "c", -1), 2);
-	ASSERT_EQ(int, func_lz(fn, "b", -1), 1);
+	ASSERT_EQ(int, func_add_lz(fn, "a"), 0);
+	ASSERT_EQ(int, func_add_lz(fn, "b"), 1);
+	ASSERT_EQ(int, func_add_lz(fn, "c"), 2);
+	ASSERT_EQ(int, func_add_lz(fn, "b"), -1);
 
 	func_shrink(fn);
 
 	ASSERT_EQ(int, func_kz(fn, "a", -1), 0);
 	ASSERT_EQ(int, func_kz(fn, "b", -1), 1);
 	ASSERT_EQ(int, func_kz(fn, "c", -1), 2);
-	ASSERT_TRUE(fn->kz[0] == ymd_kstr("a", -1));
-	ASSERT_TRUE(fn->kz[1] == ymd_kstr("b", -1));
-	ASSERT_TRUE(fn->kz[2] == ymd_kstr("c", -1));
+	ASSERT_TRUE(core->kz[0] == ymd_kstr("a", -1));
+	ASSERT_TRUE(core->kz[1] == ymd_kstr("b", -1));
+	ASSERT_TRUE(core->kz[2] == ymd_kstr("c", -1));
 
-	ASSERT_EQ(int, func_lz(fn, "a", -1), 0);
-	ASSERT_EQ(int, func_lz(fn, "b", -1), 1);
-	ASSERT_EQ(int, func_lz(fn, "c", -1), 2);
-	ASSERT_TRUE(fn->lz[0] == ymd_kstr("a", -1));
-	ASSERT_TRUE(fn->lz[1] == ymd_kstr("b", -1));
-	ASSERT_TRUE(fn->lz[2] == ymd_kstr("c", -1));
+	ASSERT_EQ(int, func_find_lz(fn, "a"), 0);
+	ASSERT_EQ(int, func_find_lz(fn, "b"), 1);
+	ASSERT_EQ(int, func_find_lz(fn, "c"), 2);
+	ASSERT_TRUE(core->lz[0] == ymd_kstr("a", -1));
+	ASSERT_TRUE(core->lz[1] == ymd_kstr("b", -1));
+	ASSERT_TRUE(core->lz[2] == ymd_kstr("c", -1));
 	return 0;
 }
 
@@ -49,7 +51,7 @@ static int test_func_local_constant_2() {
 		char key[32];
 		snprintf(key, sizeof(key), "key.%d", i);
 		ASSERT_EQ(int, func_kz(fn, key, -1), BATCH_COUNT - 1 - i);
-		ASSERT_EQ(int, func_lz(fn, key, -1), BATCH_COUNT - 1 - i);
+		ASSERT_EQ(int, func_add_lz(fn, key), BATCH_COUNT - 1 - i);
 	}
 	func_shrink(fn);
 	i = BATCH_COUNT;
@@ -58,9 +60,9 @@ static int test_func_local_constant_2() {
 		int index = BATCH_COUNT - 1 - i;
 		snprintf(key, sizeof(key), "key.%d", i);
 		ASSERT_EQ(int, func_kz(fn, key, -1), index);
-		ASSERT_TRUE(fn->kz[index] == ymd_kstr(key, -1));
-		ASSERT_EQ(int, func_lz(fn, key, -1), index);
-		ASSERT_TRUE(fn->lz[index] == ymd_kstr(key, -1));
+		ASSERT_TRUE(core->kz[index] == ymd_kstr(key, -1));
+		ASSERT_EQ(int, func_find_lz(fn, key), index);
+		ASSERT_TRUE(core->lz[index] == ymd_kstr(key, -1));
 	}
 #undef BATCH_COUNT
 	return 0;
@@ -126,9 +128,9 @@ static int test_func_emit_1() {
 	func_emit(fn, emitAfP(PUSH, ZSTR, 0));
 	func_emit(fn, emitAfP(PUSH, LOCAL, 0));
 	func_emit(fn, emitAf(PUSH, NIL));
-	ASSERT_EQ(int, fn->n_inst, 6);
-	ASSERT_EQ(uint, fn->inst[0], emitAfP(PUSH, INT, 0));
-	ASSERT_EQ(uint, fn->inst[5], emitAf(PUSH, NIL));
+	ASSERT_EQ(int, core->kinst, 6);
+	ASSERT_EQ(uint, core->inst[0], emitAfP(PUSH, INT, 0));
+	ASSERT_EQ(uint, core->inst[5], emitAf(PUSH, NIL));
 	return 0;
 }
 
@@ -137,11 +139,11 @@ static int test_func_emit_2() {
 	int i = BATCH_COUNT;
 	while (i--)
 		func_emit(fn, emitAf(PUSH, NIL));
-	ASSERT_EQ(int, fn->n_inst, BATCH_COUNT);
+	ASSERT_EQ(int, core->kinst, BATCH_COUNT);
 	func_shrink(fn);
 	i = BATCH_COUNT;
 	while (i--)
-		ASSERT_EQ(uint, fn->inst[i], emitAf(PUSH, NIL));
+		ASSERT_EQ(uint, core->inst[i], emitAf(PUSH, NIL));
 #undef BATCH_COUNT
 	return 0;
 }

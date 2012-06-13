@@ -47,11 +47,12 @@ static inline struct variable *vm_find_local(struct func *fn,
 static inline struct variable *vm_global(struct func *fn, int i) {
 	struct kstr *k;
 	struct variable key;
+	struct chunk *core = fn->u.core;
 	assert(i >= 0);
-	assert(i < fn->n_kz);
-	k = fn->kz[i];
+	assert(i < core->kkz);
+	k = core->kz[i];
 	key.type = T_KSTR;
-	key.value.ref = (struct gc_node *)k;
+	key.value.ref = gcx(k);
 	return hmap_get(vm()->global, &key);
 }
 
@@ -62,13 +63,14 @@ int vm_run(struct func *fn, int argc) {
 	uint_t inst;
 	struct context *l = ioslate();
 	struct call_info *info = l->info;
+	struct chunk *core = fn->u.core;
 
 	(void)argc;
 	assert(fn == info->run);
 
 retry:
-	while (info->pc < fn->n_inst) {
-		inst = fn->inst[info->pc];
+	while (info->pc < core->kinst) {
+		inst = core->inst[info->pc];
 		uchar_t op = asm_op(inst);
 		uchar_t flag = asm_flag(inst);
 		ushort_t param = asm_param(inst);
@@ -137,7 +139,7 @@ retry:
 				break;
 			case F_ZSTR:
 				var.type = T_KSTR;
-				var.value.ref = (struct gc_node *)fn->kz[param];
+				var.value.ref = gcx(core->kz[param]);
 				break;
 			case F_LOCAL:
 				var = *vm_local(fn, param);
@@ -215,7 +217,7 @@ retry:
 			assert(tt < KNAX);
 			kz = ymd_kstr(typeof_name[tt].name, typeof_name[tt].len);
 			ymd_top(l, 0)->type = T_KSTR;
-			ymd_top(l, 0)->value.ref = (struct gc_node *)kz;
+			ymd_top(l, 0)->value.ref = gcx(kz);
 			} break;
 		case I_INV: {
 			struct variable *opd = ymd_top(l, 0);
@@ -344,7 +346,7 @@ retry:
 			ymd_pop(l, n);
 			var = ymd_push(l);
 			var->type = T_HMAP;
-			var->value.ref = (struct gc_node *)map;
+			var->value.ref = gcx(map);
 			} break;
 		case I_NEWSKL: {
 			struct skls *map = skls_new();
@@ -355,7 +357,7 @@ retry:
 			ymd_pop(l, n);
 			var = ymd_push(l);
 			var->type = T_SKLS;
-			var->value.ref = (struct gc_node *)map;
+			var->value.ref = gcx(map);
 			} break;
 		case I_NEWDYA: {
 			struct dyay *map = dyay_new(0);
@@ -366,21 +368,23 @@ retry:
 			ymd_pop(l, param);
 			var = ymd_push(l);
 			var->type = T_DYAY;
-			var->value.ref = (struct gc_node *)map;
+			var->value.ref = gcx(map);
 			} break;
 		case I_BIND: {
-			struct func *clos = func_of(ymd_top(l, param));
+			struct variable *opd = ymd_top(l, param);
+			struct func *copied = func_clone(func_of(opd));
 			int i = param;
-			assert(clos->n_bind == param);
+			assert(copied->n_bind == param);
 			while (i--)
-				func_bind(clos, param - i - 1, ymd_top(l, i));
+				func_bind(copied, param - i - 1, ymd_top(l, i));
+			opd->value.ref = gcx(copied); // Copy-on-wirte bind
 			ymd_pop(l, param);
 			} break;
 		case I_LOAD: {
 			struct variable *var = ymd_push(l);
 			struct func *land = vm()->fn[param];
 			var->type = T_FUNC;
-			var->value.ref = (struct gc_node *)land;
+			var->value.ref = gcx(land);
 			} break;
 		default:
 			assert(0);
@@ -392,25 +396,30 @@ retry:
 }
 
 static void copy_args(struct func *fn, int argc) {
-	int i, k = fn->kargs < argc ? fn->kargs : argc;
-	struct variable *argv = vm_find_local(fn, "argv");
+	int i;
+	struct variable *argv = NULL;
 	struct context *l = ioslate();
-	// Set argv nil
-	argv->type = T_NIL;
-	argv->value.i = 0LL;
-	// Copy args
-	i = k;
-	while (i--) // Copy to local variable
-		*vm_local(fn, k - i - 1) = *ymd_top(l, i);
-	// Fill variable: `argv`
+	if (!fn->is_c) {
+		struct chunk *core = fn->u.core;
+		const int k = core->kargs < argc ? core->kargs : argc;
+		argv = vm_find_local(fn, "argv");
+		argv->type = T_NIL;
+		argv->value.i = 0LL;
+		// Copy args
+		i = k;
+		while (i--) // Copy to local variable
+			*vm_local(fn, k - i - 1) = *ymd_top(l, i);
+	}
 	if (argc > 0) {
 		// Lazy creating
 		fn->argv = !fn->argv ? dyay_new(0) : fn->argv;
 		i = argc;
 		while (i--)
 			*dyay_add(fn->argv) = *ymd_top(l, i);
-		argv->type = T_DYAY;
-		argv->value.ref = (struct gc_node *)fn->argv;
+		if (!fn->is_c) {
+			argv->type = T_DYAY;
+			argv->value.ref = gcx(fn->argv);
+		}
 	}
 }
 
@@ -422,9 +431,6 @@ int func_call(struct func *fn, int argc) {
 
 	// Initialize local variable
 	if (main_fn) {
-		struct variable *p = ymd_push(l);
-		p->type = T_FUNC;
-		p->value.ref = (struct gc_node *)fn;
 		scope.loc = l->loc;
 	} else {
 		int n = func_nlocal(l->info->run);
@@ -439,8 +445,8 @@ int func_call(struct func *fn, int argc) {
 	copy_args(fn, argc);
 	// Pop all args
 	ymd_pop(l, argc + 1);
-	if (fn->nafn) {
-		rv = (*fn->nafn)(ioslate());
+	if (fn->is_c) {
+		rv = (*fn->u.nafn)(ioslate());
 		goto ret;
 	}
 	rv = vm_run(fn, argc);
@@ -451,9 +457,20 @@ ret:
 	return rv;
 }
 
+int func_main(struct func *fn, int argc, char *argv[]) {
+	int i;
+	struct context *l = ioslate();
+	struct variable *p = ymd_push(l);
+	p->type = T_FUNC;
+	p->value.ref = gcx(fn);
+	for (i = 0; i < argc; ++i)
+		ymd_push_kstr(l, argv[i], -1);
+	return func_call(fn, argc);
+}
+
 struct func *func_compile(FILE *fp) {
 	struct func *fn = func_new(NULL);
 	int rv = do_compile(fp, fn);
-	func_proto(fn);
+	func_init(fn);
 	return rv < 0 ? NULL : fn;
 }

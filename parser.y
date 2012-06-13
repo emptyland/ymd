@@ -58,33 +58,33 @@ block stmt
 ;
 
 func_decl:
-func_prototype begin EL block end {
+func_inittype begin EL block end {
 	sop_pop();
 }
 ;
 
-func_prototype:
+func_inittype:
 func SYMBOL lparen params rparen {
 	int i = func_kz(sop_index(-2), sym_index(0), -1);
 	func_emit(sop_index(-2), emitAfP(STORE, OFF, i));
-	func_proto(sop());
+	func_init(sop());
 	sym_scope_end();
 }
 | VAR func SYMBOL lparen params rparen {
 	int i = func_add_lz(sop_index(-2), sym_index(0));
 	func_emit(sop_index(-2), emitAfP(STORE, LOCAL, i));
-	func_proto(sop());
+	func_init(sop());
 	sym_scope_end();
 }
 ;
 
 closure_prototype:
 func lparen params rparen {
-	func_proto(sop());
+	func_init(sop());
 	sym_scope_end();
 }
 | func bind_decl lparen params rparen {
-	func_proto(sop());
+	func_init(sop());
 	sym_scope_end();
 }
 ;
@@ -123,7 +123,7 @@ param COMMA params
 param:
 SYMBOL {
 	func_add_lz(sop(), sym_index(-1));
-	++sop()->kargs;
+	++sop()->u.core->kargs;
 	sym_slot(I_PARAMS, +1);
 }
 ;
@@ -199,31 +199,31 @@ elif_test block end
 
 if_test:
 IF cond begin EL {
-	info_cond_push(sop()->n_inst);
+	info_cond_push(sop()->u.core->kinst);
 	func_emit(sop(), emitAf(JNE, UNDEF));
 }
 ;
 
 elif_test:
 elif cond begin EL {
-	info_cond_rcd('b', sop()->n_inst);
+	info_cond_rcd('b', sop()->u.core->kinst);
 	func_emit(sop(), emitAf(JNE, UNDEF));
 }
 ;
 
 else:
 ELSE {
-	info_cond_rcd('o', sop()->n_inst);
+	info_cond_rcd('o', sop()->u.core->kinst);
 	func_emit(sop(), emitAf(JMP, UNDEF));
-	info_cond_rcd('b', sop()->n_inst);
+	info_cond_rcd('b', sop()->u.core->kinst);
 }
 ;
 
 elif:
 ELIF {
-	info_cond_rcd('o', sop()->n_inst);
+	info_cond_rcd('o', sop()->u.core->kinst);
 	func_emit(sop(), emitAf(JMP, UNDEF));
-	info_cond_rcd('b', sop()->n_inst);
+	info_cond_rcd('b', sop()->u.core->kinst);
 }
 ;
 
@@ -242,7 +242,7 @@ for begin EL block end {
 
 for_each:
 FOR for_index COLON call begin EL {
-	info_loop_push(sop()->n_inst);
+	info_loop_push(sop()->u.core->kinst);
 	func_emit(sop(), emitAf(FOREACH, UNDEF));
 }
 ;
@@ -260,20 +260,20 @@ SYMBOL {
 
 for:
 FOR {
-	info_loop_push(sop()->n_inst);
+	info_loop_push(sop()->u.core->kinst);
 }
 ;
 
 break_stmt:
 BREAK {
-	info_loop_rcd('b', sop()->n_inst);
+	info_loop_rcd('b', sop()->u.core->kinst);
 	func_emit(sop(), emitAf(JMP, UNDEF));
 }
 ;
 
 continue_stmt:
 CONTINUE {
-	info_loop_rcd('c', sop()->n_inst);
+	info_loop_rcd('c', sop()->u.core->kinst);
 	func_emit(sop(), emitAf(JMP, UNDEF));
 }
 ;

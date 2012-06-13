@@ -117,6 +117,14 @@ static int libx_len(struct context *l) {
 	return 1;
 }
 
+static int libx_range(struct context *l) {
+	// TODO:
+	// range(1,100) = {1,2,3,...100}
+	// range(1,100,2) = {1,3,5,...100}
+	// range({9,8,7}) = {9,8,7}
+	return 0;
+}
+
 LIBC_BEGIN(Builtin)
 	LIBC_ENTRY(print)
 	LIBC_ENTRY(add)
@@ -131,11 +139,11 @@ int ymd_load_lib(ymd_libc_t lbx) {
 		struct func *fn = func_new(i->native);
 		struct variable key, *rv;
 		key.type = T_KSTR;
-		key.value.ref = (struct gc_node *)kz;
+		key.value.ref = gcx(kz);
 		rv = hmap_get(vm()->global, &key);
 		rv->type = T_FUNC;
-		func_proto(fn);
-		rv->value.ref = (struct gc_node *)fn;
+		func_init(fn);
+		rv->value.ref = gcx(fn);
 	}
 	return 0;
 }

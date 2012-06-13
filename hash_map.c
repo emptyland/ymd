@@ -316,12 +316,12 @@ struct kvi *kz_index(struct hmap *map, const char *z, int n) {
 	kz->hash = kz_hash(z, kz->len);
 	memcpy(kz->land, z, kz->len);
 	fake.type = T_KSTR;
-	fake.value.ref = (struct gc_node *)kz;
+	fake.value.ref = gcx(kz);
 	// Find position
 	x = hindex(map, &fake);
 	if (!equals(&x->k, &fake)) {
 		x->k.type = T_KSTR;
-		x->k.value.ref = (struct gc_node *)kstr_new(z, kz->len);
+		x->k.value.ref = gcx(kstr_new(z, kz->len));
 	}
 	if (kz->len > MAX_CHUNK_LEN) vm_free(kz);
 	return x;

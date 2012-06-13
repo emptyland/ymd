@@ -193,16 +193,16 @@ void sop_error(const char *err, int rv) {
 }
 
 void sop_adjust(struct func *fn) {
-	int i = fn->n_inst;
+	int i = fn->u.core->kinst;
 	if (i < 2)
 		return;
 	i >>= 1;
 	while (i--) {
-		uint_t tmp = fn->inst[i];
-		uchar_t op = asm_op(fn->inst[i]);
+		uint_t tmp = fn->u.core->inst[i];
+		uchar_t op = asm_op(fn->u.core->inst[i]);
 		assert(op == I_STORE);
-		fn->inst[i] = fn->inst[fn->n_inst - i - 1];
-		fn->inst[fn->n_inst - i - 1] = tmp;
+		fn->u.core->inst[i] = fn->u.core->inst[fn->u.core->kinst - i - 1];
+		fn->u.core->inst[fn->u.core->kinst - i - 1] = tmp;
 	}
 }
 
@@ -222,31 +222,31 @@ void info_loop_push(ushort_t pos) {
 }
 
 ushort_t info_loop_off(const struct func *fn) {
-	assert(fn->n_inst >= loop_i->enter);
-	return fn->n_inst - loop_i->enter;
+	assert(fn->u.core->kinst >= loop_i->enter);
+	return fn->u.core->kinst - loop_i->enter;
 }
 
 void info_loop_back(struct func *fn, int death) {
 	int i;
 	uint_t k, old;
 	// Fill enter
-	loop_i->leave = fn->n_inst;
+	loop_i->leave = fn->u.core->kinst;
 	if (!death) {
-		old = fn->inst[loop_i->enter];
+		old = fn->u.core->inst[loop_i->enter];
 		assert(loop_i->leave >= loop_i->enter);
-		fn->inst[loop_i->enter] = hack_fill(old, 1, loop_i->leave - loop_i->enter);
+		fn->u.core->inst[loop_i->enter] = hack_fill(old, 1, loop_i->leave - loop_i->enter);
 	}
 	// Fill break statment or continue statment
 	i = loop_i->nrcd;
 	while (i--) {
 		k = loop_i->rcd[i] & 0xffff;
-		old = fn->inst[k];
+		old = fn->u.core->inst[k];
 		if (loop_i->rcd[i] & 0x80000000) { // break
 			assert(loop_i->leave >= k);
-			fn->inst[k] = hack_fill(old,  1, loop_i->leave - k);
+			fn->u.core->inst[k] = hack_fill(old,  1, loop_i->leave - k);
 		} else {
 			assert(loop_i->enter <= k);
-			fn->inst[k] = hack_fill(old, -1, k - loop_i->enter);
+			fn->u.core->inst[k] = hack_fill(old, -1, k - loop_i->enter);
 		}
 	}
 }
@@ -290,7 +290,7 @@ void info_cond_back(struct func *fn) {
 	int i, n = 0;
 	uint_t k, p, old;
 
-	cond_i->leave = fn->n_inst;
+	cond_i->leave = fn->u.core->kinst;
 	bak[n++] = cond_i->enter;
 	// 8: out
 	// 4: branch
@@ -298,9 +298,9 @@ void info_cond_back(struct func *fn) {
 	for (i = 0; i < cond_i->nbranch; ++i) {
 		if (cond_i->branch[i] & 0x80000000) {
 			k = cond_i->branch[i] & 0xffff;
-			old = fn->inst[k];
+			old = fn->u.core->inst[k];
 			assert(cond_i->leave >= k);
-			fn->inst[k] = hack_fill(old, 1, cond_i->leave - k);
+			fn->u.core->inst[k] = hack_fill(old, 1, cond_i->leave - k);
 		} else
 			bak[n++] = cond_i->branch[i] & 0xffff;
 	}
@@ -310,9 +310,9 @@ void info_cond_back(struct func *fn) {
 	for (i = 0; i < n; i += 2) {
 		k = bak[i];
 		p = bak[i + 1];
-		old = fn->inst[k];
+		old = fn->u.core->inst[k];
 		assert(p >= k);
-		fn->inst[k] = hack_fill(old, 1, p - k);
+		fn->u.core->inst[k] = hack_fill(old, 1, p - k);
 	}
 }
 

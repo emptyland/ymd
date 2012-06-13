@@ -10,7 +10,7 @@ struct cmd_opt {
 	FILE *input;
 	int external;
 	int debug;
-	int argv;
+	int argv_off;
 };
 
 static struct cmd_opt opt = {
@@ -33,7 +33,7 @@ int main(int argc, char *argv[]) {
 		if (strcmp(argv[i], "-d") == 0) {
 			opt.debug = 1;
 		} else if (strcmp(argv[i], "--argv") == 0) {
-			opt.argv = i + 1;
+			opt.argv_off = i + 1;
 			break;
 		} else {
 			opt.external = 1;
@@ -57,10 +57,11 @@ int main(int argc, char *argv[]) {
 			dis_func(stdout, vm()->fn[i]);
 		}
 	}
-	func_call(fn, 0);
+	//func_call(fn, 0);
+	i = func_main(fn, argc - opt.argv_off, argv + opt.argv_off);
 	if (opt.external)
 		fclose(opt.input);
 	vm_final_context();
 	vm_final();
-	return 0;
+	return i;
 }
