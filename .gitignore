@@ -1,3 +1,4 @@
+config.mk
 *.o
 *_test
 *.swp

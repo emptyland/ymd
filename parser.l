@@ -58,11 +58,11 @@
 "," { return COMMA; }
 ":" { return COLON; }
 "->" { return DICT; }
-[0-9]+ {
+[1-9][0-9]+ {
 	sym_push(yytext, -1);
 	return LITERAL_DEC;
 }
-[0][xX][0-9a-fA-F]+ {
+[0][x][0-9a-fA-F]{1,16} {
 	sym_push(yytext, -1);
 	return LITERAL_HEX;
 }
@@ -74,7 +74,7 @@
 [\t\r ]
 [/][/].*[\n]
 [#].*[\n]
-["][a-zA-Z~!@#$%^&*()_+-=\\`{\}[\]:;<>?,./\t\ ]*["] {
+["](([a-zA-Z~!@#$%^&*()_+-=`{\}[\]:;<>?,./\t\ ])|([\\]((["])|(x[0-9a-fA-F]{2})|(u[0-0a-fA-F]{4})|([\\])|([a])|([b])|([f])|([n])|([r])|([v])|([t])|([0]))))*["] {
 	sym_push(yytext + 1, strlen(yytext) - 2);
 	return STRING;
 }

@@ -404,3 +404,73 @@ void info_cond_rcd(char which, int pos) {
 		break;
 	}
 }
+
+static inline long long xtol(char x) {
+	if (x >= '0' && x <= '9')
+		return x - '0';
+	else if (x >= 'a' && x <= 'f')
+		return 16 + x - 'a';
+	else if (x >= 'A' && x <= 'F')
+		return 16 + x - 'A';
+	assert(0);
+	return -1;
+}
+
+static inline long long dtol(char d) {
+	if (x >= '0' && x <= '9')
+		return x - '0';
+	assert(0);
+	return -1;
+}
+
+#define ESC_CHAR(n, c) \
+	case n: \
+		priv[n++] = c; \
+		break
+int stresc(const char *i, char **rv) {
+	char *priv = NULL;
+	int n = 0;
+	while (*i) {
+		priv = mm_need(priv, n, 64, 1);
+		if (*i++ == '\\') {
+			switch (*i++) {
+			ESC_CHAR('a', '\a');
+			ESC_CHAR('b', '\b');
+			ESC_CHAR('f', '\f');
+			ESC_CHAR('n', '\n');
+			ESC_CHAR('r', '\r');
+			ESC_CHAR('t', '\t');
+			ESC_CHAR('v', '\v');
+			ESC_CHAR('\\', '\\');
+			ESC_CHAR('\"', '\"');
+			ESC_CHAR('\0', '\0');
+			default:
+				vm_free(priv);
+				return -1;
+			}
+			continue;
+		}
+		priv[n] = *i;
+		++i; ++n;
+	}
+}
+#undef ESC_CHAR
+
+long long xtoll(const char *raw) {
+	long long rv = 0;
+	int k = strlen(raw), i = k;
+	while (i--)
+		rv |= (xtol(raw[i]) << ((k - i - 1) * 16));
+	return rv;
+}
+
+long long dtoll(const char *raw) {
+	long long rv = 0;
+	long long pow = 1;
+	int k = strlen(raw), i = k;
+	while (i--) {
+		rv += (dtol(raw[i]) * pow);
+		pow *= 10;
+	}
+	return rv;
+}

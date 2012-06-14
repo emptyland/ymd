@@ -1,6 +1,4 @@
-CC=clang
-DFLAGS=-O0 -g
-CFLAGS=$(DFLAGS) -Wall -Wextra
+include config.mk
 OBJS=state.o value.o memory.o dynamic_array.o hash_map.o skip_list.o closure.o call.o libc.o
 OBJT=$(OBJS) yut_rand.o yut.o main_test.o disassembly.o parser.o lexer.o symbol.o
 INCS=state.h value.h memory.h
@@ -132,5 +130,6 @@ y.tab.c: parser.y
 lex.yy.c: parser.l
 	lex parser.l
 
+.PHONY: clean
 clean:
 	rm *.o *_test y.tab.c y.tab.h lex.yy.c ymd_main 2&> /dev/null

@@ -50,4 +50,9 @@ void info_cond_back(struct func *fn);
 void info_cond_pop();
 void info_cond_rcd(char which, int pos);
 
+// Converation
+int stresc(const char *raw, char **rv);
+long long xtoll(const char *raw);
+long long dtoll(const char *raw);
+
 #endif // YMD_SYMBOL_H
