@@ -66,6 +66,8 @@ struct context {
 // ----------------------------------------------------------------------------
 struct func *ymd_spawnf(unsigned short *id);
 
+//-----------------------------------------------------------------------------
+// Misc:
 // ----------------------------------------------------------------------------
 struct variable *ymd_get(struct variable *var, const struct variable *key);
 
@@ -73,6 +75,8 @@ static inline struct kstr *ymd_kstr(const char *z, int n) {
 	struct kvi *x = kz_index(vm()->kpool, z, n);
 	return kstr_x(&x->k);
 }
+
+struct kstr *ymd_strcat(const struct kstr *lhs, const struct kstr *rhs);
 
 struct kstr *ymd_format(const char *fmt, ...);
 

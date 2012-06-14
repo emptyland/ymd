@@ -20,9 +20,6 @@ int yyerror(const char *e);
 #define DEMIT1(fmt, arg1)
 #define DEMIT2(fmt, arg1, arg2)
 #endif
-//static int index_access(const char *z);
-static void emit_access(unsigned char inst, const char *z);
-static void emit_bind(const char *z);
 %}
 %token NUMBER SYMBOL LBRACK RBRACK TRUE FALSE
 %token EL NIL STRING FUNC COMMA EMAP ESKL EDYA
@@ -627,31 +624,3 @@ int do_compile(FILE *fp, struct func *fn) {
 	return sop_result();
 }
 
-/*
-static int index_access(const char *z) {
-	int i = func_find_lz(sop(), z);
-	return i < 0 ? func_kz(sop(), z, -1) : i;
-}*/
-
-static void emit_access(unsigned char inst, const char *z) {
-	int i = func_find_lz(sop(), z); 
-	if (i < 0) {
-		int k = func_kz(sop(), z, -1);
-		func_emit(sop(), asm_build(inst, F_OFF, k));
-	} else {
-		func_emit(sop(), asm_build(inst, F_LOCAL, i));
-	}
-}
-
-static void emit_bind(const char *z) {
-	struct func *up = sop_index(-2);
-	int i = func_find_lz(up, z);
-	if (i < 0) {
-		int k = func_kz(up, z, -1);
-		func_emit(up, emitAfP(PUSH, OFF, k));
-	} else {
-		func_emit(up, emitAfP(PUSH, LOCAL, i));
-	}
-	++sop()->n_bind;
-	func_add_lz(sop(), z); // FIXME
-}

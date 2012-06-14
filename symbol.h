@@ -5,7 +5,7 @@
 
 struct func;
 
-// Symbol function:
+// Symbol functions:
 int sym_count();
 int sym_push(const char *z, int n);
 const char *sym_index(int i);
@@ -17,11 +17,9 @@ void sym_slot_end();
 int sym_slot(int i, int op);
 int sym_last_slot(int i, int lv);
 
-// Offset functions:
-int push_off(unsigned short off);
-unsigned short pop_off();
-unsigned short index_off(int i);
-
+// Emiting functions:
+void emit_access(unsigned char op, const char *z);
+void emit_bind(const char *z);
 
 // Scope functions:
 int sop_push(struct func *fn);
@@ -46,7 +44,7 @@ void info_loop_set_jcond(int pos);
 const char *info_loop_iter_name();
 void info_loop_set_id(const char *id);
 const char *info_loop_id();
-
+// Condition information
 void info_cond_push(int pos);
 void info_cond_back(struct func *fn);
 void info_cond_pop();

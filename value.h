@@ -122,11 +122,12 @@ struct skls {
 };
 
 // Managed data (must be from C/C++)
+typedef int (*ymd_final_t)(void *);
 struct mand {
 	GC_HEAD;
 	int len; // land length
 	const char *tt; // Type name
-	int (*final)(void *); // Release function, call in deleted
+	ymd_final_t final; // Release function, call in deleted
 	unsigned char land[1]; // Payload data
 };
 
@@ -214,7 +215,7 @@ struct variable *dyay_get(struct dyay *arr, ymd_int_t i);
 struct variable *dyay_add(struct dyay *arr);
 
 // Managed data: `mand` functions:
-struct mand *mand_new(const void *data, int size, int (*final)(void *));
+struct mand *mand_new(const void *data, int size, ymd_final_t final);
 void mand_final(struct mand *pm);
 int mand_equals(const struct mand *pm, const struct mand *rhs);
 int mand_compare(const struct mand *pm, const struct mand *rhs);

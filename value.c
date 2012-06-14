@@ -174,7 +174,7 @@ int kstr_compare(const struct kstr *kz, const struct kstr *rhs) {
 //-------------------------------------------------------------------------
 // Managed data: `mand` functions:
 //-------------------------------------------------------------------------
-struct mand *mand_new(const void *data, int size, int (*final)(void *)) {
+struct mand *mand_new(const void *data, int size, ymd_final_t final) {
 	struct mand *x = NULL;
 	assert(size >= 0);
 	x = gc_alloc(&vm()->gc, sizeof(*x) + size, T_MAND);

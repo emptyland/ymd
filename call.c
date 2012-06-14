@@ -127,7 +127,7 @@ retry:
 		case I_FOREACH: {
 			struct variable *cond = ymd_top(l, 0);
 			if (cond->type == T_EXT &&
-				cond->value.ext == (void *)-1) {
+				cond->value.ext == (void *)-1) { // FIXME: use a macro or constant
 				switch (flag) {
 				case F_FORWARD:
 					info->pc += param;
@@ -265,7 +265,8 @@ retry:
 				rhs->value.i = rhs->value.i + int_of(lhs);
 				break;
 			case T_KSTR:
-				// TODO:
+				rhs->value.ref = gcx(ymd_strcat(kstr_of(rhs),
+					kstr_of(lhs)));
 				break;
 			default:
 				vm_die("Operator + don't support this type");
@@ -422,9 +423,7 @@ static void copy_args(struct func *fn, int argc) {
 		struct chunk *core = fn->u.core;
 		const int k = core->kargs < argc ? core->kargs : argc;
 		argv = vm_find_local(fn, "argv");
-		argv->type = T_NIL;
-		argv->value.i = 0LL;
-		// Copy args
+		vset_nil(argv);
 		i = k;
 		while (i--) // Copy to local variable
 			*vm_local(fn, k - i - 1) = *ymd_top(l, i);
@@ -433,12 +432,10 @@ static void copy_args(struct func *fn, int argc) {
 		// Lazy creating
 		fn->argv = !fn->argv ? dyay_new(0) : fn->argv;
 		i = argc;
-		while (i--)
+		while (i--) // Copy to array: argv
 			*dyay_add(fn->argv) = *ymd_top(l, i);
-		if (!fn->is_c) {
-			argv->type = T_DYAY;
-			argv->value.ref = gcx(fn->argv);
-		}
+		if (!fn->is_c)
+			vset_dyay(argv, fn->argv);
 	}
 }
 
@@ -479,17 +476,16 @@ ret:
 int func_main(struct func *fn, int argc, char *argv[]) {
 	int i;
 	struct context *l = ioslate();
-	struct variable *p = ymd_push(l);
-	p->type = T_FUNC;
-	p->value.ref = gcx(fn);
+	ymd_push_func(l, fn);
 	for (i = 0; i < argc; ++i)
 		ymd_push_kstr(l, argv[i], -1);
 	return func_call(fn, argc);
 }
 
 struct func *func_compile(FILE *fp) {
+	int rv;
 	struct func *fn = func_new(NULL);
-	int rv = do_compile(fp, fn);
 	func_init(fn);
+	rv = do_compile(fp, fn);
 	return rv < 0 ? NULL : fn;
 }

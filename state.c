@@ -110,6 +110,16 @@ struct variable *ymd_get(struct variable *var, const struct variable *key) {
 	return knax;
 }
 
+struct kstr *ymd_strcat(const struct kstr *lhs, const struct kstr *rhs) {
+	char *tmp = vm_zalloc(lhs->len + rhs->len);
+	struct kvi *x;
+	memcpy(tmp, lhs->land, lhs->len);
+	memcpy(tmp + lhs->len, rhs->land, rhs->len);
+	x = kz_index(vm()->kpool, tmp, lhs->len + rhs->len);
+	vm_free(tmp);
+	return kstr_x(&x->k);
+}
+
 //-----------------------------------------------------------------------------
 // Function table:
 // ----------------------------------------------------------------------------

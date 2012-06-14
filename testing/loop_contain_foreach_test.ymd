@@ -1,0 +1,29 @@
+var func test(a) {
+	print("---- Only value")
+	for var i: range(a) {
+		print(i)
+	}
+	print("---- Key-value pair")
+	for i: rank(a) {
+		print(i)
+	}
+	print("---- Only key")
+	for i: ranki(a) {
+		print(i)
+	}
+}
+
+print("==== skiplist ====")
+var a = @{a:1, b:2, c:3, d:4, e:"Hello", f:nil, gg:true, kk:false}
+print(a)
+test(a)
+
+print("==== hashmap ====")
+a = {name:"John", id:9527, {1,2,3}->{4,5,6}}
+print(a)
+test(a)
+
+print("==== array ====")
+a = {"name", 1, 2, "bbb", {1,2,3}}
+print(a)
+test(a)

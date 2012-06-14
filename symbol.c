@@ -6,11 +6,13 @@
 #include <string.h>
 #include <stdio.h>
 
-#define MAX_SLOT  16
-#define MAX_STACK 128
-#define MAX_SCOPE 128
-#define MAX_ERR   260
-#define MAX_RCD   128
+#define MAX_SLOT       16
+#define MAX_STACK      128
+#define MAX_SCOPE      128
+#define MAX_ERR        260
+#define MAX_SYMBOL_LEN 260
+#define MAX_ITER_LEN   64
+#define MAX_RCD        128
 
 struct slot {
 	struct slot *prev;
@@ -35,8 +37,8 @@ struct loop_info {
 	uint_t rcd[MAX_RCD];
 	int nrcd;
 	int seq;
-	char id[260];
-	char iter[64];
+	char id[MAX_SYMBOL_LEN];
+	char iter[MAX_ITER_LEN];
 };
 
 struct cond_info {
@@ -147,6 +149,30 @@ int sym_last_slot(int i, int lv) {
 		return sym->last_elem_s[i];
 	}
 	return 0;
+}
+
+
+void emit_access(unsigned char inst, const char *z) {
+	int i = func_find_lz(sop(), z); 
+	if (i < 0) {
+		int k = func_kz(sop(), z, -1);
+		func_emit(sop(), asm_build(inst, F_OFF, k));
+	} else {
+		func_emit(sop(), asm_build(inst, F_LOCAL, i));
+	}
+}
+
+void emit_bind(const char *z) {
+	struct func *up = sop_index(-2);
+	int i = func_find_lz(up, z);
+	if (i < 0) {
+		int k = func_kz(up, z, -1);
+		func_emit(up, emitAfP(PUSH, OFF, k));
+	} else {
+		func_emit(up, emitAfP(PUSH, LOCAL, i));
+	}
+	++sop()->n_bind;
+	func_add_lz(sop(), z); // FIXME
 }
 
 int sop_push(struct func *fn) {

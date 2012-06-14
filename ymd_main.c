@@ -57,7 +57,6 @@ int main(int argc, char *argv[]) {
 			dis_func(stdout, vm()->fn[i]);
 		}
 	}
-	//func_call(fn, 0);
 	i = func_main(fn, argc - opt.argv_off, argv + opt.argv_off);
 	if (opt.external)
 		fclose(opt.input);

@@ -4,6 +4,14 @@
 #include "libc.h"
 #include <stdio.h>
 
+struct strbuf {
+	int len;
+	int max;
+	char *buf;
+};
+#define STRBUF_ADD 128
+static const char *T_STRBUF = "strbuf";
+
 #define PRINT_SPLIT " "
 static void *const kend = (void *)-1;
 
@@ -118,6 +126,15 @@ static int libx_len(struct context *l) {
 	return 1;
 }
 
+static int libx_str(struct context *l) {
+	// TODO:
+	(void)l;
+	return 0;
+}
+
+//------------------------------------------------------------------------------
+// Foreach closures
+//------------------------------------------------------------------------------
 static int libx_end(struct context *l) {
 	vset_ext(ymd_push(l), kend);
 	return 1;
@@ -160,10 +177,15 @@ static struct func *new_step_iter(struct context *l,
 #define ITER_KEY   0
 #define ITER_VALUE 1
 #define ITER_KV    2
+
+// Dynamic array iterator
+// bind[0]: struct variable *i; current pointer
+// bind[1]: struct variable *m; end of pointer
+// bind[2]: int idx; index counter
+// bind[3]: iterator flag
 static int dyay_iter(struct context *l) {
 	struct variable *i = ymd_bval(l, 0)->value.ext,
 	                *m = ymd_bval(l, 1)->value.ext;
-	(void)l;
 	if (i >= m) {
 		vset_ext(ymd_push(l), kend);
 		return 1;
@@ -193,6 +215,73 @@ static int dyay_iter(struct context *l) {
 	return 1;
 }
 
+static inline struct kvi *move2valid(struct kvi *i, struct kvi *m) {
+	while (i->flag == 0 && i < m) ++i;
+	return i;
+}
+
+// Hash map iterator
+// bind[0]: struct kvi *i; current pointer
+// bind[1]: struct kvi *m; end of pointer
+// bind[2]: iterator flag
+static int hmap_iter(struct context *l) {
+	struct kvi *i = ymd_bval(l, 0)->value.ext,
+			   *m = ymd_bval(l, 1)->value.ext;
+	if (i >= m) {
+		vset_ext(ymd_push(l), kend);
+		return 1;
+	}
+	switch (int_of(ymd_bval(l, 2))) {
+	case ITER_KEY:
+		*ymd_push(l) = i->k;
+		break;
+	case ITER_VALUE:
+		*ymd_push(l) = i->v;
+		break;
+	case ITER_KV: {
+		struct dyay *rv = dyay_new(0);
+		*dyay_add(rv) = i->k;
+		*dyay_add(rv) = i->v;
+		vset_dyay(ymd_push(l), rv);
+		} break;
+	default:
+		assert(0);
+		break;
+	}
+	vset_ext(ymd_bval(l, 0), move2valid(i + 1, m));
+	return 1;
+}
+
+// Skip list iterator
+// bind[0]: struct sknd *i; current pointer
+// bind[1]: iterator flag
+static int skls_iter(struct context *l) {
+	struct sknd *i = ymd_bval(l, 0)->value.ext;
+	if (!i) {
+		vset_ext(ymd_push(l), kend);
+		return 1;
+	}
+	switch (int_of(ymd_bval(l, 1))) {
+	case ITER_KEY:
+		*ymd_push(l) = i->k;
+		break;
+	case ITER_VALUE:
+		*ymd_push(l) = i->v;
+		break;
+	case ITER_KV: {
+		struct dyay *rv = dyay_new(0);
+		*dyay_add(rv) = i->k;
+		*dyay_add(rv) = i->v;
+		vset_dyay(ymd_push(l), rv);
+		} break;
+	default:
+		assert(0);
+		break;
+	}
+	vset_ext(ymd_bval(l, 0), i->fwd[0]);
+	return 1;
+}
+
 static struct func *new_contain_iter(
 	struct context *l,
 	const struct variable *obj,
@@ -209,25 +298,39 @@ static struct func *new_contain_iter(
 		vset_int(func_bval(iter, 2), 0);
 		vset_int(func_bval(iter, 3), flag);
 		break;
-	case T_HMAP:
+	case T_HMAP: {
+		struct kvi *m = hmap_k(obj)->item + (1 << hmap_k(obj)->shift),
+				   *i = move2valid(hmap_k(obj)->item, m);
+		if (i >= m)
+			return func_new(libx_end);
 		iter = func_new(hmap_iter);
 		iter->n_bind = 3;
 		func_init(iter);
-		vset_ext(func_bval(iter, 0), hmap_k(obj)->slot);
-		vset_ext(func_bval(iter, 1),
-		         hmap_k(obj)->slot + (1 << hmap_k(obj)->shift));
+		vset_ext(func_bval(iter, 0), i);
+		vset_ext(func_bval(iter, 1), m);
 		vset_int(func_bval(iter, 2), flag);
-		break;
+		} break;
+	case T_SKLS: {
+		struct sknd *i = skls_k(obj)->head->fwd[0];
+		if (!i)
+			return func_new(libx_end);
+		iter = func_new(skls_iter);
+		iter->n_bind = 2;
+		func_init(iter);
+		vset_ext(func_bval(iter, 0), i);
+		vset_int(func_bval(iter, 1), flag);
+		} break;
 	default:
+		vm_die("Type is not be supported");
 		break;
 	}
 	return iter;
 }
 
+// range(1,100) = {1,2,3,...100}
+// range(1,100,2) = {1,3,5,...100}
+// range({9,8,7}) = {9,8,7}
 static int libx_range(struct context *l) {
-	// range(1,100) = {1,2,3,...100}
-	// range(1,100,2) = {1,3,5,...100}
-	// range({9,8,7}) = {9,8,7}
 	struct func *iter;
 	const struct dyay *argv = ymd_argv(l);
 	if (!argv)
@@ -254,10 +357,30 @@ static int libx_range(struct context *l) {
 	return 1;
 }
 
+static int libx_rank(struct context *l) {
+	struct func *iter;
+	const struct dyay *argv = ymd_argv(l);
+	if (!argv)
+		vm_die("Void argument, need 1");
+	iter = new_contain_iter(l, argv->elem, ITER_KV);
+	vset_func(ymd_push(l), iter);
+	return 1;
+}
+
+static int libx_ranki(struct context *l) {
+	struct func *iter;
+	const struct dyay *argv = ymd_argv(l);
+	if (!argv)
+		vm_die("Void argument, need 1");
+	iter = new_contain_iter(l, argv->elem, ITER_KEY);
+	vset_func(ymd_push(l), iter);
+	return 1;
+}
+
 static int libx_done(struct context *l) {
 	const struct dyay *argv = ymd_argv(l);
 	if (!argv || argv->count != 1)
-		vm_die("Bad argument 1, need 1");
+		vm_die("Bad argument number, need 1");
 	if (argv->elem[0].type == T_EXT &&
 		argv->elem[0].value.ext == kend)
 		ymd_push_bool(l, 1);
@@ -272,14 +395,96 @@ static int libx_panic(struct context *l) {
 	return 0;
 }
 
+//------------------------------------------------------------------------------
+// String Buffer: strbuf
+//------------------------------------------------------------------------------
+static inline struct strbuf *strbuf_of(struct mand *pm) {
+	if (pm->tt != T_STRBUF)
+		vm_die("Builtin fatal:%s:%d", __FILE__, __LINE__);
+	return (struct strbuf *)pm->land;
+}
+
+static int strbuf_final(struct strbuf *sb) {
+	if (sb->buf)
+		vm_free(sb->buf);
+	sb->len = 0;
+	sb->max = 0;
+	sb->buf = NULL;
+	return 0;
+}
+
+static void strbuf_need(struct strbuf *sb, int add) {
+	if (sb->len + add <= sb->max)
+		return;
+	while (sb->len + add > sb->max)
+		sb->max = sb->max * 3 / 2 + STRBUF_ADD;
+	if (!sb->buf)
+		sb->buf = vm_zalloc(sb->max);
+	else
+		sb->buf = vm_realloc(sb->buf, sb->max);
+}
+
+static inline void strbuf_append(struct strbuf *sb,
+                                 const char *z, int n) {
+	assert(sb->len + n <= sb->max);
+	memcpy(sb->buf + sb->len, z, n);
+	sb->len += n;
+}
+
+static int libx_strbuf(struct context *l) {
+	struct mand *x = mand_new(NULL, sizeof(struct strbuf),
+	                          (ymd_final_t)strbuf_final);
+	x->tt = T_STRBUF;
+	vset_mand(ymd_push(l), x);
+	return 1;
+}
+
+static int libx_strfin(struct context *l) {
+	struct strbuf *self;
+	struct kstr *rv;
+	struct dyay *argv = ymd_argv(l);
+	if (!argv)
+		vm_die("Bad argument 1, need `strbuf`");
+	self = strbuf_of(mand_of(argv->elem));
+	if (self->len == 0) {
+		vset_nil(ymd_push(l));
+		return 0;
+	}
+	rv = ymd_kstr(self->buf, self->len);
+	strbuf_final(self);
+	vset_kstr(ymd_push(l), rv);
+	return 1;
+}
+
+static int libx_strcat(struct context *l) {
+	int i;
+	struct strbuf *self;
+	struct dyay *argv = ymd_argv(l);
+	if (!argv || argv->count <= 1)
+		vm_die("Bad argument number, need > 1");
+	self = strbuf_of(mand_of(argv->elem));
+	for (i = 1; i < argv->count; ++i) {
+		struct kstr *kz = kstr_of(argv->elem + i);
+		strbuf_need(self, kz->len);
+		strbuf_append(self, kz->land, kz->len);
+	}
+	return 0;
+}
+
 LIBC_BEGIN(Builtin)
 	LIBC_ENTRY(print)
 	LIBC_ENTRY(add)
 	LIBC_ENTRY(len)
 	LIBC_ENTRY(range)
+	LIBC_ENTRY(rank)
+	LIBC_ENTRY(ranki)
 	LIBC_ENTRY(end)
 	LIBC_ENTRY(done)
+	LIBC_ENTRY(str)
 	LIBC_ENTRY(panic)
+	LIBC_ENTRY(strbuf)
+	LIBC_ENTRY(strcat)
+	LIBC_ENTRY(strfin)
 LIBC_END
 
 

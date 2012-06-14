@@ -1,4 +1,4 @@
-CC=gcc
+CC=clang
 DFLAGS=-O0 -g
 CFLAGS=$(DFLAGS) -Wall -Wextra
 OBJS=state.o value.o memory.o dynamic_array.o hash_map.o skip_list.o closure.o call.o libc.o
