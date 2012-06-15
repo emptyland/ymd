@@ -1,5 +1,6 @@
 include config.mk
-OBJS=state.o value.o memory.o dynamic_array.o hash_map.o skip_list.o closure.o call.o libc.o
+OBJS=state.o value.o memory.o dynamic_array.o hash_map.o skip_list.o closure.o \
+	 call.o libc.o varint.o
 OBJT=$(OBJS) yut_rand.o yut.o main_test.o disassembly.o parser.o lexer.o symbol.o
 INCS=state.h value.h memory.h
 INCT=$(INCS) yut.h yut_rand.h
@@ -114,6 +115,9 @@ call.o: $(INCS) call.c
 
 libc.o: $(INCS) libc.c
 	$(CC) $(CFLAGS) libc.c -c -o libc.o
+
+varint.o: varint.c varint.h
+	$(CC) $(CFLAGS) varint.c -c -o varint.o
 
 value.o: value.c value.h state.h
 	$(CC) $(CFLAGS) value.c -c -o value.o

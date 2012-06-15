@@ -2,6 +2,7 @@
 #include "state.h"
 #include "memory.h"
 #include "assembly.h"
+#include "varint.h"
 #include <stdio.h>
 
 extern int do_compile(FILE *fp, struct func *fn);
@@ -153,9 +154,19 @@ retry:
 				var.type = T_INT;
 				var.value.i = param;
 				break;
-			case F_PARTAL:
-				// TODO:
-				break;
+			case F_PARTAL: {
+				ushort_t partal[MAX_VARINT16_LEN];
+				int i = 0;
+				while (asm_flag(inst) != F_INT) {
+					inst = core->inst[info->pc];
+					assert(asm_op(inst) == I_PUSH);
+					partal[i++] = asm_param(inst);
+					++info->pc;
+				}
+				var.type = T_INT;
+				var.value.i = varint16_decode(partal, i);
+				--info->pc;
+				} break;
 			case F_ZSTR:
 				var.type = T_KSTR;
 				var.value.ref = gcx(core->kz[param]);

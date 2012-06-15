@@ -3,6 +3,7 @@
 
 #include "assembly.h"
 #include "value.h"
+#include "varint.h"
 
 // Symbol functions:
 int sym_count();
@@ -19,6 +20,7 @@ int sym_last_slot(int i, int lv);
 // Emiting functions:
 void emit_access(unsigned char op, const char *z);
 void emit_bind(const char *z);
+void emit_int(ymd_int_t imm);
 
 // Scope functions:
 int sop_push(struct func *fn);
@@ -53,20 +55,5 @@ void info_cond_rcd(char which, int pos);
 int stresc(const char *raw, char **rv);
 ymd_int_t xtoll(const char *raw);
 ymd_int_t dtoll(const char *raw);
-
-// Encoding/Decoding
-static inline ymd_uint_t zigzag_encode(ymd_int_t i) {
-	if (i < 0)
-		return (ymd_uint_t)(((-i) << 1) | 1ULL);
-	return (ymd_uint_t)(i << 1);
-}
-static inline ymd_int_t zigzag_decode(ymd_uint_t u) {
-	if (u & 0x1ULL)
-		return -((ymd_int_t)(u >> 1));
-	return (ymd_uint_t)(u >> 1);
-}
-#define MAX_VARINT16_LEN 4
-int varint16_encode(ymd_int_t d, ushort_t rv[]);
-ymd_int_t varint16_decode(const ushort_t by[], int n);
 
 #endif // YMD_SYMBOL_H

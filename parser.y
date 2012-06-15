@@ -366,15 +366,15 @@ TRUE {
 ;
 
 expr:
-number {
-	// TODO:
-	func_emit(sop(), emitAfP(PUSH, INT, atoi(sym_index(-1))));
-}
+number
 | NIL {
 	func_emit(sop(), emitAf(PUSH, NIL));
 }
 | STRING {
-	int i = func_kz(sop(), sym_index(-1), -1);
+	char *priv = NULL;
+	int n = stresc(sym_index(-1), &priv);
+	int i = func_kz(sop(), priv, n);
+	vm_free(priv);
 	func_emit(sop(), emitAfP(PUSH, ZSTR, i));
 }
 | closure_prototype begin EL block end {
@@ -392,10 +392,12 @@ number {
 
 number:
 LITERAL_DEC {
-	// TODO:
+	ymd_int_t imm = dtoll(sym_index(-1));
+	emit_int(imm);
 }
 | LITERAL_HEX {
-	// TODO:
+	ymd_int_t imm = xtoll(sym_index(-1));
+	emit_int(imm);
 }
 ;
 
