@@ -34,8 +34,9 @@
 struct context;
 struct mach;
 
-typedef long long    ymd_int_t;
-typedef unsigned int ymd_inst_t;
+typedef long long          ymd_int_t;
+typedef unsigned long long ymd_uint_t;
+typedef unsigned int       ymd_inst_t;
 typedef int (*ymd_nafn_t)(struct context *);
 
 

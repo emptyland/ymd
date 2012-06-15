@@ -1,9 +1,9 @@
-print("==== simple:");
+print("==== simple:")
 for var i: range(1,3) {
 	print(i)
 }
 
-print("==== break:");
+print("==== break:")
 for i: range(0, 100) {
 	print(">", i)
 	if i >= 6 {
@@ -11,7 +11,7 @@ for i: range(0, 100) {
 	}
 }
 
-print("==== nested:");
+print("==== nested:")
 for i: range(0, 1) {
 	for var j: range(2, 3) {
 		print(i, j)

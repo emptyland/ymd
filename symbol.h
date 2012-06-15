@@ -2,8 +2,7 @@
 #define YMD_SYMBOL_H
 
 #include "assembly.h"
-
-struct func;
+#include "value.h"
 
 // Symbol functions:
 int sym_count();
@@ -52,7 +51,22 @@ void info_cond_rcd(char which, int pos);
 
 // Converation
 int stresc(const char *raw, char **rv);
-long long xtoll(const char *raw);
-long long dtoll(const char *raw);
+ymd_int_t xtoll(const char *raw);
+ymd_int_t dtoll(const char *raw);
+
+// Encoding/Decoding
+static inline ymd_uint_t zigzag_encode(ymd_int_t i) {
+	if (i < 0)
+		return (ymd_uint_t)(((-i) << 1) | 1ULL);
+	return (ymd_uint_t)(i << 1);
+}
+static inline ymd_int_t zigzag_decode(ymd_uint_t u) {
+	if (u & 0x1ULL)
+		return -((ymd_int_t)(u >> 1));
+	return (ymd_uint_t)(u >> 1);
+}
+#define MAX_VARINT16_LEN 4
+int varint16_encode(ymd_int_t d, ushort_t rv[]);
+ymd_int_t varint16_decode(const ushort_t by[], int n);
 
 #endif // YMD_SYMBOL_H

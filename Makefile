@@ -5,11 +5,19 @@ INCS=state.h value.h memory.h
 INCT=$(INCS) yut.h yut_rand.h
 
 #-------------------------------------------------------------------------------
+# ymd_main
+ymd_main: $(OBJS) ymd_main.o disassembly.o parser.o lexer.o symbol.o
+	$(CC) $(OBJS) ymd_main.o disassembly.o parser.o lexer.o symbol.o -o ymd_main
+
+ymd_main.o: $(INCS) disassembly.h libc.h ymd_main.c
+	$(CC) $(CFLAGS) ymd_main.c -c -o ymd_main.o
+
+#-------------------------------------------------------------------------------
 # Run all test
 test: yut_test memory_test value_test skip_list_test hash_map_test \
-      closure_test dynamic_array_test
+      closure_test dynamic_array_test symbol_test
 	./memory_test && ./value_test && ./skip_list_test && ./hash_map_test && \
-	./closure_test && ./dynamic_array_test
+	./closure_test && ./dynamic_array_test && symbol_test
 
 #-------------------------------------------------------------------------------
 # Unit test rules:
@@ -55,6 +63,12 @@ call_test: $(OBJT) call_test.o
 call_test.o: $(INCT) libc.h call_test.c 
 	$(CC) $(CFLAGS) call_test.c -c -o call_test.o
 
+symbol_test: $(OBJT) symbol_test.o
+	$(CC) $(OBJT) symbol_test.o -o symbol_test
+
+symbol_test.o: $(INCT) symbol_test.c symbol.h assembly.h 
+	$(CC) $(CFLAGS) symbol_test.c -c -o symbol_test.o
+
 main_test.o: main_test.c state.h yut.h
 	$(CC) $(CFLAGS) main_test.c -c -o main_test.o
 
@@ -72,15 +86,6 @@ yut_rand.o: yut_rand.c yut_rand.h yut.h
 yut.o: yut.c yut.h
 	$(CC) $(CFLAGS) yut.c -c -o yut.o
 
-# ymd_main
-#-------------------------------------------------------------------------------
-ymd_main: $(OBJS) ymd_main.o disassembly.o parser.o lexer.o symbol.o
-	$(CC) $(OBJS) ymd_main.o disassembly.o parser.o lexer.o symbol.o -o ymd_main
-
-ymd_main.o: $(INCS) disassembly.h libc.h ymd_main.c
-	$(CC) $(CFLAGS) ymd_main.c -c -o ymd_main.o
-
-# Objects rules:
 #-------------------------------------------------------------------------------
 # Objects rules:
 disassembly.o: disassembly.c disassembly.h assembly.h value.h

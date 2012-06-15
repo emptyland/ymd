@@ -58,7 +58,7 @@
 "," { return COMMA; }
 ":" { return COLON; }
 "->" { return DICT; }
-[1-9][0-9]+ {
+[0-9]+ {
 	sym_push(yytext, -1);
 	return LITERAL_DEC;
 }
