@@ -152,7 +152,7 @@ retry:
 			switch (flag) {
 			case F_INT:
 				var.type = T_INT;
-				var.value.i = param;
+				var.value.i = zigzag_decode(param);
 				break;
 			case F_PARTAL: {
 				ushort_t partal[MAX_VARINT16_LEN];

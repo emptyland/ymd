@@ -372,9 +372,13 @@ number
 }
 | STRING {
 	char *priv = NULL;
-	int n = stresc(sym_index(-1), &priv);
-	int i = func_kz(sop(), priv, n);
-	vm_free(priv);
+	int i, n = stresc(sym_index(-1), &priv);
+	if (priv) {
+		i = func_kz(sop(), priv, n);
+		vm_free(priv);
+	} else {
+		i = func_kz(sop(), "", 0);
+	}
 	func_emit(sop(), emitAfP(PUSH, ZSTR, i));
 }
 | closure_prototype begin EL block end {

@@ -12,6 +12,12 @@ struct strbuf {
 #define STRBUF_ADD 128
 static const char *T_STRBUF = "strbuf";
 
+struct ansic_file {
+	struct yio_stream op;
+	FILE *fp;
+};
+static const char *T_STREAM = "stream";
+
 #define PRINT_SPLIT " "
 static void *const kend = (void *)-1;
 
@@ -72,6 +78,14 @@ static int print_var(const struct variable *var) {
 		}
 		putchar('}');
 		} break;
+	case T_MAND: {
+		const struct mand *pm = mand_k(var);
+		int i;
+		printf("block:%p [", pm);
+		for (i = 0; i < pm->len; ++i)
+			printf("%02x ", (unsigned char)pm->land[i]);
+		printf("]");
+		} break;
 	default:
 		vm_die("Bad type: %d", var->type);
 		break;
@@ -106,11 +120,7 @@ static int libx_add(struct context *l) {
 }
 
 static int libx_len(struct context *l) {
-	const struct dyay *argv = ymd_argv(l);
-	const struct variable *arg0;
-	if (!argv)
-		vm_die("Void argument, need 1");
-	arg0 = argv->elem + 0;
+	const struct variable *arg0 = ymd_argv_get(l, 0);
 	switch (arg0->type) {
 	case T_KSTR:
 		ymd_push_int(l, kstr_k(arg0)->len);
@@ -332,9 +342,7 @@ static struct func *new_contain_iter(
 // range({9,8,7}) = {9,8,7}
 static int libx_range(struct context *l) {
 	struct func *iter;
-	const struct dyay *argv = ymd_argv(l);
-	if (!argv)
-		vm_die("Void argument, need less 1");
+	const struct dyay *argv = ymd_argv_chk(l, 1);
 	switch (argv->count) {
 	case 1:
 		iter = new_contain_iter(l, argv->elem, ITER_VALUE);
@@ -358,29 +366,19 @@ static int libx_range(struct context *l) {
 }
 
 static int libx_rank(struct context *l) {
-	struct func *iter;
-	const struct dyay *argv = ymd_argv(l);
-	if (!argv)
-		vm_die("Void argument, need 1");
-	iter = new_contain_iter(l, argv->elem, ITER_KV);
+	struct func *iter = new_contain_iter(l, ymd_argv_get(l, 0), ITER_KV);
 	vset_func(ymd_push(l), iter);
 	return 1;
 }
 
 static int libx_ranki(struct context *l) {
-	struct func *iter;
-	const struct dyay *argv = ymd_argv(l);
-	if (!argv)
-		vm_die("Void argument, need 1");
-	iter = new_contain_iter(l, argv->elem, ITER_KEY);
+	struct func *iter = new_contain_iter(l, ymd_argv_get(l, 0), ITER_KEY);
 	vset_func(ymd_push(l), iter);
 	return 1;
 }
 
 static int libx_done(struct context *l) {
-	const struct dyay *argv = ymd_argv(l);
-	if (!argv || argv->count != 1)
-		vm_die("Bad argument number, need 1");
+	const struct dyay *argv = ymd_argv_chk(l, 1);
 	if (argv->elem[0].type == T_EXT &&
 		argv->elem[0].value.ext == kend)
 		ymd_push_bool(l, 1);
@@ -442,10 +440,7 @@ static int libx_strbuf(struct context *l) {
 static int libx_strfin(struct context *l) {
 	struct strbuf *self;
 	struct kstr *rv;
-	struct dyay *argv = ymd_argv(l);
-	if (!argv)
-		vm_die("Bad argument 1, need `strbuf`");
-	self = strbuf_of(mand_of(argv->elem));
+	self = strbuf_of(mand_of(ymd_argv_get(l, 0)));
 	if (self->len == 0) {
 		vset_nil(ymd_push(l));
 		return 0;
@@ -459,9 +454,7 @@ static int libx_strfin(struct context *l) {
 static int libx_strcat(struct context *l) {
 	int i;
 	struct strbuf *self;
-	struct dyay *argv = ymd_argv(l);
-	if (!argv || argv->count <= 1)
-		vm_die("Bad argument number, need > 1");
+	struct dyay *argv = ymd_argv_chk(l, 2);
 	self = strbuf_of(mand_of(argv->elem));
 	for (i = 1; i < argv->count; ++i) {
 		struct kstr *kz = kstr_of(argv->elem + i);
@@ -469,6 +462,101 @@ static int libx_strcat(struct context *l) {
 		strbuf_append(self, kz->land, kz->len);
 	}
 	return 0;
+}
+
+//------------------------------------------------------------------------------
+// File
+//------------------------------------------------------------------------------
+static inline struct ansic_file *ansic_file_of(struct mand *pm) {
+	if (pm->tt != T_STREAM)
+		vm_die("Builtin fatal:%s:%d", __FILE__, __LINE__);
+	return (struct ansic_file *)pm->land;
+}
+
+static inline struct yio_stream *yio_stream_of(struct mand *pm) {
+	if (pm->tt != T_STREAM)
+		vm_die("Builtin fatal:%s:%d", __FILE__, __LINE__);
+	return (struct yio_stream *)pm->land;
+}
+
+static int ansic_file_read(struct context *l) {
+	char *buf = NULL;
+	struct kstr *kz = NULL;
+	struct ansic_file *self = ansic_file_of(mand_of(ymd_argv_get(l, 0)));
+	ymd_int_t rv, n = 128;
+	if (ymd_argv_chk(l, 1)->count > 1)
+		n = int_of(ymd_argv_get(l, 1));
+	if (n <= 0)
+		goto done;
+	buf = vm_zalloc(n);
+	rv = fread(buf, n, 1, self->fp);
+	if (rv <= 0)
+		goto done;
+	kz = ymd_kstr(buf, rv * n);
+	vm_free(buf);
+	vset_kstr(ymd_push(l), kz);
+	return 1;
+done:
+	if (buf)
+		vm_free(buf);
+	vset_nil(ymd_push(l));
+	return 1;
+}
+
+static int ansic_file_write(struct context *l) {
+	struct ansic_file *self = ansic_file_of(mand_of(ymd_argv_get(l, 0)));
+	struct kstr *bin = NULL;
+	if (is_nil(ymd_argv_get(l, 1)))
+		return 0;
+	bin = kstr_of(ymd_argv_get(l, 1));
+	int rv = fwrite(bin->land, bin->len, 1, self->fp);
+	if (rv < 0)
+		vm_die("Write file failed!");
+	return 0;
+}
+
+static int ansic_file_final(struct ansic_file *self) {
+	if (self->fp) {
+		fclose(self->fp);
+		self->fp = NULL;
+	}
+	return 0;
+}
+
+static int libx_open(struct context *l) {
+	const char *mod = "r";
+	struct mand *x = mand_new(NULL, sizeof(struct ansic_file),
+	                          (ymd_final_t)ansic_file_final);
+	struct ansic_file *rv = (struct ansic_file *)(x->land);
+	x->tt = T_STREAM;
+	rv->op.read = ansic_file_read;
+	rv->op.write = ansic_file_write;
+	if (ymd_argv_chk(l, 1)->count > 1)
+		mod = kstr_of(ymd_argv_get(l, 1))->land;
+	rv->fp = fopen(kstr_of(ymd_argv_get(l, 0))->land, mod);
+	if (!rv->fp)
+		vset_nil(ymd_push(l));
+	else
+		vset_mand(ymd_push(l), x);
+	return 1;
+}
+
+static int libx_read(struct context *l) {
+	struct yio_stream *s = yio_stream_of(mand_of(ymd_argv_get(l, 0)));
+	return s->read(l);
+}
+
+static int libx_write(struct context *l) {
+	struct yio_stream *s = yio_stream_of(mand_of(ymd_argv_get(l, 0)));
+	return s->write(l);
+}
+
+static int libx_close(struct context *l) {
+	struct mand *pm = mand_of(ymd_argv_get(l, 0));
+	struct yio_stream *self = yio_stream_of(pm);
+	assert(pm->final);
+	return (*pm->final)(self);
+
 }
 
 LIBC_BEGIN(Builtin)
@@ -485,6 +573,10 @@ LIBC_BEGIN(Builtin)
 	LIBC_ENTRY(strbuf)
 	LIBC_ENTRY(strcat)
 	LIBC_ENTRY(strfin)
+	LIBC_ENTRY(open)
+	LIBC_ENTRY(read)
+	LIBC_ENTRY(write)
+	LIBC_ENTRY(close)
 LIBC_END
 
 

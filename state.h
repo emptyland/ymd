@@ -90,6 +90,17 @@ static inline struct dyay *ymd_argv(struct context *l) {
 	return ymd_called(l)->argv;
 }
 
+static inline struct dyay *ymd_argv_chk(struct context *l, int need) {
+	if (need > 0 && (!ymd_argv(l) || ymd_argv(l)->count < need))
+		vm_die("Bad argument, need > %d", need);
+	return ymd_argv(l);
+}
+
+static inline struct variable *ymd_argv_get(struct context *l, int i) {
+	struct dyay *argv = ymd_argv_chk(l, i + 1);
+	return argv->elem + i;
+}
+
 static inline struct variable *ymd_bval(struct context *l, int i) {
 	assert(i >= 0);
 	assert(i < ymd_called(l)->n_bind);
