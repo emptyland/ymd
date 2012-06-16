@@ -214,6 +214,7 @@ int dyay_equals(const struct dyay *arr, const struct dyay *rhs);
 int dyay_compare(const struct dyay *arr, const struct dyay *rhs);
 struct variable *dyay_get(struct dyay *arr, ymd_int_t i);
 struct variable *dyay_add(struct dyay *arr);
+struct variable *dyay_insert(struct dyay *arr, ymd_int_t i);
 
 // Managed data: `mand` functions:
 struct mand *mand_new(const void *data, int size, ymd_final_t final);

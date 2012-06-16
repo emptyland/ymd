@@ -108,14 +108,70 @@ out:
 	return 0;
 }
 
+static inline void dyay_range_chk(const struct dyay *arr, ymd_int_t i) {
+	if (i < 0 || i >= arr->count)
+		vm_die("array index out of range, %lld", i);
+}
+
+static void dyay_do_insert(struct dyay *self, struct context *l) {
+	switch (ymd_argv_chk(l, 2)->count) {
+	case 2:
+		*dyay_add(self) = *ymd_argv_get(l, 1);
+		break;
+	case 3: {
+		ymd_int_t i = int_of(ymd_argv_get(l, 1));
+		dyay_range_chk(self, i);
+		*dyay_insert(self, i) = *ymd_argv_get(l, 2);
+		} break;
+	default:
+		vm_die("Too many arguments, %d", ymd_argv(l)->count);
+		break;
+	}
+}
+
 static int libx_insert(struct context *l) {
+	struct variable *arg0 = ymd_argv_get(l, 0);
+	switch (arg0->type) {
+	case T_DYAY:
+		dyay_do_insert(dyay_x(arg0), l);
+		break;
+	case T_HMAP:
+		*hmap_get(hmap_x(arg0), ymd_argv_get(l, 1)) = *ymd_argv_get(l, 2);
+		break;
+	case T_SKLS:
+		*skls_get(skls_x(arg0), ymd_argv_get(l, 1)) = *ymd_argv_get(l, 2);
+		break;
+	default:
+		vm_die("This type: %d is not be support", arg0->type);
+		break;
+	}
+	return 0;
+}
+
+static int libx_append(struct context *l) {
 	int i;
-	struct dyay *self, *argv = ymd_argv(l);
-	if (!argv)
-		return 0;
-	self = dyay_of(argv->elem + 0);
-	for (i = 1; i < argv->count; ++i)
-		*dyay_add(self) = argv->elem[i];
+	struct variable *arg0 = ymd_argv_get(l, 0);
+	switch (arg0->type) {
+	case T_DYAY:
+		for (i = 1; i < ymd_argv_chk(l, 2)->count; ++i)
+			*dyay_add(dyay_x(arg0)) = ymd_argv(l)->elem[i];
+		break;
+	case T_HMAP:
+		for (i = 1; i < ymd_argv_chk(l, 2)->count; ++i) {
+			struct dyay *pair = dyay_of(ymd_argv_get(l, i));
+			*hmap_get(hmap_x(arg0), pair->elem) = pair->elem[1];
+		}
+		break;
+	case T_SKLS:
+		for (i = 1; i < ymd_argv_chk(l, 2)->count; ++i) {
+			struct dyay *pair = dyay_of(ymd_argv_get(l, i));
+			*skls_get(skls_x(arg0), pair->elem) = pair->elem[1];
+		}
+		break;
+	default:
+		vm_die("This type: %d is not be support", arg0->type);
+		break;
+	}
 	return 0;
 }
 
@@ -602,6 +658,7 @@ static int libx_close(struct context *l) {
 LIBC_BEGIN(Builtin)
 	LIBC_ENTRY(print)
 	LIBC_ENTRY(insert)
+	LIBC_ENTRY(append)
 	LIBC_ENTRY(len)
 	LIBC_ENTRY(range)
 	LIBC_ENTRY(rank)

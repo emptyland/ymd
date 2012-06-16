@@ -6,4 +6,6 @@ config.mk
 lex.yy.c
 y.tab.c
 y.tab.h
+foo.ymd
+foo.yut
 ymd_main

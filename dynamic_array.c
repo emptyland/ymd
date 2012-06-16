@@ -81,3 +81,16 @@ struct variable *dyay_add(struct dyay *arr) {
 	memset(arr->elem + arr->count, 0, sizeof(*arr->elem));
 	return arr->elem + arr->count++;
 }
+
+struct variable *dyay_insert(struct dyay *arr, ymd_int_t i) {
+	int j;
+	if (arr->count >= arr->max) // Resize
+		resize(arr);
+	assert(i >= 0);
+	assert(i < arr->count);
+	j = arr->count;
+	while (j-- > i)
+		arr->elem[j + 1] = arr->elem[j];
+	++arr->count;
+	return arr->elem + i;
+}

@@ -1,0 +1,38 @@
+var a = {^}
+var i, j
+
+for i: range(0, 9) {
+	insert(a, i)
+}
+print(a)
+
+// Insert kv pairs
+a = {@}
+for i: range(0, 9) {
+	j = i^2
+	insert(a, i, j)
+}
+print(a)
+
+a = {:}
+for i: range(0, 9) {
+	j = i^2
+	insert(a, i, j)
+}
+print(a)
+
+a = {0, 1, 2, 3, 4, 5, 6}
+insert(a, 1, "a")
+print("step1:", a)
+insert(a, 0, "zero")
+print("step2:", a)
+insert(a, len(a) - 1, "tail")
+print("step3:", a)
+
+// Append 
+a = {^}
+append(a, 1, 2, "Hello", {}, "World")
+print(a)
+a = {}
+append(a, {1,2}, {"name","Johnson"}, {"id",65535})
+print(a)
