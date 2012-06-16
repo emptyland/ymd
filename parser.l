@@ -20,7 +20,6 @@
 "else" { return ELSE; }
 "elif" { return ELIF; }
 "for" { return FOR; }
-"in" { return IN; }
 "break" { return BREAK; }
 "continue" { return CONTINUE; }
 "." { return DOT; }

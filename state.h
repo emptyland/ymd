@@ -4,6 +4,7 @@
 #include "memory.h"
 #include "value.h"
 #include <string.h>
+#include <setjmp.h>
 
 struct mach {
 	struct hmap *global;
@@ -59,6 +60,7 @@ struct context {
 	struct variable loc[MAX_LOCAL];
 	struct variable stk[MAX_STACK];
 	struct variable *top;
+	jmp_buf jpt; // Jump point
 };
 
 //-----------------------------------------------------------------------------

@@ -37,8 +37,8 @@ static void default_die(struct mach *m, const char *msg) {
 	UNUSED(m);
 	if (!msg || !*msg)
 		msg = "Unknown!";
-	fprintf(stderr, "== VM Panic!\n -%s\n", msg);
-	exit(0);
+	fprintf(stderr, "== VM Panic!\n > %s\n", msg);
+	longjmp(ioslate()->jpt, 1);
 }
 
 static struct mach mach_state = {

@@ -108,7 +108,7 @@ out:
 	return 0;
 }
 
-static int libx_add(struct context *l) {
+static int libx_insert(struct context *l) {
 	int i;
 	struct dyay *self, *argv = ymd_argv(l);
 	if (!argv)
@@ -467,49 +467,89 @@ static int libx_strcat(struct context *l) {
 //------------------------------------------------------------------------------
 // File
 //------------------------------------------------------------------------------
-static inline struct ansic_file *ansic_file_of(struct mand *pm) {
+static inline struct ansic_file *ansic_file_of(struct variable *var) {
+	struct mand *pm = mand_of(var);
 	if (pm->tt != T_STREAM)
 		vm_die("Builtin fatal:%s:%d", __FILE__, __LINE__);
 	return (struct ansic_file *)pm->land;
 }
 
-static inline struct yio_stream *yio_stream_of(struct mand *pm) {
+static inline struct yio_stream *yio_stream_of(struct variable *var) {
+	struct mand *pm = mand_of(var);
 	if (pm->tt != T_STREAM)
 		vm_die("Builtin fatal:%s:%d", __FILE__, __LINE__);
 	return (struct yio_stream *)pm->land;
 }
 
-static int ansic_file_read(struct context *l) {
-	char *buf = NULL;
-	struct kstr *kz = NULL;
-	struct ansic_file *self = ansic_file_of(mand_of(ymd_argv_get(l, 0)));
-	ymd_int_t rv, n = 128;
-	if (ymd_argv_chk(l, 1)->count > 1)
-		n = int_of(ymd_argv_get(l, 1));
-	if (n <= 0)
+static struct kstr *ansic_file_readn(struct ansic_file *self, ymd_int_t n) {
+	struct kstr *rv = NULL;
+	char *buf = vm_zalloc(n);
+	int rvl = fread(buf, 1, n, self->fp);
+	if (rvl <= 0)
 		goto done;
-	buf = vm_zalloc(n);
-	rv = fread(buf, n, 1, self->fp);
-	if (rv <= 0)
-		goto done;
-	kz = ymd_kstr(buf, rv * n);
-	vm_free(buf);
-	vset_kstr(ymd_push(l), kz);
-	return 1;
+	rv = kstr_new(buf, rvl);
 done:
-	if (buf)
-		vm_free(buf);
-	vset_nil(ymd_push(l));
+	vm_free(buf);
+	return rv;
+}
+
+static struct kstr *ansic_file_readall(struct ansic_file *self) {
+	ymd_int_t len;
+	fseek(self->fp, 0, SEEK_END);
+	len = ftell(self->fp);
+	rewind(self->fp);
+	return ansic_file_readn(self, len);
+}
+
+static struct kstr *ansic_file_readline(struct ansic_file *self) {
+	char line[1024];
+	char *rv = fgets(line, sizeof(line), self->fp);
+	if (!rv)
+		return NULL;
+	return kstr_new(line, -1);
+}
+
+static int ansic_file_read(struct context *l) {
+	struct kstr *rv = NULL;
+	struct variable *arg1 = NULL;
+	struct ansic_file *self = ansic_file_of(ymd_argv_get(l, 0));
+	if (ymd_argv_chk(l, 1)->count == 1) {
+		rv = ansic_file_readn(self, 128);
+		goto done;
+	}
+	arg1 = ymd_argv_get(l, 1);
+	switch (arg1->type) {
+	case T_KSTR:
+		if (strcmp(kstr_k(arg1)->land, "*all") == 0)
+			rv = ansic_file_readall(self);
+		else if (strcmp(kstr_k(arg1)->land, "*line") == 0)
+			rv = ansic_file_readline(self);
+		else
+			vm_die("Bad read() option: %s", kstr_k(arg1)->land);
+		break;
+	case T_INT: {
+		ymd_int_t n = int_of(ymd_argv_get(l, 1));
+		rv = ansic_file_readn(self, n);
+		} break;
+	default:
+		vm_die("Bad read() option");
+		break;
+	}
+done:
+	if (!rv)
+		vset_nil(ymd_push(l));
+	else
+		vset_kstr(ymd_push(l), rv);
 	return 1;
 }
 
 static int ansic_file_write(struct context *l) {
-	struct ansic_file *self = ansic_file_of(mand_of(ymd_argv_get(l, 0)));
+	struct ansic_file *self = ansic_file_of(ymd_argv_get(l, 0));
 	struct kstr *bin = NULL;
 	if (is_nil(ymd_argv_get(l, 1)))
 		return 0;
 	bin = kstr_of(ymd_argv_get(l, 1));
-	int rv = fwrite(bin->land, bin->len, 1, self->fp);
+	int rv = fwrite(bin->land, 1, bin->len, self->fp);
 	if (rv < 0)
 		vm_die("Write file failed!");
 	return 0;
@@ -542,18 +582,18 @@ static int libx_open(struct context *l) {
 }
 
 static int libx_read(struct context *l) {
-	struct yio_stream *s = yio_stream_of(mand_of(ymd_argv_get(l, 0)));
+	struct yio_stream *s = yio_stream_of(ymd_argv_get(l, 0));
 	return s->read(l);
 }
 
 static int libx_write(struct context *l) {
-	struct yio_stream *s = yio_stream_of(mand_of(ymd_argv_get(l, 0)));
+	struct yio_stream *s = yio_stream_of(ymd_argv_get(l, 0));
 	return s->write(l);
 }
 
 static int libx_close(struct context *l) {
 	struct mand *pm = mand_of(ymd_argv_get(l, 0));
-	struct yio_stream *self = yio_stream_of(pm);
+	struct yio_stream *self = yio_stream_of(ymd_argv_get(l, 0));
 	assert(pm->final);
 	return (*pm->final)(self);
 
@@ -561,7 +601,7 @@ static int libx_close(struct context *l) {
 
 LIBC_BEGIN(Builtin)
 	LIBC_ENTRY(print)
-	LIBC_ENTRY(add)
+	LIBC_ENTRY(insert)
 	LIBC_ENTRY(len)
 	LIBC_ENTRY(range)
 	LIBC_ENTRY(rank)
