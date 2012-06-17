@@ -64,24 +64,24 @@ func_inittype:
 func SYMBOL lparen params rparen {
 	int i = func_kz(sop_index(-2), sym_index(0), -1);
 	func_emit(sop_index(-2), emitAfP(STORE, OFF, i));
-	func_init(sop());
+	func_init(sop(), sym_index(0));
 	sym_scope_end();
 }
 | VAR func SYMBOL lparen params rparen {
 	int i = func_add_lz(sop_index(-2), sym_index(0));
 	func_emit(sop_index(-2), emitAfP(STORE, LOCAL, i));
-	func_init(sop());
+	func_init(sop(), sym_index(0));
 	sym_scope_end();
 }
 ;
 
 closure_prototype:
 func lparen params rparen {
-	func_init(sop());
+	func_init(sop(), NULL);
 	sym_scope_end();
 }
 | func bind_decl lparen params rparen {
-	func_init(sop());
+	func_init(sop(), NULL);
 	sym_scope_end();
 }
 ;

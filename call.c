@@ -7,23 +7,6 @@
 
 extern int do_compile(FILE *fp, struct func *fn);
 
-struct typeof_z {
-	int len;
-	const char *name;
-};
-static const struct typeof_z typeof_name[] = {
-	{ 3, "nil", },
-	{ 3, "int", },
-	{ 4, "bool", },
-	{ 4, "lite", },
-	{ 6, "string", },
-	{ 8, "function", },
-	{ 5, "array", },
-	{ 7, "hashmap", },
-	{ 8, "skiplist", },
-	{ 7, "managed", },
-};
-
 // +----------------------+
 // |  bind  |    local    |
 // +--------+-------------+
@@ -245,7 +228,7 @@ retry:
 			const unsigned tt = ymd_top(l, 0)->type;
 			struct kstr *kz;
 			assert(tt < KNAX);
-			kz = ymd_kstr(typeof_name[tt].name, typeof_name[tt].len);
+			kz = typeof_kstr(tt);
 			ymd_top(l, 0)->type = T_KSTR;
 			ymd_top(l, 0)->value.ref = gcx(kz);
 			} break;
@@ -500,7 +483,7 @@ int func_main(struct func *fn, int argc, char *argv[]) {
 struct func *func_compile(FILE *fp) {
 	int rv;
 	struct func *fn = func_new(NULL);
-	func_init(fn);
+	func_init(fn, "__main__");
 	rv = do_compile(fp, fn);
 	return rv < 0 ? NULL : fn;
 }

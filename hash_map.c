@@ -310,7 +310,7 @@ struct kvi *kz_index(struct hmap *map, const char *z, int n) {
 		kz = (struct kstr *)chunk;
 	}
 	kz->next = NULL;
-	kz->color = 0;
+	kz->marked = 0; // FIXME: Real mark it!
 	kz->type = T_KSTR;
 	kz->len = lzn;
 	kz->hash = kz_hash(z, kz->len);

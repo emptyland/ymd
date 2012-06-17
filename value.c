@@ -5,6 +5,33 @@
 #include <assert.h>
 #include <string.h>
 
+struct typeof_z {
+	int len;
+	const char *name;
+};
+static const struct typeof_z typeof_name[] = {
+	{ 3, "nil", },
+	{ 3, "int", },
+	{ 4, "bool", },
+	{ 4, "lite", },
+	{ 6, "string", },
+	{ 8, "function", },
+	{ 5, "array", },
+	{ 7, "hashmap", },
+	{ 8, "skiplist", },
+	{ 7, "managed", },
+};
+
+const char *typeof_kz(unsigned tt) {
+	assert(tt < sizeof(typeof_name)/sizeof(typeof_name[0]));
+	return typeof_name[tt].name;
+}
+
+struct kstr *typeof_kstr(unsigned tt) {
+	assert(tt < sizeof(typeof_name)/sizeof(typeof_name[0]));
+	return ymd_kstr(typeof_name[tt].name, typeof_name[tt].len);
+}
+
 //-------------------------------------------------------------------------
 // Constant variable value:
 //-------------------------------------------------------------------------

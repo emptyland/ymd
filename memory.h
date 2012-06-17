@@ -7,10 +7,11 @@
 #define GC_GRAY  1
 #define GC_BLACK 2
 
-#define GC_HEAD           \
-	struct gc_node *next; \
-	unsigned char color;  \
-	unsigned char type
+#define GC_HEAD             \
+	struct gc_node *next;   \
+	unsigned char reserved; \
+	unsigned char type;     \
+	unsigned short marked
 
 struct gc_node {
 	GC_HEAD;

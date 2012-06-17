@@ -129,18 +129,17 @@ void func_dump(struct func *fn, FILE *fp) {
 	fprintf(fp, "\n");
 }
 
-const struct kstr *func_init(struct func *fn) {
+const struct kstr *func_init(struct func *fn, const char *name) {
 	assert(fn->proto == NULL);
 	if (fn->is_c) {
-		fn->proto = ymd_format("func (...) {[native:%p]}",
-							   fn->u.nafn);
+		fn->proto = ymd_format("func %s(...) {[native:%p]}",
+							   !name ? "" : name, fn->u.nafn);
 	} else {
-		fn->proto = ymd_format("func [*%d] (*%d) {...}",
-							   fn->n_bind, fn->u.core->kargs);
+		fn->proto = ymd_format("func %s[*%d] (*%d) {...}",
+							   !name ? "" : name, fn->n_bind,
+							   fn->u.core->kargs);
 		func_add_lz(fn, "argv"); // Reserved var(s)
 		// ...
-		//if (fn->n_bind > 0) // Allocate bind variable space
-		//	fn->bind = vm_zalloc(sizeof(*fn->bind) * fn->n_bind);
 	}
 	return fn->proto;
 }

@@ -21,90 +21,146 @@ static const char *T_STREAM = "stream";
 #define PRINT_SPLIT " "
 static void *const kend = (void *)-1;
 
-static int print_var(const struct variable *var) {
+// Format context
+#define FMTX_STATIC_MAX 260
+struct fmtx {
+	char kbuf[FMTX_STATIC_MAX];
+	char *dy;
+	int last;
+	int max;
+};
+#define FMTX_INIT { {0}, NULL, 0, FMTX_STATIC_MAX }
+
+static inline void fmtx_final(struct fmtx *self) {
+	if (self->dy) vm_free(self->dy);
+	memset(self->kbuf, 0, sizeof(self->kbuf));
+	self->dy = NULL;
+	self->last = 0;
+	self->max  = FMTX_STATIC_MAX;
+}
+
+static inline char *fmtx_buf(struct fmtx *self) {
+	return !self->dy ? self->kbuf : self->dy;
+}
+
+static inline int fmtx_remain(struct fmtx *self) {
+	return self->max - self->last;
+}
+
+static inline char *fmtx_last(struct fmtx *self) {
+	return fmtx_buf(self) + self->last;
+}
+
+static inline char *fmtx_add(struct fmtx *self) {
+	self->last += strlen(fmtx_last(self));
+	return fmtx_buf(self);
+}
+
+static void fmtx_need(struct fmtx *self, int n) {
+	if (self->last + n <= (int)sizeof(self->kbuf))
+		return;
+	if (self->last + n <= self->max)
+		return;
+	self->max = (self->last + n) * 3 / 2 + FMTX_STATIC_MAX;
+	if (!self->dy) {
+		self->dy = vm_zalloc(self->max);
+		memcpy(self->dy, self->kbuf, self->last);
+	} else {
+		self->dy = vm_realloc(self->dy, self->max);
+	}
+}
+
+static const char *fmtx_append(struct fmtx *self, const char *src, int n) {
+	fmtx_need(self, n);
+	memcpy(fmtx_last(self), src, n);
+	self->last += n;
+	return fmtx_buf(self);
+}
+
+static const char *tostring(struct fmtx *ctx, const struct variable *var) {
 	switch (var->type) {
 	case T_NIL:
-		printf("nil");
-		break;
-	case T_BOOL:
-		printf("%s", var->value.i ? "true" : "false");
-		break;
+		return fmtx_append(ctx, "nil", 3);
 	case T_INT:
-		printf("%lld", var->value.i);
-		break;
+		fmtx_need(ctx, 24);
+		snprintf(fmtx_last(ctx), fmtx_remain(ctx), "%lld", var->value.i);
+		return fmtx_add(ctx);
+	case T_BOOL:
+		return var->value.i ? fmtx_append(ctx, "true", 4)
+			: fmtx_append(ctx, "false", 5);
 	case T_EXT:
-		printf("@%p", var->value.ext);
-		break;
+		fmtx_need(ctx, 24);
+		snprintf(fmtx_last(ctx), fmtx_remain(ctx), "@%p", var->value.ext);
+		return fmtx_add(ctx);
 	case T_KSTR:
-		printf("%s", kstr_k(var)->land);
-		break;
+		return fmtx_append(ctx, kstr_k(var)->land, kstr_k(var)->len);
 	case T_FUNC:
-		printf("%s", func_k(var)->proto->land);
-		break;
+		return fmtx_append(ctx, func_k(var)->proto->land,
+		                   func_k(var)->proto->len);
 	case T_DYAY: {
 		int i;
-		const struct dyay *arr = dyay_k(var);
-		printf("{");
-		for (i = 0; i < arr->count; ++i) {
-			if (i > 0) printf(", ");
-			print_var(arr->elem + i);
+		fmtx_append(ctx, "{", 1);
+		for (i = 0; i < dyay_k(var)->count; ++i) {
+			if (i > 0) fmtx_append(ctx, ", ", 2);
+			tostring(ctx, dyay_k(var)->elem + i);
 		}
-		printf("}");
-		} break;
-	case T_SKLS: {
-		int f = 0;
-		const struct sknd *i = skls_k(var)->head;
-		printf("@{");
-		while ((i = i->fwd[0]) != NULL) {
-			if (f++ > 0) printf(", ");
-			print_var(&i->k);
-			putchar(':');
-			print_var(&i->v);
-		}
-		putchar('}');
-		} break;
+		} return fmtx_append(ctx, "}", 1);
 	case T_HMAP: {
-		const struct hmap *map = hmap_k(var);
-		const int k = 1 << map->shift;
-		int i, f = 0;
-		putchar('{');
-		for (i = 0; i < k; ++i) {
-			if (!map->item[i].flag)
-				continue;
-			if (f++ > 0) printf(", ");
-			print_var(&map->item[i].k);
-			putchar(':');
-			print_var(&map->item[i].v);
+		struct kvi *initial = hmap_k(var)->item,
+				   *i = NULL,
+				   *k = initial + (1 << hmap_k(var)->shift);
+		int f = 0;
+		fmtx_append(ctx, "{", 1);
+		for (i = initial; i != k; ++i) {
+			if (!i->flag) continue;
+			if (f++ > 0) fmtx_append(ctx, ", ", 2);
+			tostring(ctx, &i->k);
+			fmtx_append(ctx, " : ", 3);
+			tostring(ctx, &i->v);
 		}
-		putchar('}');
-		} break;
+		} return fmtx_append(ctx, "}", 1);
+	case T_SKLS: {
+		struct sknd *initial = skls_k(var)->head->fwd[0],
+				    *i = NULL;
+		int f = 0;
+		fmtx_append(ctx, "{", 1);
+		for (i = initial; i != NULL; i = i->fwd[0]) {
+			if (f++ > 0) fmtx_append(ctx, ", ", 2);
+			tostring(ctx, &i->k);
+			fmtx_append(ctx, " : ", 3);
+			tostring(ctx, &i->v);
+		}
+		} return fmtx_append(ctx, "}", 1);
 	case T_MAND: {
-		const struct mand *pm = mand_k(var);
-		int i;
-		printf("block:%p [", pm);
-		for (i = 0; i < pm->len; ++i)
-			printf("%02x ", (unsigned char)pm->land[i]);
-		printf("]");
-		} break;
+		fmtx_append(ctx, "(", 1);
+		if (mand_k(var)->tt)
+			fmtx_append(ctx, mand_k(var)->tt, strlen(mand_k(var)->tt));
+		else
+			fmtx_append(ctx, "*", 1);
+		fmtx_append(ctx, ")", 1);
+		fmtx_need(ctx, 10 + 24 + 2);
+		snprintf(fmtx_last(ctx), fmtx_remain(ctx), "[%d@%p]",
+		         mand_k(var)->len, mand_k(var)->land);
+		} return fmtx_add(ctx);
 	default:
-		vm_die("Bad type: %d", var->type);
+		assert(0);
 		break;
 	}
-	return 0;
+	return NULL;
 }
 
 static int libx_print(struct context *l) {
 	int i;
+	struct fmtx fx = FMTX_INIT;
 	struct dyay *argv = ymd_argv(l);
-	if (!argv)
-		goto out;
+	if (!argv) { puts(""); return 0; }
 	for (i = 0; i < argv->count; ++i) {
-		struct variable *var = argv->elem + i;
+		const char *raw = tostring(&fx, argv->elem + i);
 		if (i > 0) printf(PRINT_SPLIT);
-		print_var(var);
+		fwrite(raw, fx.last, 1, stdout);
+		fmtx_final(&fx);
 	}
-out:
-	printf("\n");
+	puts("");
 	return 0;
 }
 
@@ -142,7 +198,7 @@ static int libx_insert(struct context *l) {
 		*skls_get(skls_x(arg0), ymd_argv_get(l, 1)) = *ymd_argv_get(l, 2);
 		break;
 	default:
-		vm_die("This type: %d is not be support", arg0->type);
+		vm_die("This type: `%s` is not be support", typeof_kz(arg0->type));
 		break;
 	}
 	return 0;
@@ -169,7 +225,7 @@ static int libx_append(struct context *l) {
 		}
 		break;
 	default:
-		vm_die("This type: %d is not be support", arg0->type);
+		vm_die("This type: `%s` is not be support", typeof_kz(arg0->type));
 		break;
 	}
 	return 0;
@@ -184,18 +240,48 @@ static int libx_len(struct context *l) {
 	case T_DYAY:
 		ymd_push_int(l, dyay_k(arg0)->count);
 		break;
+	case T_HMAP: {
+		ymd_int_t n = 0;
+		struct kvi *i = hmap_k(arg0)->item,
+				   *k = i + (1 << hmap_k(arg0)->shift);
+		for (; i != k; ++i)
+			if (i->flag) ++n;
+		ymd_push_int(l, n);
+		} break;
+	case T_SKLS: {
+		ymd_int_t n = 0;
+		struct sknd *i = skls_k(arg0)->head->fwd[0];
+		for (; i != NULL; i = i->fwd[0]) ++n;
+		ymd_push_int(l, n);
+		} break;
 	default:
 		ymd_push_nil(l);
-		vm_die("Bad argument 1, need a string/hashmap/skiplist/array");
+		vm_die("This type: `%s` is not be support, "
+		       "need a container or string type",
+		       typeof_kz(arg0->type));
 		return 1;
 	}
 	return 1;
 }
 
+// int 12   -> "12"
+// lite 12  -> "@0x000000000000000C"
+// nil      -> "nil"
+// bool     -> "true" or "false"
+// string   -> "Hello, World"
+// array    -> "{1,2,name,{1,2}}"
+// function -> "func [...] (...) {...}"
+// hashmap  -> "{name:John, content:{1,2,3}}"
+// skiplist -> "@{name:John, content:{1,2,3}}"
+// managed  -> "(stream)[24@0x08067FF]"
 static int libx_str(struct context *l) {
-	// TODO:
-	(void)l;
-	return 0;
+	const struct variable *arg0 = ymd_argv_get(l, 0);
+	struct fmtx fx = FMTX_INIT;
+	const char *z = tostring(&fx, arg0);
+	struct kstr *rv = ymd_kstr(z, fx.last);
+	vset_kstr(ymd_push(l), rv);
+	fmtx_final(&fx);
+	return 1;
 }
 
 //------------------------------------------------------------------------------
@@ -233,7 +319,7 @@ static struct func *new_step_iter(struct context *l,
 		return func_new(libx_end);
 	iter = func_new(step_iter);
 	iter->n_bind = 3;
-	func_init(iter);
+	func_init(iter, "__step_iter__");
 	vset_int(func_bval(iter, 0), i);
 	vset_int(func_bval(iter, 1), m);
 	vset_int(func_bval(iter, 2), s);
@@ -358,7 +444,7 @@ static struct func *new_contain_iter(
 	case T_DYAY:
 		iter = func_new(dyay_iter);
 		iter->n_bind = 4;
-		func_init(iter);
+		func_init(iter, "__dyay_iter__");
 		vset_ext(func_bval(iter, 0), dyay_k(obj)->elem);
 		vset_ext(func_bval(iter, 1), dyay_k(obj)->elem + dyay_k(obj)->count);
 		vset_int(func_bval(iter, 2), 0);
@@ -368,10 +454,10 @@ static struct func *new_contain_iter(
 		struct kvi *m = hmap_k(obj)->item + (1 << hmap_k(obj)->shift),
 				   *i = move2valid(hmap_k(obj)->item, m);
 		if (i >= m)
-			return func_new(libx_end);
+			return func_new(libx_end); // FIXME:
 		iter = func_new(hmap_iter);
 		iter->n_bind = 3;
-		func_init(iter);
+		func_init(iter, "__hmap_iter__");
 		vset_ext(func_bval(iter, 0), i);
 		vset_ext(func_bval(iter, 1), m);
 		vset_int(func_bval(iter, 2), flag);
@@ -379,10 +465,10 @@ static struct func *new_contain_iter(
 	case T_SKLS: {
 		struct sknd *i = skls_k(obj)->head->fwd[0];
 		if (!i)
-			return func_new(libx_end);
+			return func_new(libx_end); // FIXME:
 		iter = func_new(skls_iter);
 		iter->n_bind = 2;
-		func_init(iter);
+		func_init(iter, "__skls_iter__");
 		vset_ext(func_bval(iter, 0), i);
 		vset_int(func_bval(iter, 1), flag);
 		} break;
@@ -444,49 +530,37 @@ static int libx_done(struct context *l) {
 }
 
 static int libx_panic(struct context *l) {
-	(void)l;
-	vm_die("Unknown");
+	int i;
+	struct dyay *argv = ymd_argv(l);
+	struct fmtx fx = FMTX_INIT;
+	if (!argv || argv->count == 0)
+		vm_die("Unknown");
+	for (i = 0; i < argv->count; ++i) {
+		if (i > 0) fmtx_append(&fx, " ", 1);
+		tostring(&fx, argv->elem + i);
+	}
+	vm_die(fmtx_buf(&fx));
+	fmtx_final(&fx);
 	return 0;
 }
 
 //------------------------------------------------------------------------------
 // String Buffer: strbuf
 //------------------------------------------------------------------------------
-static inline struct strbuf *strbuf_of(struct mand *pm) {
+static inline struct fmtx *strbuf_of(struct variable *var) {
+	struct mand *pm = mand_of(var);
 	if (pm->tt != T_STRBUF)
 		vm_die("Builtin fatal:%s:%d", __FILE__, __LINE__);
-	return (struct strbuf *)pm->land;
+	return (struct fmtx *)pm->land;
 }
 
-static int strbuf_final(struct strbuf *sb) {
-	if (sb->buf)
-		vm_free(sb->buf);
-	sb->len = 0;
-	sb->max = 0;
-	sb->buf = NULL;
+static int strbuf_final(struct fmtx *sb) {
+	fmtx_final(sb);
 	return 0;
 }
 
-static void strbuf_need(struct strbuf *sb, int add) {
-	if (sb->len + add <= sb->max)
-		return;
-	while (sb->len + add > sb->max)
-		sb->max = sb->max * 3 / 2 + STRBUF_ADD;
-	if (!sb->buf)
-		sb->buf = vm_zalloc(sb->max);
-	else
-		sb->buf = vm_realloc(sb->buf, sb->max);
-}
-
-static inline void strbuf_append(struct strbuf *sb,
-                                 const char *z, int n) {
-	assert(sb->len + n <= sb->max);
-	memcpy(sb->buf + sb->len, z, n);
-	sb->len += n;
-}
-
 static int libx_strbuf(struct context *l) {
-	struct mand *x = mand_new(NULL, sizeof(struct strbuf),
+	struct mand *x = mand_new(NULL, sizeof(struct fmtx),
 	                          (ymd_final_t)strbuf_final);
 	x->tt = T_STRBUF;
 	vset_mand(ymd_push(l), x);
@@ -494,29 +568,26 @@ static int libx_strbuf(struct context *l) {
 }
 
 static int libx_strfin(struct context *l) {
-	struct strbuf *self;
+	struct fmtx *self;
 	struct kstr *rv;
-	self = strbuf_of(mand_of(ymd_argv_get(l, 0)));
-	if (self->len == 0) {
+	self = strbuf_of(ymd_argv_get(l, 0));
+	if (self->last == 0) {
 		vset_nil(ymd_push(l));
-		return 0;
+		goto done;
 	}
-	rv = ymd_kstr(self->buf, self->len);
-	strbuf_final(self);
+	rv = ymd_kstr(fmtx_buf(self), self->last);
 	vset_kstr(ymd_push(l), rv);
+done:
+	strbuf_final(self);
 	return 1;
 }
 
 static int libx_strcat(struct context *l) {
 	int i;
-	struct strbuf *self;
 	struct dyay *argv = ymd_argv_chk(l, 2);
-	self = strbuf_of(mand_of(argv->elem));
-	for (i = 1; i < argv->count; ++i) {
-		struct kstr *kz = kstr_of(argv->elem + i);
-		strbuf_need(self, kz->len);
-		strbuf_append(self, kz->land, kz->len);
-	}
+	struct fmtx *self = strbuf_of(argv->elem);
+	for (i = 1; i < argv->count; ++i)
+		tostring(self, argv->elem + i);
 	return 0;
 }
 
@@ -687,7 +758,7 @@ int ymd_load_lib(ymd_libc_t lbx) {
 		key.value.ref = gcx(kz);
 		rv = hmap_get(vm()->global, &key);
 		rv->type = T_FUNC;
-		func_init(fn);
+		func_init(fn, kz->land);
 		rv->value.ref = gcx(fn);
 	}
 	return 0;

@@ -182,6 +182,9 @@ static inline void vset_##name(struct variable *v, struct name *o) { \
 DECL_TREF(DEFINE_SETTER)
 #undef DEFINE_SETTER
 
+const char *typeof_kz(unsigned tt);
+struct kstr *typeof_kstr(unsigned tt);
+
 // Generic comparing
 int equals(const struct variable *lhs, const struct variable *rhs);
 int compare(const struct variable *lhs, const struct variable *rhs);
@@ -224,7 +227,7 @@ int mand_compare(const struct mand *pm, const struct mand *rhs);
 
 // Closure functions:
 struct func *func_new(ymd_nafn_t nafn);
-const struct kstr *func_init(struct func *fn);
+const struct kstr *func_init(struct func *fn, const char *name);
 struct func *func_clone(struct func *fn);
 void func_final(struct func *fn);
 int func_emit(struct func *fn, ymd_inst_t inst);

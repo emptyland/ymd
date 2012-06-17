@@ -8,6 +8,8 @@
 
 #define MAX_MSG_LEN 1024
 
+static void vm_backtrace(int max);
+
 static void *default_zalloc(struct mach *m, size_t size) {
 	void *chunk = calloc(size, 1);
 	if (!chunk)
@@ -37,7 +39,9 @@ static void default_die(struct mach *m, const char *msg) {
 	UNUSED(m);
 	if (!msg || !*msg)
 		msg = "Unknown!";
-	fprintf(stderr, "== VM Panic!\n > %s\n", msg);
+	fprintf(stderr, "== VM Panic!\n%%%% %s\n", msg);
+	fprintf(stderr, "-- Back trace:\n");
+	vm_backtrace(6);
 	longjmp(ioslate()->jpt, 1);
 }
 
@@ -90,6 +94,17 @@ int vm_init_context() {
 void vm_final_context() {
 	vm_free(owned_ctx);
 	owned_ctx = NULL;
+}
+
+static void vm_backtrace(int max) {
+	struct call_info *i = ioslate()->info;
+	assert(max >= 0);
+	while (i && max--) {
+		fprintf(stderr, " > %s\n", i->run->proto->land);
+		i = i->chain;
+	}
+	if (i != NULL)
+		fprintf(stderr, " > ... more calls ...\n");
 }
 
 //------------------------------------------------------------------------
