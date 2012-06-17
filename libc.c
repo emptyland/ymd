@@ -563,6 +563,7 @@ static int libx_strbuf(struct context *l) {
 	struct mand *x = mand_new(NULL, sizeof(struct fmtx),
 	                          (ymd_final_t)strbuf_final);
 	x->tt = T_STRBUF;
+	((struct fmtx *)x->land)->max = FMTX_STATIC_MAX;
 	vset_mand(ymd_push(l), x);
 	return 1;
 }
