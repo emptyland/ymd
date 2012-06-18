@@ -73,6 +73,12 @@ symbol_test: $(OBJT) symbol_test.o
 symbol_test.o: $(INCT) symbol_test.c symbol.h assembly.h 
 	$(CC) $(CFLAGS) symbol_test.c -c -o symbol_test.o
 
+lex_test: $(OBJT) lex.o lex_test.o
+	$(CC) $(OBJT) lex_test.o lex.o -o lex_test 
+
+lex_test.o: lex_test.c lex.h
+	$(CC) $(CFLAGS) lex_test.c -c -o lex_test.o
+
 main_test.o: main_test.c state.h yut.h
 	$(CC) $(CFLAGS) main_test.c -c -o main_test.o
 
@@ -102,6 +108,9 @@ disassembly.o: disassembly.c disassembly.h assembly.h value.h
 
 symbol.o: symbol.c symbol.h state.h value.h
 	$(CC) $(CFLAGS) symbol.c -c -o symbol.o
+
+lex.o: lex.c lex.h
+	$(CC) $(CFLAGS) lex.c -c -o lex.o
 
 state.o: state.c state.h value.h memory.h
 	$(CC) $(CFLAGS) state.c -c -o state.o
