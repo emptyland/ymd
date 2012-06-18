@@ -805,6 +805,52 @@ static int libx_match(struct context *l) {
 	return 1;
 }
 
+//------------------------------------------------------------------------------
+// Library:
+//------------------------------------------------------------------------------
+extern int do_compile(FILE *fp, struct func *fn);
+
+#define MAX_BLOCK_NAME_LEN 260 * 2
+
+static const char *file2blknam(const char *name, char *buf, int len) {
+	int i = 0;
+	char tran[MAX_BLOCK_NAME_LEN];
+	memset(tran, 0, sizeof(tran));
+	while (*name) {
+		char ch = *name++;
+		if (ch == '.') { // Transform `.` to `_2d_`
+			strcat(tran + i, "_2d_");
+			i += 4;
+		} else {
+			tran[i] = ch;
+			++i;
+		}
+	}
+	tran[i] = 0; // finish
+	snprintf(buf, len, "__blk_%s__", tran);
+	return buf;
+}
+
+static int libx_import(struct context *l) {
+	int i, rv;
+	char blknam[MAX_BLOCK_NAME_LEN];
+	struct func *block;
+	struct kstr *name = kstr_of(ymd_argv_get(l, 0));
+	FILE *fp = fopen(name->land, "r");
+	if (!fp)
+		vm_die("Can not open import file: %s", name->land);
+	block = func_new(NULL);
+	rv = do_compile(fp, block);
+	fclose(fp);
+	if (rv < 0)
+		vm_die("Import fatal, syntax error, %s", name->land);
+	func_init(block, file2blknam(name->land, blknam, sizeof(blknam)));
+	vset_func(ymd_push(l), block);
+	for (i = 1; i < ymd_argv(l)->count; ++i)
+		*ymd_push(l) = *ymd_argv_get(l, i);
+	return func_call(block, ymd_argv(l)->count - 1);
+}
+
 LIBC_BEGIN(Builtin)
 	LIBC_ENTRY(print)
 	LIBC_ENTRY(insert)
@@ -826,6 +872,7 @@ LIBC_BEGIN(Builtin)
 	LIBC_ENTRY(close)
 	LIBC_ENTRY(pattern)
 	LIBC_ENTRY(match)
+	LIBC_ENTRY(import)
 LIBC_END
 
 

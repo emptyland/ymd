@@ -241,8 +241,7 @@ int func_main(struct func *fn, int argc, char *argv[]);
 struct func *func_compile(FILE *fp);
 void func_dump(struct func *fn, FILE *fp);
 static inline int func_nlocal(const struct func *fn) {
-	assert(!fn->is_c);
-	return fn->u.core->klz - fn->n_bind;
+	return fn->is_c ? 0 : fn->u.core->klz - fn->n_bind;
 }
 static inline struct variable *func_bval(struct func *fn, int i) {
 	struct variable nil; memset(&nil, 0, sizeof(nil));
