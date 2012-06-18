@@ -11,7 +11,7 @@
 #define I_FOREACH 30 // foreach label
 #define I_SETF    35 // setf n
 #define I_PUSH    40 // push "string"|true|false|nil|number|local|off
-#define I_TEST    45 // test gt|ge|lt|le|eq|ne
+#define I_TEST    45 // test gt|ge|lt|le|eq|ne|match
 #define I_LOGC    50 // logc and|or|not
 #define I_INDEX   55 // index
 #define I_TYPEOF  60 // typeof
@@ -56,6 +56,7 @@
 #define F_GE 3
 #define F_LT 4
 #define F_LE 5
+#define F_MATCH 6
 
 // logc
 // param: Ignore all

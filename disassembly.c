@@ -2,7 +2,7 @@
 #include <assert.h>
 
 static const char *kz_test_op[] = {
-	"eq", "ne", "gt", "ge", "lt", "le",
+	"eq", "ne", "gt", "ge", "lt", "le", "match",
 };
 
 static const char *kz_logc_op[] = {

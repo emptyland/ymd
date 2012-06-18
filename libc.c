@@ -1,15 +1,16 @@
+#include "3rd/regex/regex.h"
 #include "state.h"
 #include "value.h"
 #include "memory.h"
 #include "libc.h"
 #include <stdio.h>
 
-struct strbuf {
-	int len;
-	int max;
-	char *buf;
+struct posix_regex {
+	regex_t core; // NOTE: This field must be first!
+	int sub;
 };
-#define STRBUF_ADD 128
+static const char *T_REGEX = "regex";
+
 static const char *T_STRBUF = "strbuf";
 
 struct ansic_file {
@@ -727,6 +728,83 @@ static int libx_close(struct context *l) {
 
 }
 
+//------------------------------------------------------------------------------
+// Regex pattern and match
+//------------------------------------------------------------------------------
+static inline struct posix_regex *posix_regex_of(struct variable *var) {
+	struct mand *pm = mand_of(var);
+	if (pm->tt != T_REGEX)
+		vm_die("Builtin fatal:%s:%d", __FILE__, __LINE__);
+	return (struct posix_regex *)pm->land;
+}
+
+static int posix_regex_final(struct posix_regex *self) {
+	regfree(&self->core);
+	return 0;
+}
+
+// Example:
+// regex = pattern("^[0-9]+$")
+// result = match(regex, "0000")
+// print(result)
+static int libx_pattern(struct context *l) {
+	int err = 0, cflag = REG_EXTENDED;
+	struct kstr *arg0 = kstr_of(ymd_argv_get(l, 0));
+	struct mand *x = mand_new(NULL, sizeof(*x),
+	                          (ymd_final_t)posix_regex_final);
+	struct posix_regex *self = (struct posix_regex *)x->land;
+	x->tt = T_REGEX;
+	switch (ymd_argv(l)->count) {
+	case 1:
+		cflag = REG_NOSUB;
+		break;
+	case 2: {
+		struct kstr *arg1 = kstr_of(ymd_argv_get(l, 1));
+		if (strcmp(arg1->land, "*nosub") == 0)
+			cflag |= REG_NOSUB;
+		else if (strcmp(arg1->land, "*sub") == 0)
+			self->sub = 1;
+		else
+			vm_die("Bad regex option: %s", arg1->land);
+		} break;
+	default:
+		vm_die("Too many args, %d", ymd_argv(l)->count);
+		break;
+	}
+	err = regcomp(&self->core, arg0->land, cflag);
+	if (err)
+		vset_nil(ymd_push(l));
+	else
+		vset_mand(ymd_push(l), x);
+	return 1;
+}
+
+static int libx_match(struct context *l) {
+	struct posix_regex *self = posix_regex_of(ymd_argv_get(l, 0));
+	struct kstr *arg1 = kstr_of(ymd_argv_get(l, 1));
+	int err = 0;
+	if (self->sub) {
+		struct dyay *rv = dyay_new(0);
+		regmatch_t matched[128];
+		err = regexec(&self->core, arg1->land,
+		              sizeof(matched)/sizeof(matched[0]),
+					  matched, 0);
+		if (!err) {
+			regmatch_t *i;
+			for (i = matched; i->rm_so != -1; ++i) {
+				struct kstr *sub = ymd_kstr(arg1->land + i->rm_so,
+				                            i->rm_eo - i->rm_so);
+				vset_kstr(dyay_add(rv), sub);
+			}
+		}
+		vset_dyay(ymd_push(l), rv);
+	} else {
+		err = regexec(&self->core, arg1->land, 0, NULL, 0);
+		vset_bool(ymd_push(l), !err);
+	}
+	return 1;
+}
+
 LIBC_BEGIN(Builtin)
 	LIBC_ENTRY(print)
 	LIBC_ENTRY(insert)
@@ -746,6 +824,8 @@ LIBC_BEGIN(Builtin)
 	LIBC_ENTRY(read)
 	LIBC_ENTRY(write)
 	LIBC_ENTRY(close)
+	LIBC_ENTRY(pattern)
+	LIBC_ENTRY(match)
 LIBC_END
 
 

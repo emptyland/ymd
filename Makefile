@@ -5,10 +5,13 @@ OBJT=$(OBJS) yut_rand.o yut.o main_test.o disassembly.o parser.o lexer.o symbol.
 INCS=state.h value.h memory.h
 INCT=$(INCS) yut.h yut_rand.h
 
+LIB_REGEX=3rd/regex/libregex.a
+XLIBS=$(LIB_REGEX)
+
 #-------------------------------------------------------------------------------
 # ymd_main
-ymd_main: $(OBJS) ymd_main.o disassembly.o parser.o lexer.o symbol.o
-	$(CC) $(OBJS) ymd_main.o disassembly.o parser.o lexer.o symbol.o -o ymd_main
+ymd_main: $(OBJS) $(XLIBS) ymd_main.o disassembly.o parser.o lexer.o symbol.o
+	$(CC) $(OBJS) $(XLIBS) ymd_main.o disassembly.o parser.o lexer.o symbol.o -o ymd_main
 
 ymd_main.o: $(INCS) disassembly.h libc.h ymd_main.c
 	$(CC) $(CFLAGS) ymd_main.c -c -o ymd_main.o
@@ -88,6 +91,11 @@ yut.o: yut.c yut.h
 	$(CC) $(CFLAGS) yut.c -c -o yut.o
 
 #-------------------------------------------------------------------------------
+# 3rd party libs rules:
+$(LIB_REGEX):
+	cd 3rd && make regex
+
+#-------------------------------------------------------------------------------
 # Objects rules:
 disassembly.o: disassembly.c disassembly.h assembly.h value.h
 	$(CC) $(CFLAGS) disassembly.c -c -o disassembly.o
@@ -141,4 +149,5 @@ lex.yy.c: parser.l
 
 .PHONY: clean
 clean:
-	rm *.o *_test y.tab.c y.tab.h lex.yy.c ymd_main 2&> /dev/null
+	rm -f *.o *_test y.tab.c y.tab.h lex.yy.c ymd_main
+	cd 3rd && make clean

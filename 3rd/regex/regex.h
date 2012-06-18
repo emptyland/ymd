@@ -4,6 +4,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+#include <unistd.h>
 
 /* === regex2.h === */
 typedef off_t regoff_t;

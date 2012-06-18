@@ -33,7 +33,7 @@ int yyerror(const char *e);
 %left AND OR
 %left NOT
 %left LPAREN RPAREN
-%left GT GE LT LE EQ NE
+%left GT GE LT LE EQ NE MATCH
 %left ADD SUB
 %left MUL DIV MOD
 %right POW
@@ -69,6 +69,8 @@ func SYMBOL lparen params rparen {
 }
 | VAR func SYMBOL lparen params rparen {
 	int i = func_add_lz(sop_index(-2), sym_index(0));
+	if (i < 0)
+		yyerror("Local variable duplicate.");
 	func_emit(sop_index(-2), emitAfP(STORE, LOCAL, i));
 	func_init(sop(), sym_index(0));
 	sym_scope_end();
@@ -264,7 +266,8 @@ SYMBOL {
 	info_loop_set_id(sym_index(-1));
 }
 | VAR SYMBOL {
-	func_add_lz(sop(), sym_index(-1));
+	if (func_add_lz(sop(), sym_index(-1)) < 0)
+		yyerror("Local variable duplicate.");
 	info_loop_set_id(sym_index(-1));
 }
 ;
@@ -300,7 +303,8 @@ decl_expr
 
 decl_expr:
 SYMBOL {
-	func_add_lz(sop(), sym_index(0));
+	if (func_add_lz(sop(), sym_index(0)) < 0)
+		yyerror("Local variable duplicate.");
 	sym_pop();
 }
 | SYMBOL ASSIGN rval {
@@ -351,6 +355,9 @@ TRUE {
 }
 | expr NE expr {
 	func_emit(sop(), emitAf(TEST, NE));
+}
+| expr MATCH expr {
+	func_emit(sop(), emitAf(TEST, MATCH));
 }
 | cond AND cond {
 	func_emit(sop(), emitAf(LOGC, AND));

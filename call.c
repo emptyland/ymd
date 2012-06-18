@@ -3,6 +3,7 @@
 #include "memory.h"
 #include "assembly.h"
 #include "varint.h"
+#include "3rd/regex/regex.h"
 #include <stdio.h>
 
 extern int do_compile(FILE *fp, struct func *fn);
@@ -38,6 +39,21 @@ static inline struct variable *vm_global(struct func *fn, int i) {
 	key.type = T_KSTR;
 	key.value.ref = gcx(k);
 	return hmap_get(vm()->global, &key);
+}
+
+static inline int vm_match(const struct kstr *lhs, const struct kstr *pattern) {
+	regex_t regex;
+	int err = regcomp(&regex, pattern->land, REG_NOSUB|REG_EXTENDED);
+	if (err) {
+		char msg[128];
+		regerror(err, &regex, msg, sizeof(msg));
+		regfree(&regex);
+		vm_die("Regex match fatal: %s", msg);
+		return 0;
+	}
+	err = regexec(&regex, lhs->land, 0, NULL, 0);
+	regfree(&regex);
+	return !err;
 }
 
 //-----------------------------------------------------------------------------
@@ -192,6 +208,9 @@ retry:
 				break;
 			case F_LE:
 				rhs->value.i = compare(rhs, lhs) <= 0;
+				break;
+			case F_MATCH:
+				rhs->value.i = vm_match(kstr_of(rhs), kstr_of(lhs));
 				break;
 			default:
 				assert(0);

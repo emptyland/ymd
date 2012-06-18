@@ -5,6 +5,18 @@
 #include <string.h>
 %}
 %%
+[0-9]+ {
+	sym_push(yytext, -1);
+	return LITERAL_DEC;
+}
+"0x"[0-9a-fA-F]+ {
+	sym_push(yytext, -1);
+	return LITERAL_HEX;
+}
+[\n] { return EL; }
+[\t\r ]
+[/][/].*[\n]
+[#].*[\n]
 "nil" { return NIL; }
 "true" { return TRUE; }
 "false" { return FALSE; }
@@ -22,12 +34,21 @@
 "for" { return FOR; }
 "break" { return BREAK; }
 "continue" { return CONTINUE; }
+[_a-zA-Z][a-zA-Z_0-9]* {
+	sym_push(yytext, -1);
+	return SYMBOL;
+}
+["](([a-zA-Z~!@#$%^&*()_+-=`{\}[\]:;<>?,./\t\ ])|([\\]((["])|(x[0-9a-fA-F]+)|(u[0-9a-fA-F]+)|([\\])|([a])|([b])|([f])|([n])|([r])|([v])|([t])|([0]))))*["] {
+	sym_push(yytext + 1, strlen(yytext) - 2);
+	return STRING;
+}
 "." { return DOT; }
 ">" { return GT; }
 ">=" { return GE; }
 "<" { return LT; }
 "<=" { return LE; }
 "==" { return EQ; }
+"~=" { return MATCH; }
 "!=" { return NE; }
 "=" { return ASSIGN; }
 "-" { return SUB; }
@@ -57,26 +78,6 @@
 "," { return COMMA; }
 ":" { return COLON; }
 "->" { return DICT; }
-[0-9]+ {
-	sym_push(yytext, -1);
-	return LITERAL_DEC;
-}
-"0x"[0-9a-fA-F]+ {
-	sym_push(yytext, -1);
-	return LITERAL_HEX;
-}
-[_a-zA-Z][a-zA-Z_0-9]* {
-	sym_push(yytext, -1);
-	return SYMBOL;
-}
-[\n] { return EL; }
-[\t\r ]
-[/][/].*[\n]
-[#].*[\n]
-["](([a-zA-Z~!@#$%^&*()_+-=`{\}[\]:;<>?,./\t\ ])|([\\]((["])|(x[0-9a-fA-F]+)|(u[0-9a-fA-F]+)|([\\])|([a])|([b])|([f])|([n])|([r])|([v])|([t])|([0]))))*["] {
-	sym_push(yytext + 1, strlen(yytext) - 2);
-	return STRING;
-}
 . { printf("Fatal: Error token!\n"); }
 %%
 int yywrap(void) {

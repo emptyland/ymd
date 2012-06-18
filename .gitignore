@@ -1,5 +1,6 @@
 config.mk
 *.o
+*.a
 *_test
 *.swp
 *.log
