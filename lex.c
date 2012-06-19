@@ -89,6 +89,7 @@ static int lex_term(int ch) {
 static int lex_read_dec(struct ymd_lex *lex, int neg, struct ytoken *x) {
 	int ch;
 	x->off = lex->buf + lex->off - neg;
+	x->token = ERROR;
 	while (!lex_term(ch = lex_read(lex))) {
 		if (isdigit(ch))
 			++x->len;
@@ -97,12 +98,14 @@ static int lex_read_dec(struct ymd_lex *lex, int neg, struct ytoken *x) {
 	}
 	--lex->off;
 	x->token = !x->len ? ERROR : DEC_LITERAL; 
+	x->len += neg;
 	return x->token;
 }
 
 static int lex_read_hex(struct ymd_lex *lex, struct ytoken *x) {
 	int ch;
 	lex_move(lex);
+	x->token = ERROR;
 	x->off = lex->buf + lex->off - 2; // '0x|0X' 2 char
 	while (!lex_term(ch = lex_read(lex))) {
 		if (isxdigit(ch))
@@ -112,6 +115,30 @@ static int lex_read_hex(struct ymd_lex *lex, struct ytoken *x) {
 	}
 	--lex->off;
 	x->token = !x->len ? ERROR : HEX_LITERAL; 
+	return x->token;
+}
+
+static int lex_read_sym(struct ymd_lex *lex, struct ytoken *x) {
+	x->token = ERROR;
+	x->off = lex->buf + lex->off;
+	for (;;) {
+		int ch = lex_read(lex);
+		switch (ch) {
+		case EOS:
+		case TERM_CHAR:
+		case PREX_CHAR:
+		case '\n':
+			goto done;
+		default:
+			if (isalpha(ch) || isdigit(ch) || ch == '_')
+				++x->len;
+			else
+				return ERROR;
+			break;
+		}
+	}
+done:
+	x->token = SYMBOL;
 	return x->token;
 }
 
@@ -161,11 +188,15 @@ int lex_next(struct ymd_lex *lex, struct ytoken *x) {
 			rv->len = 1;
 			lex_move(lex);
 			return rv->token;
+		case '_':
+			return lex_read_sym(lex, rv);
 		default:
 			if (isspace(ch))
 				lex_read(lex); // skip!
 			else if (isdigit(ch))
 				return lex_read_dec(lex, 0, rv);
+			else if (isalpha(ch))
+				return lex_read_sym(lex, rv);
 			break;
 		}
 	}

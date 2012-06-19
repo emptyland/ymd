@@ -73,6 +73,12 @@ symbol_test: $(OBJT) symbol_test.o
 symbol_test.o: $(INCT) symbol_test.c symbol.h assembly.h 
 	$(CC) $(CFLAGS) symbol_test.c -c -o symbol_test.o
 
+compiler_test: $(OBJT) compiler_test.o compiler.o lex.o
+	$(CC) $(OBJT) compiler_test.o compiler.o lex.o -o compiler_test
+
+compiler_test.o: $(INCT) compiler_test.c compiler.h lex.h
+	$(CC) $(CFLAGS) compiler_test.c -c -o compiler_test.o
+
 lex_test: $(OBJT) lex.o lex_test.o
 	$(CC) $(OBJT) lex_test.o lex.o -o lex_test 
 
@@ -108,6 +114,9 @@ disassembly.o: disassembly.c disassembly.h assembly.h value.h
 
 symbol.o: symbol.c symbol.h state.h value.h
 	$(CC) $(CFLAGS) symbol.c -c -o symbol.o
+
+compiler.o: $(INCS) compiler.c compiler.h lex.h
+	$(CC) $(CFLAGS) compiler.c -c -o compiler.o
 
 lex.o: lex.c lex.h
 	$(CC) $(CFLAGS) lex.c -c -o lex.o

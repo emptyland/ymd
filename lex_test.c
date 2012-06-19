@@ -98,10 +98,25 @@ static int test_lex_num_literal_2() {
 	ASSERT_TOKEN(EOS);
 	return 0;
 }
+#define ASSERT_SYM(sym) \
+	ASSERT_TOKEN(SYMBOL); \
+	ASSERT_EQ(int, 0, memcmp(#sym, token.off, token.len))
+static int test_lex_sym_literal_1() {
+	struct ymd_lex lex;
+	struct ytoken token;
+	int rv;
+	lex_init(&lex, NULL, " a\nb\n\t__\t_1\t_1abcdef\n(ab)");
+	ASSERT_SYM(a);
+	ASSERT_TOKEN(EL);
+	ASSERT_SYM(b);
+	ASSERT_TOKEN(EL);
+	return 0;
+}
 
 TEST_BEGIN
 	TEST_ENTRY(lex_token_1, normal)
 	TEST_ENTRY(lex_punc_1, normal)
 	TEST_ENTRY(lex_num_literal_1, normal)
 	TEST_ENTRY(lex_num_literal_2, normal)
+	TEST_ENTRY(lex_sym_literal_1, normal)
 TEST_END
