@@ -122,22 +122,14 @@ static int lex_read_sym(struct ymd_lex *lex, struct ytoken *x) {
 	x->token = ERROR;
 	x->off = lex->buf + lex->off;
 	for (;;) {
-		int ch = lex_read(lex);
-		switch (ch) {
-		case EOS:
-		case TERM_CHAR:
-		case PREX_CHAR:
-		case '\n':
-			goto done;
-		default:
-			if (isalpha(ch) || isdigit(ch) || ch == '_')
-				++x->len;
-			else
-				return ERROR;
+		int ch = lex_peek(lex);
+		if (isalpha(ch) || isdigit(ch) || ch == '_')
+			++x->len, lex_move(lex);
+		else if (lex_term(ch))
 			break;
-		}
+		else
+			return ERROR;
 	}
-done:
 	x->token = SYMBOL;
 	return x->token;
 }

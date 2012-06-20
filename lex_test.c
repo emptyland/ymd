@@ -110,6 +110,12 @@ static int test_lex_sym_literal_1() {
 	ASSERT_TOKEN(EL);
 	ASSERT_SYM(b);
 	ASSERT_TOKEN(EL);
+	lex_init(&lex, NULL, "4 * (b + 2) / a\n");
+	ASSERT_DEC(4);
+	ASSERT_TOKEN('*');
+	ASSERT_TOKEN('(');
+	ASSERT_SYM(b);
+	ASSERT_TOKEN('+');
 	return 0;
 }
 
