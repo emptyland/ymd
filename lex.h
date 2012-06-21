@@ -13,12 +13,38 @@
 #undef ERROR
 #endif
 
+#define DECL_TOKEN(v) \
+	v(NIL, "nil") \
+	v(EL, "\n") \
+	v(TRUE, "true") \
+	v(FALSE, "false") \
+	v(STRING, "") \
+	v(HEX_LITERAL, "") \
+	v(DEC_LITERAL, "") \
+	v(LE, "<") \
+	v(GE, "<=") \
+	v(NE, "!=") \
+	v(MATCH, "~=") \
+	v(EQ, "==") \
+	v(SYMBOL, "") \
+	v(SKLS, "@{") \
+	v(LSHIFT, "<<") \
+	v(RSHIFT_A, ">>") \
+	v(RSHIFT_L, "|>") \
+	v(DICT, "->") \
+	v(VAR, "var") \
+	v(FUNC, "func") \
+	v(AND, "and") \
+	v(OR, "or") \
+	v(NOT, "not")
+
+#define DEFINE_TOKEN(tok, literal) tok,
 enum ymd_token {
-	EOS = -1, ERROR = 127,
-	NIL, EL, TRUE, FALSE, STRING, HEX_LITERAL, DEC_LITERAL,
-	LE, GE, NE, MATCH, EQ, SYMBOL, SKLS, LSHIFT, RSHIFT_A,
-	RSHIFT_L, DICT, VAR, FUNC,
+	EOS = -1,
+	ERROR = 127, // offset itoa
+	DECL_TOKEN(DEFINE_TOKEN)
 };
+#undef DEFINE_TOKEN
 
 struct ytoken {
 	int token;

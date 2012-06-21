@@ -15,6 +15,30 @@
 	     '-': case '<': case '>': case '=': case '!': case '~': \
 	case '@': case '|'
 
+#define DEFINE_TOKEN(tok, literal) \
+	{ sizeof(literal) - 1, literal, },
+const struct {
+	int len;
+	const char *kz;
+} tok_literal[] = {
+	DECL_TOKEN(DEFINE_TOKEN)
+};
+#undef DEFINE_TOKEN
+
+#define MAX_TOK ((int)(sizeof(tok_literal)/sizeof(tok_literal[0])))
+
+static int lex_token(const struct ytoken *tok) {
+	int i;
+	if (!tok->len)
+		return ERROR;
+	for (i = 0; i < MAX_TOK; ++i) {
+		if (tok->len == tok_literal[i].len &&
+			memcmp(tok->off, tok_literal[i].kz, tok->len) == 0)
+			break;
+	}
+	return i >= MAX_TOK ? SYMBOL : i + 128;
+}
+
 static inline int lex_peek(struct ymd_lex *lex) {
 	return !lex->buf[lex->off] ? EOS : lex->buf[lex->off];
 }
@@ -130,7 +154,7 @@ static int lex_read_sym(struct ymd_lex *lex, struct ytoken *x) {
 		else
 			return ERROR;
 	}
-	x->token = SYMBOL;
+	x->token = lex_token(x);
 	return x->token;
 }
 

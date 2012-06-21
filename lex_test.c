@@ -120,6 +120,23 @@ static int test_lex_sym_literal_1() {
 	ASSERT_TOKEN('+');
 	return 0;
 }
+#define ASSERT_KWD(kwd, tok) \
+	ASSERT_TOKEN(tok); \
+	ASSERT_EQ(int, 0, memcmp(#kwd, token.off, token.len))
+static int test_lex_keyword() {
+	struct ymd_lex lex;
+	struct ytoken token;
+	int rv;
+	lex_init(&lex, NULL, "nil true false and or func var");
+	ASSERT_KWD(nil, NIL);
+	ASSERT_KWD(true, TRUE);
+	ASSERT_KWD(false, FALSE);
+	ASSERT_KWD(and, AND);
+	ASSERT_KWD(or, OR);
+	ASSERT_KWD(func, FUNC);
+	ASSERT_KWD(var, VAR);
+	return 0;
+}
 
 TEST_BEGIN
 	//TEST_ENTRY(lex_token_1, normal)
@@ -127,4 +144,5 @@ TEST_BEGIN
 	TEST_ENTRY(lex_num_literal_1, normal)
 	TEST_ENTRY(lex_num_literal_2, normal)
 	TEST_ENTRY(lex_sym_literal_1, normal)
+	TEST_ENTRY(lex_keyword, normal)
 TEST_END
