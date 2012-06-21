@@ -22,7 +22,10 @@ static int test_ymc_expr() {
 	lex_init(&p.lex, NULL, "i + b.i(1, 2, f(f() + 1))\n");
 	printf("----:%s", p.lex.buf);
 	ymc_compile(&p);*/
-	lex_init(&p.lex, NULL, "f([1,2,3,4])\n");
+	lex_init(&p.lex, NULL, "f([1,2,3,4])[1][2]\n");
+	printf("----:%s", p.lex.buf);
+	ymc_compile(&p);
+	lex_init(&p.lex, NULL, "f({a:@{b:[]}})\n");
 	printf("----:%s", p.lex.buf);
 	ymc_compile(&p);
 	return 0;

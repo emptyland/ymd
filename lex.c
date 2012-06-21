@@ -142,11 +142,6 @@ int lex_next(struct ymd_lex *lex, struct ytoken *x) {
 		case EOS:
 		case TERM_CHAR:
 			return lex_token_c(lex, rv);
-		case '-':
-			if (isdigit(lex_move(lex)))
-				return lex_read_dec(lex, 1, rv);
-			--lex->off;
-			return lex_token_c(lex, rv);
 		case '<':
 			return lex_token_lt(lex, rv);
 		case '>':
@@ -159,6 +154,19 @@ int lex_next(struct ymd_lex *lex, struct ytoken *x) {
 			return lex_token_l(lex, '=', MATCH, rv);
 		case '=':
 			return lex_token_l(lex, '=', EQ, rv);
+		case '-':
+			lex_move(lex);
+			if (isdigit(lex_peek(lex)))
+				return lex_read_dec(lex, 1, rv);
+			if (lex_peek(lex) == '>') {
+				rv->off = lex->buf + lex->off - 2;
+				rv->len = 2;
+				rv->token = DICT;
+				lex_move(lex);
+				return rv->token;
+			}
+			--lex->off;
+			return lex_token_c(lex, rv);
 		case '@':
 			rv->off = lex->buf + lex->off;
 			if (lex_move(lex) != '{')

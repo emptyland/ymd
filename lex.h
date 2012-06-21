@@ -17,7 +17,7 @@ enum ymd_token {
 	EOS = -1, ERROR = 127,
 	NIL, EL, TRUE, FALSE, STRING, HEX_LITERAL, DEC_LITERAL,
 	LE, GE, NE, MATCH, EQ, SYMBOL, SKLS, LSHIFT, RSHIFT_A,
-	RSHIFT_L,
+	RSHIFT_L, DICT, VAR, FUNC,
 };
 
 struct ytoken {
