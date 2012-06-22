@@ -5,23 +5,13 @@
 #include <string.h>
 #include <assert.h>
 
-#define DECL_EXPR_PRIV(v) \
-	v(LITERAL, 0) \
-	v(PAREN,   1) \
-	v(INDEX,   2) \
-	v(DOT,     3) \
-	v(CALL,    4) \
-	v(UNQIUE,  5) \
-	v(MUL,     6) \
-	v(ADD,     7) \
-	v(COMP,    8) \
-	v(LOGC,    9)
-
 char *strndup(const char *p, size_t n) {
 	char *rv = calloc(n + 1, 1);
 	strncpy(rv, p, n);
 	return rv;
 }
+
+static int parse_expr(struct ymd_parser *p, int limit);
 
 static void ymc_fail(struct ymd_parser *p, const char *fmt, ...) {
 	va_list ap;
@@ -54,6 +44,14 @@ static inline int ymc_next(struct ymd_parser *p) {
 
 static inline char *ymc_literal(struct ymd_parser *p) {
 	return strndup(p->lah.off, p->lah.len);
+}
+
+static int ymc_test(struct ymd_parser *p, int token) {
+	if (ymc_peek(p) == token) {
+		ymc_next(p);
+		return 1;
+	}
+	return 0;
 }
 
 enum ymd_op {
@@ -124,10 +122,150 @@ static void ymk_binary(struct ymd_parser *p, int op) {
 		break;
 	}
 }
+
+static const char *ymc_symbol(struct ymd_parser *p) {
+	const char *literal;
+	if (ymc_peek(p) != SYMBOL)
+		ymc_fail(p, "Error token, need symbol.");
+	literal = ymc_literal(p);
+	ymc_next(p);
+	return literal;
+}
+
+static void parse_array(struct ymd_parser *p) {
+	int count = 0;
+	ymc_match(p, '[');
+	do {
+		switch (ymc_peek(p)) {
+		case ']':
+			goto out;
+		default:
+			parse_expr(p, 0);
+			++count;
+			break;
+		}
+	} while (ymc_test(p, ','));
+out:
+	printf("newdyay %d\n", count);
+}
+
+static void parse_map(struct ymd_parser *p, int ord) {
+	int count = 0;
+	ymc_match(p, ord ? SKLS : '{');
+	do {
+		switch (ymc_peek(p)) {
+		case '}':
+			goto out;
+		case SYMBOL:
+			printf("push %s\n", ymc_symbol(p));
+			ymc_match(p, ':');
+			parse_expr(p, 0);
+			++count;
+			break;
+		default:
+			parse_expr(p, 0);
+			ymc_match(p, DICT);
+			parse_expr(p, 0);
+			++count;
+			break;
+		}
+	} while(ymc_test(p, ','));
+out:
+	if (ord)
+		printf("newskls %d\n", count);
+	else
+		printf("newhmap %d\n", count);
+}
+
+static int parse_args(struct ymd_parser *p) {
+	int nargs = 1;
+	parse_expr(p, 0);
+	while (ymc_test(p, ',')) {
+		parse_expr(p, 0);
+		++nargs;
+	}
+	return nargs;
+}
+
+static void parse_callargs(struct ymd_parser *p, int self) {
+	int nargs = self, type = 0;
+	switch (ymc_peek(p)) {
+	case '(':
+		type = 0;
+		ymc_next(p);
+		if (ymc_peek(p) == ')') {
+			ymc_next(p);
+			goto out;
+		}
+		nargs += parse_args(p);
+		ymc_match(p, ')');
+		break;
+	case '{':
+		type = 1;
+		parse_map(p, 0);
+		nargs += 1;
+		ymc_match(p, '}');
+		break;
+	//case STRING:
+	//	printf("push %s\n", ymc_symbol(p));
+	//	nargs += 1;
+	//	break;
+	default:
+		ymc_fail(p, "Function arguments expected.");
+		break;
+	}
+out:
+	printf("call %d\n", nargs);
+}
+
+static void parse_primary(struct ymd_parser *p) {
+	switch (ymc_peek(p)) {
+	case '(':
+		ymc_next(p);
+		parse_expr(p, 0);
+		ymc_match(p, ')');
+		break;
+	case SYMBOL:
+		printf("push %s\n", ymc_symbol(p));
+		break;
+	default:
+		ymc_fail(p, "Unexpected symbol");
+		break;
+	}
+}
+
+static void parse_suffixed(struct ymd_parser *p) {
+	parse_primary(p);
+	for (;;) {
+		switch (ymc_peek(p)) {
+		case '.':
+			ymc_next(p);
+			printf("getf %s\n", ymc_symbol(p));
+			break;
+		case '[':
+			ymc_next(p);
+			parse_expr(p, 0);
+			printf("getf 1\n");
+			break;
+		case '(': /*case STRING:*/ case '{':
+			parse_callargs(p, 0);
+			break;
+		default:
+			return;
+		}
+	}
+}
+
 static void parse_simple(struct ymd_parser *p) {
 	switch (ymc_peek(p)) {
 	case NIL:
 		printf("push nil\n");
+		break;
+	case TRUE:
+		printf("push true\n");
+		break;
+	case FALSE:
+		printf("push false\n");
 		break;
 	case DEC_LITERAL:
 		printf("push %s\n", ymc_literal(p));
@@ -135,11 +273,17 @@ static void parse_simple(struct ymd_parser *p) {
 	case HEX_LITERAL:
 		printf("push %s\n", ymc_literal(p));
 		break;
-	case SYMBOL:
-		printf("push %s\n", ymc_literal(p));
+	case '{':
+		parse_map(p, 0);
+		break;
+	case SKLS:
+		parse_map(p, 1);
+		break;
+	case '[':
+		parse_array(p);
 		break;
 	default:
-		// parse_suffixed(p);
+		parse_suffixed(p);
 		return;
 	}
 	ymc_next(p);

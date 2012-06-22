@@ -3,7 +3,6 @@
 
 static int test_ymc_expr() {
 	struct ymd_parser p;
-	/*
 	lex_init(&p.lex, NULL, "4 * (b + 2) / a\n");
 	printf("----:%s", p.lex.buf);
 	ymc_compile(&p);
@@ -27,8 +26,11 @@ static int test_ymc_expr() {
 	ymc_compile(&p);
 	lex_init(&p.lex, NULL, "f({a:@{b:[]}})\n");
 	printf("----:%s", p.lex.buf);
-	ymc_compile(&p);*/
+	ymc_compile(&p);
 	lex_init(&p.lex, NULL, "a * 4 + b / 2\n");
+	printf("----:%s", p.lex.buf);
+	ymc_compile(&p);
+	lex_init(&p.lex, NULL, "1 + print{a:1} / f()\n");
 	printf("----:%s", p.lex.buf);
 	ymc_compile(&p);
 	return 0;
