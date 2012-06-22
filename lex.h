@@ -36,7 +36,15 @@
 	v(FUNC, "func") \
 	v(AND, "and") \
 	v(OR, "or") \
-	v(NOT, "not")
+	v(NOT, "not") \
+	v(IF, "if") \
+	v(ELSE, "else") \
+	v(ELIF, "elif") \
+	v(WITH, "with") \
+	v(FOR, "for") \
+	v(RETURN, "return") \
+	v(BREAK, "break") \
+	v(CONTINUE, "continue")
 
 #define DEFINE_TOKEN(tok, literal) tok,
 enum ymd_token {

@@ -87,6 +87,7 @@ static int ymc_binary_op(struct ymd_parser *p) {
 }
 
 static void ymk_unary(struct ymd_parser *p, int op) {
+	(void)p;
 	switch (op) {
 	case OP_MINS:
 		printf("inv\n");
@@ -104,6 +105,7 @@ static void ymk_unary(struct ymd_parser *p, int op) {
 }
 
 static void ymk_binary(struct ymd_parser *p, int op) {
+	(void)p;
 	switch (op) {
 	case OP_ADD:
 		printf("add\n");
@@ -319,9 +321,142 @@ static int parse_expr(struct ymd_parser *p, int limit) {
 	return op;
 }
 
+enum {
+	VSYMBOL,
+	VDOT,
+	VINDEX,
+	VCALL,
+};
+
+struct lval_desc {
+	const char *last;
+	int vt; // value type
+};
+
+static void ymk_lval_partal(struct ymd_parser *p,
+                            const struct lval_desc *desc) {
+	(void)p;
+	switch (desc->vt) {
+	case VSYMBOL:
+		printf("push %s\n", desc->last);
+		break;
+	case VINDEX:
+		printf("index\n");
+		break;
+	case VDOT:
+		printf("getf %s\n", desc->last);
+		break;
+	default:
+		break;
+	}
+}
+
+static void ymk_lval_finish(struct ymd_parser *p,
+                            const struct lval_desc *desc) {
+	(void)p;
+	switch (desc->vt) {
+	case VSYMBOL:
+		printf("store %s\n", desc->last);
+		break;
+	case VINDEX:
+		printf("setf 1\n");
+		break;
+	case VDOT:
+		printf("setf %s\n", desc->last);
+		break;
+	default:
+		ymc_fail(p, "Syntax error, call is not lval");
+		break;
+	}
+}
+
+static void parse_lval(struct ymd_parser *p, struct lval_desc *desc) {
+	switch (ymc_peek(p)) {
+	case SYMBOL:
+		desc->last = ymc_symbol(p);
+		desc->vt = VSYMBOL;
+		break;
+	default:
+		ymc_fail(p, "Unexpected symbol");
+		break;
+	}
+	for (;;) {
+		switch (ymc_peek(p)) {
+		case '.':
+			ymk_lval_partal(p, desc);
+			ymc_next(p);
+			desc->last = ymc_symbol(p);
+			desc->vt = VDOT;
+			break;
+		case '[':
+			ymk_lval_partal(p, desc);
+			ymc_next(p);
+			parse_expr(p, 0);
+			ymc_match(p, ']');
+			desc->last = NULL;
+			desc->vt = VINDEX;
+			break;
+		case '(': /*case STRING:*/ case '{':
+			ymk_lval_partal(p, desc);
+			parse_callargs(p, 0);
+			desc->last = NULL;
+			desc->vt = VCALL;
+			break;
+		default:
+			return;
+		}
+	}
+}
+
+static void parse_expr_stat(struct ymd_parser *p) {
+	struct lval_desc desc;
+	parse_lval(p, &desc);
+	if (ymc_peek(p) == '=') {
+		ymc_next(p);
+		parse_expr(p, 0);
+		ymk_lval_finish(p, &desc);
+	} else {
+		if (desc.vt != VCALL)
+			ymc_fail(p, "Syntax error");
+	}
+}
+
+static void parse_stmt(struct ymd_parser *p) {
+	switch (ymc_peek(p)) {
+	case ';':
+		ymc_next(p); // Empty statement
+		break;
+	case IF:
+		//parse_if(p);
+		break;
+	case WITH:
+		//parse_with(p);
+		break;
+	case FOR:
+		//parse_for(p);
+		break;
+	case FUNC:
+		//parse_func(p);
+		break;
+	case VAR:
+		//parse_local_decl(p);
+		break;
+	case RETURN:
+		//parse_return(p);
+		break;
+	case BREAK:
+	case CONTINUE:
+		//parse_goto(p);
+		break;
+	default:
+		parse_expr_stat(p);
+		break;
+	}
+}
+
 void ymc_compile(struct ymd_parser *p) {
 	lex_next(&p->lex, &p->lah);
 	if (setjmp(p->jpt))
 		return;
-	parse_expr(p, 0);
+	parse_stmt(p);
 }
