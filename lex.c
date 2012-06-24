@@ -8,12 +8,12 @@
 	memset(rv, 0, sizeof(*rv))
 
 #define TERM_CHAR \
-	     '+': case '*': case '/': case '%': case '^': case ',': \
+	     '+': case '*': case '%': case '^': case ',': case ';': \
 	case '(': case ')': case '[': case ']': case '{': case '}': \
 	case ':': case '.': case '&'
 #define PREX_CHAR \
 	     '-': case '<': case '>': case '=': case '!': case '~': \
-	case '@': case '|'
+	case '@': case '|': case '/': case '\"'
 
 #define DEFINE_TOKEN(tok, literal) \
 	{ sizeof(literal) - 1, literal, },
@@ -53,7 +53,13 @@ static inline int lex_move(struct ymd_lex *lex) {
 	int ch = lex->buf[lex->off];
 	if (!ch) return EOS;
 	ch = lex->buf[++lex->off];
+	++lex->i_column;
 	return !ch ? EOS : ch;
+}
+
+static inline void lex_back(struct ymd_lex *lex) {
+	--lex->off;
+	--lex->i_column;
 }
 
 static inline int lex_token_c(struct ymd_lex *lex, struct ytoken *x) {
@@ -67,7 +73,7 @@ static inline int lex_token_c(struct ymd_lex *lex, struct ytoken *x) {
 static int lex_token_l(struct ymd_lex *lex, int m, int tk,
                               struct ytoken *x) {
 	if (lex_move(lex) != m) {
-		--lex->off;
+		lex_back(lex);
 		return lex_token_c(lex, x);
 	}
 	x->token = tk;
@@ -120,7 +126,7 @@ static int lex_read_dec(struct ymd_lex *lex, int neg, struct ytoken *x) {
 		else
 			return ERROR;
 	}
-	--lex->off;
+	lex_back(lex);
 	x->token = !x->len ? ERROR : DEC_LITERAL; 
 	x->len += neg;
 	return x->token;
@@ -130,14 +136,15 @@ static int lex_read_hex(struct ymd_lex *lex, struct ytoken *x) {
 	int ch;
 	lex_move(lex);
 	x->token = ERROR;
-	x->off = lex->buf + lex->off - 2; // '0x|0X' 2 char
+	x->len = 2;
+	x->off = lex->buf + lex->off - x->len; // '0x|0X' 2 char
 	while (!lex_term(ch = lex_read(lex))) {
 		if (isxdigit(ch))
 			++x->len;
 		else
 			return ERROR;
 	}
-	--lex->off;
+	lex_back(lex);
 	x->token = !x->len ? ERROR : HEX_LITERAL; 
 	return x->token;
 }
@@ -155,6 +162,32 @@ static int lex_read_sym(struct ymd_lex *lex, struct ytoken *x) {
 			return ERROR;
 	}
 	x->token = lex_token(x);
+	return x->token;
+}
+
+static int lex_read_raw(struct ymd_lex *lex, struct ytoken *x) {
+	lex_move(lex);
+	x->token = ERROR;
+	x->off = lex->buf + lex->off;
+	for (;;) {
+		int ch = lex_peek(lex);
+		switch (ch) {
+		case '\"':
+			x->token = STRING;
+			goto out;
+		case '\\':
+			lex_move(lex);
+			lex_move(lex); x->len += 2; //Skip ESC char
+			break;
+		case '\n':
+			return ERROR;
+		default:
+			lex_move(lex); ++x->len;
+			break;
+		}
+	}
+out:
+	lex_move(lex);
 	return x->token;
 }
 
@@ -178,6 +211,10 @@ int lex_next(struct ymd_lex *lex, struct ytoken *x) {
 			return lex_token_l(lex, '=', MATCH, rv);
 		case '=':
 			return lex_token_l(lex, '=', EQ, rv);
+		case '_':
+			return lex_read_sym(lex, rv);
+		case '\"':
+			return lex_read_raw(lex, rv);
 		case '-':
 			lex_move(lex);
 			if (isdigit(lex_peek(lex)))
@@ -189,7 +226,15 @@ int lex_next(struct ymd_lex *lex, struct ytoken *x) {
 				lex_move(lex);
 				return rv->token;
 			}
-			--lex->off;
+			lex_back(lex);
+			return lex_token_c(lex, rv);
+		case '/':
+			if (lex_move(lex) == '/') {
+				while (lex_move(lex) != '\n')
+					;
+				break;
+			}
+			lex_back(lex);
 			return lex_token_c(lex, rv);
 		case '@':
 			rv->off = lex->buf + lex->off;
@@ -203,17 +248,13 @@ int lex_next(struct ymd_lex *lex, struct ytoken *x) {
 			ch = lex_move(lex);
 			if (ch == 'x' || ch == 'X')
 				return lex_read_hex(lex, rv);
-			--lex->off; // Fallback 1 position.
+			lex_back(lex);
 			return lex_read_dec(lex, 0, rv);
 		case '\n':
-			++lex->i_line; lex->i_column = -1;
-			rv->token = EL;
-			rv->off = lex->buf + lex->off;
-			rv->len = 1;
 			lex_move(lex);
-			return rv->token;
-		case '_':
-			return lex_read_sym(lex, rv);
+			++lex->i_line;
+			lex->i_column = 0;
+			break;
 		default:
 			if (isspace(ch))
 				lex_read(lex); // skip!

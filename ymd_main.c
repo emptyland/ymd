@@ -2,18 +2,21 @@
 #include "value.h"
 #include "memory.h"
 #include "state.h"
+#include "compiler.h"
 #include "libc.h"
 #include <stdio.h>
 #include <string.h>
 
 struct cmd_opt {
 	FILE *input;
+	const char *name;
 	int external;
 	int debug;
 	int argv_off;
 };
 
 static struct cmd_opt opt = {
+	NULL,
 	NULL,
 	0,
 	0,
@@ -28,7 +31,6 @@ static void die(const char *msg) {
 int main(int argc, char *argv[]) {
 	int i;
 	struct func *fn;
-	opt.input = stdin;
 	for (i = 1; i < argc; ++i) {
 		if (strcmp(argv[i], "-d") == 0) {
 			opt.debug = 1;
@@ -37,14 +39,17 @@ int main(int argc, char *argv[]) {
 			break;
 		} else {
 			opt.external = 1;
-			opt.input = fopen(argv[i], "r");
+			opt.name = argv[i];
+			opt.input = fopen(opt.name, "r");
 			if (!opt.input)
 				die("Bad file!");
 		}
 	}
 	vm_init();
 	vm_init_context();
-	fn = func_compile(opt.input);
+	if (!opt.input)
+		die("Null file!");
+	fn = func_compilef("__main__", opt.name, opt.input);
 	if (!fn)
 		die("Syntax error!");
 	ymd_load_lib(lbxBuiltin);

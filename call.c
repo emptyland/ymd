@@ -1,12 +1,11 @@
+#include "compiler.h"
 #include "value.h"
 #include "state.h"
 #include "memory.h"
 #include "assembly.h"
-#include "varint.h"
+#include "encode.h"
 #include "3rd/regex/regex.h"
 #include <stdio.h>
-
-extern int do_compile(FILE *fp, struct func *fn);
 
 // +----------------------+
 // |  bind  |    local    |
@@ -23,7 +22,7 @@ static inline struct variable *vm_local(struct func *fn, int i) {
 
 static inline struct variable *vm_find_local(struct func *fn,
                                              const char *name) {
-	int i = func_find_lz(fn, name);
+	int i = blk_find_lz(fn->u.core, name);
 	if (i < 0)
 		vm_die("Can not find local: %s", name);
 	return vm_local(fn, i);
@@ -56,6 +55,30 @@ static inline int vm_match(const struct kstr *lhs, const struct kstr *pattern) {
 	return !err;
 }
 
+static inline int vm_bool(const struct variable *lhs) {
+	switch (lhs->type) {
+	case T_NIL:
+		return 0;
+	case T_BOOL:
+		return lhs->value.i;
+	default:
+		return 1;
+	}
+	return 0;
+}
+
+#define IMPL_JUMP          \
+	switch (flag) {        \
+	case F_FORWARD:        \
+		info->pc += param; \
+		break;             \
+	case F_BACKWARD:       \
+		info->pc -= param; \
+		break;             \
+	default:               \
+		assert(0);         \
+		break;             \
+	}
 //-----------------------------------------------------------------------------
 // Stack functions:
 // ----------------------------------------------------------------------------
@@ -78,8 +101,6 @@ retry:
 		case I_PANIC:
 			vm_die("%s Panic!", fn->proto->land);
 			break;
-		//case I_CLOSURE:
-		//	break;
 		case I_STORE:
 			switch (flag) {
 			case F_LOCAL:
@@ -94,36 +115,30 @@ retry:
 		case I_RET:
 			return param; // return!
 		case I_JNE:
-			if (bool_of(ymd_top(l, 0))) {
+			if (vm_bool(ymd_top(l, 0))) {
 				ymd_pop(l, 1);
 				break;
 			}
-			switch (flag) {
-			case F_FORWARD:
-				info->pc += param;
-				break;
-			case F_BACKWARD:
-				info->pc -= param;
-				break;
-			default:
-				assert(0);
-				break;
-			}
+			IMPL_JUMP
 			ymd_pop(l, 1);
 			goto retry;
-		case I_JMP:
-			switch (flag) {
-			case F_FORWARD:
-				info->pc += param;
-				goto retry;
-			case F_BACKWARD:
-				info->pc -= param;
-				goto retry;
-			default:
-				assert(0);
+		case I_JNT:
+			if (vm_bool(ymd_top(l, 0))) {
+				ymd_pop(l, 1);
 				break;
 			}
-			break;
+			IMPL_JUMP
+			goto retry;
+		case I_JNN:
+			if (!vm_bool(ymd_top(l, 0))) {
+				ymd_pop(l, 1);
+				break;
+			}
+			IMPL_JUMP
+			goto retry;
+		case I_JMP:
+			IMPL_JUMP
+			goto retry;
 		case I_FOREACH: {
 			struct variable *cond = ymd_top(l, 0);
 			if (cond->type == T_EXT &&
@@ -143,9 +158,29 @@ retry:
 				goto retry;
 			}
 			} break;
-		case I_SETF:
-			ymd_setf(l, param);
-			break;
+		case I_SETF: {
+			switch (flag) {
+			case F_STACK: {
+				int i, k = param << 1;
+				struct variable *var = ymd_top(l, k);
+				for (i = 0; i < k; i += 2) {
+					struct variable *v = ymd_get(var, ymd_top(l, i + 1));
+					*v = *ymd_top(l, i);
+				}
+				ymd_pop(l, k + 1);
+				} break;
+			case F_FAST: {
+				struct variable key, *v;
+				vset_kstr(&key, core->kz[param]);
+				v = ymd_get(ymd_top(l, 1), &key);
+				*v = *ymd_top(l, 0);
+				ymd_pop(l, 2);
+				} break;
+			default:
+				assert(0);
+				break;
+			}
+			} break;
 		case I_PUSH: {
 			struct variable var;
 			switch (flag) {
@@ -219,30 +254,28 @@ retry:
 			rhs->type = T_BOOL;
 			ymd_pop(l, 1);
 			} break;
-		case I_LOGC: {
-			struct variable *opd0, *opd1 = ymd_top(l, 0);
+		case I_NOT: {
+			struct variable *opd = ymd_top(l, 0);
+			vset_bool(opd, !vm_bool(opd));
+			} break;
+		case I_GETF: {
 			switch (flag) {
-			case F_NOT:
-				opd1->value.i = !bool_of(opd1);
-				break;
-			case F_AND:
-				opd0 = ymd_top(l, 1);
-				opd0->value.i = bool_of(opd0) && bool_of(opd1);
-				break;
-			case F_OR:
-				opd0 = ymd_top(l, 1);
-				opd0->value.i = bool_of(opd0) || bool_of(opd1);
-				break;
+			case F_STACK: {
+				struct variable *k = ymd_top(l, 0),
+								*v = ymd_get(ymd_top(l, 1), k);
+				ymd_pop(l, 2);
+				*ymd_push(l) = *v;
+				} break;
+			case F_FAST: {
+				struct variable k;
+				vset_kstr(&k, core->kz[param]);
+				*ymd_top(l, 0) = *ymd_get(ymd_top(l, 0), &k);
+				} break;
 			default:
 				assert(0);
 				break;
 			}
-			if (flag != F_NOT)
-				ymd_pop(l, 1);
 			} break;
-		case I_INDEX:
-			ymd_index(l);
-			break;
 		case I_TYPEOF: {
 			const unsigned tt = ymd_top(l, 0)->type;
 			struct kstr *kz;
@@ -427,6 +460,7 @@ retry:
 	}
 	return 0;
 }
+#undef IMPL_JUMP
 
 static void copy_args(struct func *fn, int argc) {
 	int i;
@@ -499,10 +533,3 @@ int func_main(struct func *fn, int argc, char *argv[]) {
 	return func_call(fn, argc);
 }
 
-struct func *func_compile(FILE *fp) {
-	int rv;
-	struct func *fn = func_new(NULL);
-	func_init(fn, "__main__");
-	rv = do_compile(fp, fn);
-	return rv < 0 ? NULL : fn;
-}

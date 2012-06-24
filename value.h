@@ -225,20 +225,21 @@ void mand_final(struct mand *pm);
 int mand_equals(const struct mand *pm, const struct mand *rhs);
 int mand_compare(const struct mand *pm, const struct mand *rhs);
 
+// Chunk and compiling:
+int blk_emit(struct chunk *core, ymd_inst_t inst);
+int blk_kz(struct chunk *core, const char *z, int n);
+int blk_find_lz(struct chunk *core, const char *z);
+int blk_add_lz(struct chunk *core, const char *z);
+void blk_shrink(struct chunk *core);
+
 // Closure functions:
-struct func *func_new(ymd_nafn_t nafn);
-const struct kstr *func_init(struct func *fn, const char *name);
+struct func *func_new(struct chunk *blk, const char *name);
+struct func *func_new_c(ymd_nafn_t nafn, const char *name);
 struct func *func_clone(struct func *fn);
 void func_final(struct func *fn);
-int func_emit(struct func *fn, ymd_inst_t inst);
-int func_kz(struct func *fn, const char *z, int n);
-int func_find_lz(struct func *fn, const char *z);
-int func_add_lz(struct func *fn, const char *z);
 int func_bind(struct func *fn, int i, const struct variable *var);
-void func_shrink(struct func *fn);
 int func_call(struct func *fn, int argc);
 int func_main(struct func *fn, int argc, char *argv[]);
-struct func *func_compile(FILE *fp);
 void func_dump(struct func *fn, FILE *fp);
 static inline int func_nlocal(const struct func *fn) {
 	return fn->is_c ? 0 : fn->u.core->klz - fn->n_bind;
@@ -248,5 +249,4 @@ static inline struct variable *func_bval(struct func *fn, int i) {
 	func_bind(fn, i, &nil);
 	return fn->bind + i;
 }
-
 #endif // YMD_VALUE_H

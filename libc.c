@@ -2,6 +2,7 @@
 #include "state.h"
 #include "value.h"
 #include "memory.h"
+#include "compiler.h"
 #include "libc.h"
 #include <stdio.h>
 
@@ -100,12 +101,12 @@ static const char *tostring(struct fmtx *ctx, const struct variable *var) {
 		                   func_k(var)->proto->len);
 	case T_DYAY: {
 		int i;
-		fmtx_append(ctx, "{", 1);
+		fmtx_append(ctx, "[", 1);
 		for (i = 0; i < dyay_k(var)->count; ++i) {
 			if (i > 0) fmtx_append(ctx, ", ", 2);
 			tostring(ctx, dyay_k(var)->elem + i);
 		}
-		} return fmtx_append(ctx, "}", 1);
+		} return fmtx_append(ctx, "]", 1);
 	case T_HMAP: {
 		struct kvi *initial = hmap_k(var)->item,
 				   *i = NULL,
@@ -124,7 +125,7 @@ static const char *tostring(struct fmtx *ctx, const struct variable *var) {
 		struct sknd *initial = skls_k(var)->head->fwd[0],
 				    *i = NULL;
 		int f = 0;
-		fmtx_append(ctx, "{", 1);
+		fmtx_append(ctx, "@{", 2);
 		for (i = initial; i != NULL; i = i->fwd[0]) {
 			if (f++ > 0) fmtx_append(ctx, ", ", 2);
 			tostring(ctx, &i->k);
@@ -317,10 +318,9 @@ static struct func *new_step_iter(struct context *l,
 	struct func *iter;
 	(void)l;
 	if ((s == 0) || (i > m && s > 0) || (i < m && s < 0))
-		return func_new(libx_end);
-	iter = func_new(step_iter);
+		return func_new_c(libx_end, "end");
+	iter = func_new_c(step_iter, "__step_iter__");
 	iter->n_bind = 3;
-	func_init(iter, "__step_iter__");
 	vset_int(func_bval(iter, 0), i);
 	vset_int(func_bval(iter, 1), m);
 	vset_int(func_bval(iter, 2), s);
@@ -443,9 +443,8 @@ static struct func *new_contain_iter(
 	(void)l;
 	switch (obj->type) {
 	case T_DYAY:
-		iter = func_new(dyay_iter);
+		iter = func_new_c(dyay_iter, "__dyay_iter__");
 		iter->n_bind = 4;
-		func_init(iter, "__dyay_iter__");
 		vset_ext(func_bval(iter, 0), dyay_k(obj)->elem);
 		vset_ext(func_bval(iter, 1), dyay_k(obj)->elem + dyay_k(obj)->count);
 		vset_int(func_bval(iter, 2), 0);
@@ -455,10 +454,9 @@ static struct func *new_contain_iter(
 		struct kvi *m = hmap_k(obj)->item + (1 << hmap_k(obj)->shift),
 				   *i = move2valid(hmap_k(obj)->item, m);
 		if (i >= m)
-			return func_new(libx_end); // FIXME:
-		iter = func_new(hmap_iter);
+			return func_new_c(libx_end, "end"); // FIXME:
+		iter = func_new_c(hmap_iter, "__hmap_iter__");
 		iter->n_bind = 3;
-		func_init(iter, "__hmap_iter__");
 		vset_ext(func_bval(iter, 0), i);
 		vset_ext(func_bval(iter, 1), m);
 		vset_int(func_bval(iter, 2), flag);
@@ -466,10 +464,9 @@ static struct func *new_contain_iter(
 	case T_SKLS: {
 		struct sknd *i = skls_k(obj)->head->fwd[0];
 		if (!i)
-			return func_new(libx_end); // FIXME:
-		iter = func_new(skls_iter);
+			return func_new_c(libx_end, "end"); // FIXME:
+		iter = func_new_c(skls_iter, "__skls_iter__");
 		iter->n_bind = 2;
-		func_init(iter, "__skls_iter__");
 		vset_ext(func_bval(iter, 0), i);
 		vset_int(func_bval(iter, 1), flag);
 		} break;
@@ -808,8 +805,6 @@ static int libx_match(struct context *l) {
 //------------------------------------------------------------------------------
 // Library:
 //------------------------------------------------------------------------------
-extern int do_compile(FILE *fp, struct func *fn);
-
 #define MAX_BLOCK_NAME_LEN 260 * 2
 
 static const char *file2blknam(const char *name, char *buf, int len) {
@@ -832,19 +827,18 @@ static const char *file2blknam(const char *name, char *buf, int len) {
 }
 
 static int libx_import(struct context *l) {
-	int i, rv;
+	int i;
 	char blknam[MAX_BLOCK_NAME_LEN];
 	struct func *block;
 	struct kstr *name = kstr_of(ymd_argv_get(l, 0));
 	FILE *fp = fopen(name->land, "r");
 	if (!fp)
 		vm_die("Can not open import file: %s", name->land);
-	block = func_new(NULL);
-	rv = do_compile(fp, block);
+	block = func_compilef(
+		file2blknam(name->land, blknam, sizeof(blknam)), name->land, fp);
 	fclose(fp);
-	if (rv < 0)
-		vm_die("Import fatal, syntax error, %s", name->land);
-	func_init(block, file2blknam(name->land, blknam, sizeof(blknam)));
+	if (!block)
+		vm_die("Import fatal, syntax error in file: `%s`", name->land);
 	vset_func(ymd_push(l), block);
 	for (i = 1; i < ymd_argv(l)->count; ++i)
 		*ymd_push(l) = *ymd_argv_get(l, i);
@@ -880,13 +874,12 @@ int ymd_load_lib(ymd_libc_t lbx) {
 	const struct libfn_entry *i;
 	for (i = lbx; i->native != NULL; ++i) {
 		struct kstr *kz = ymd_kstr(i->symbol.z, i->symbol.len);
-		struct func *fn = func_new(i->native);
+		struct func *fn = func_new_c(i->native, kz->land);
 		struct variable key, *rv;
 		key.type = T_KSTR;
 		key.value.ref = gcx(kz);
 		rv = hmap_get(vm()->global, &key);
 		rv->type = T_FUNC;
-		func_init(fn, kz->land);
 		rv->value.ref = gcx(fn);
 	}
 	return 0;

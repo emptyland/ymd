@@ -15,18 +15,17 @@
 
 #define DECL_TOKEN(v) \
 	v(NIL, "nil") \
-	v(EL, "\n") \
 	v(TRUE, "true") \
 	v(FALSE, "false") \
-	v(STRING, "") \
-	v(HEX_LITERAL, "") \
-	v(DEC_LITERAL, "") \
+	v(STRING, "<raw>") \
+	v(HEX_LITERAL, "<hex>") \
+	v(DEC_LITERAL, "<dec>") \
 	v(LE, "<") \
 	v(GE, "<=") \
 	v(NE, "!=") \
 	v(MATCH, "~=") \
 	v(EQ, "==") \
-	v(SYMBOL, "") \
+	v(SYMBOL, "<id>") \
 	v(SKLS, "@{") \
 	v(LSHIFT, "<<") \
 	v(RSHIFT_A, ">>") \
@@ -74,6 +73,7 @@ static inline void lex_init(struct ymd_lex *lex, const char *file,
 	memset(lex, 0, sizeof(*lex));
 	lex->file = file;
 	lex->buf  = buf;
+	lex->i_line = 1;
 }
 
 int lex_next(struct ymd_lex *lex, struct ytoken *rv);

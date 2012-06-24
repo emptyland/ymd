@@ -3,17 +3,17 @@
 
 // Instructions:
 #define I_PANIC   0
-#define I_CLOSURE 5
+//reserved 5
 #define I_STORE   10 // store local|off
 #define I_RET     15 // ret n
 #define I_JNE     20 // jne label
 #define I_JMP     25 // jmp label
 #define I_FOREACH 30 // foreach label
-#define I_SETF    35 // setf n
+#define I_SETF    35 // setf stack|fast
 #define I_PUSH    40 // push "string"|true|false|nil|number|local|off
 #define I_TEST    45 // test gt|ge|lt|le|eq|ne|match
-#define I_LOGC    50 // logc and|or|not
-#define I_INDEX   55 // index
+#define I_JNT     50 // jnt label //reserved 50
+#define I_JNN     55 // jnn label //reserved 55
 #define I_TYPEOF  60 // typeof
 #define I_INV     65
 #define I_MUL     70
@@ -33,6 +33,8 @@
 #define I_NEWDYA  140 // newdya
 #define I_BIND    145 // bind n
 #define I_LOAD    150 // load id
+#define I_GETF    155 // getf stack|fast
+#define I_NOT     160 // not
 
 // jne/jmp
 #define F_FORWARD  0 // param: Number of instructions
@@ -58,17 +60,15 @@
 #define F_LE 5
 #define F_MATCH 6
 
-// logc
-// param: Ignore all
-#define F_NOT 0
-#define F_AND 1
-#define F_OR  2
-
 // shift
 // param: Ignore all
 #define F_LEFT    0
 #define F_RIGHT_L 1
 #define F_RIGHT_A 2
+
+// setf/getf
+#define F_STACK 0 // param: number
+#define F_FAST  1 // param: `kz` offset
 
 
 typedef unsigned int   uint_t;

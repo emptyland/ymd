@@ -138,10 +138,12 @@ struct kstr *ymd_strcat(const struct kstr *lhs, const struct kstr *rhs) {
 //-----------------------------------------------------------------------------
 // Function table:
 // ----------------------------------------------------------------------------
-struct func *ymd_spawnf(unsigned short *id) {
-	vm()->fn = mm_need(vm()->fn, vm()->n_fn, FUNC_ALIGN, sizeof(struct func*));
+struct func *ymd_spawnf(struct chunk *blk, const char *name,
+                        unsigned short *id) {
+	vm()->fn = mm_need(vm()->fn, vm()->n_fn, FUNC_ALIGN,
+	                   sizeof(struct func*));
 	*id = vm()->n_fn;
-	vm()->fn[vm()->n_fn++] = func_new(NULL);
+	vm()->fn[vm()->n_fn++] = func_new(blk, name);
 	return vm()->fn[vm()->n_fn - 1];
 }
 

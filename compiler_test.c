@@ -32,7 +32,7 @@ static int test_ymc_expr() {
 	ymc_compile(&p);
 	lex_init(&p.lex, NULL, "1 + print{a:1} / f()\n");
 	printf("----:%s", p.lex.buf);
-	ymc_compile(&p);*/
+	ymc_compile(&p);
 	lex_init(&p.lex, NULL, "env().a.i[1 + 2 * b] = f()\n");
 	printf("----:%s", p.lex.buf);
 	ymc_compile(&p);
@@ -40,6 +40,18 @@ static int test_ymc_expr() {
 	printf("----:%s", p.lex.buf);
 	ymc_compile(&p);
 	lex_init(&p.lex, NULL, "print(1,2,3) = 2\n");
+	printf("----:%s", p.lex.buf);
+	ymc_compile(&p);*/
+	lex_init(&p.lex, NULL,
+	"func foo(a,b,c,d) { return a + b / d }\n");
+	printf("----:%s", p.lex.buf);
+	ymc_compile(&p);
+	lex_init(&p.lex, NULL,
+	"return func [a,b,c] (p) {\n"
+	"	var tmp, doom = a, dot = {}\n"
+	"	print(a, b, c)\n"
+	"	return p+a+c\n"
+	"}\n");
 	printf("----:%s", p.lex.buf);
 	ymc_compile(&p);
 	return 0;

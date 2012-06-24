@@ -1,7 +1,7 @@
 include config.mk
 OBJS=state.o value.o memory.o dynamic_array.o hash_map.o skip_list.o closure.o \
-	 call.o libc.o varint.o
-OBJT=$(OBJS) yut_rand.o yut.o main_test.o disassembly.o parser.o lexer.o symbol.o
+	 call.o libc.o encode.o
+OBJT=$(OBJS) yut_rand.o yut.o main_test.o disassembly.o lex.o compiler.o
 INCS=state.h value.h memory.h
 INCT=$(INCS) yut.h yut_rand.h
 
@@ -10,8 +10,8 @@ XLIBS=$(LIB_REGEX)
 
 #-------------------------------------------------------------------------------
 # ymd_main
-ymd_main: $(OBJS) $(XLIBS) ymd_main.o disassembly.o parser.o lexer.o symbol.o
-	$(CC) $(OBJS) $(XLIBS) ymd_main.o disassembly.o parser.o lexer.o symbol.o -o ymd_main
+ymd_main: $(OBJS) $(XLIBS) ymd_main.o disassembly.o lex.o compiler.o
+	$(CC) $(OBJS) $(XLIBS) ymd_main.o disassembly.o lex.o compiler.o -o ymd_main
 
 ymd_main.o: $(INCS) disassembly.h libc.h ymd_main.c
 	$(CC) $(CFLAGS) ymd_main.c -c -o ymd_main.o
@@ -67,11 +67,11 @@ call_test: $(OBJT) call_test.o
 call_test.o: $(INCT) libc.h call_test.c 
 	$(CC) $(CFLAGS) call_test.c -c -o call_test.o
 
-symbol_test: $(OBJT) symbol_test.o
-	$(CC) $(OBJT) symbol_test.o -o symbol_test
+#symbol_test: $(OBJT) symbol_test.o
+#	$(CC) $(OBJT) symbol_test.o -o symbol_test
 
-symbol_test.o: $(INCT) symbol_test.c symbol.h assembly.h 
-	$(CC) $(CFLAGS) symbol_test.c -c -o symbol_test.o
+#symbol_test.o: $(INCT) symbol_test.c symbol.h assembly.h 
+#	$(CC) $(CFLAGS) symbol_test.c -c -o symbol_test.o
 
 compiler_test: $(OBJT) compiler_test.o compiler.o lex.o
 	$(CC) $(OBJT) compiler_test.o compiler.o lex.o -o compiler_test
@@ -112,9 +112,6 @@ $(LIB_REGEX):
 disassembly.o: disassembly.c disassembly.h assembly.h value.h
 	$(CC) $(CFLAGS) disassembly.c -c -o disassembly.o
 
-symbol.o: symbol.c symbol.h state.h value.h
-	$(CC) $(CFLAGS) symbol.c -c -o symbol.o
-
 compiler.o: $(INCS) compiler.c compiler.h lex.h
 	$(CC) $(CFLAGS) compiler.c -c -o compiler.o
 
@@ -142,28 +139,14 @@ call.o: $(INCS) call.c
 libc.o: $(INCS) libc.c
 	$(CC) $(CFLAGS) libc.c -c -o libc.o
 
-varint.o: varint.c varint.h
-	$(CC) $(CFLAGS) varint.c -c -o varint.o
+encode.o: $(INCS) encode.c encode.h
+	$(CC) $(CFLAGS) encode.c -c -o encode.o
 
 value.o: value.c value.h state.h
 	$(CC) $(CFLAGS) value.c -c -o value.o
 
 memory.o: memory.c memory.h state.h
 	$(CC) $(CFLAGS) memory.c -c -o memory.o
-
-#-------------------------------------------------------------------------------
-# Parser and Lexer rules:
-parser.o: y.tab.c y.tab.h parser.y
-	$(CC) $(CFLAGS) -DYYERROR_VERBOSE y.tab.c -c -o parser.o
-
-lexer.o: lex.yy.c y.tab.c parser.l
-	$(CC) $(DFLAGS) -DYYERROR_VERBOSE lex.yy.c -c -o lexer.o
-
-y.tab.c: parser.y
-	yacc parser.y -d
-
-lex.yy.c: parser.l
-	lex parser.l
 
 .PHONY: clean
 clean:

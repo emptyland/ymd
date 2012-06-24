@@ -5,10 +5,6 @@ static const char *kz_test_op[] = {
 	"eq", "ne", "gt", "ge", "lt", "le", "match",
 };
 
-static const char *kz_logc_op[] = {
-	"not", "and", "or",
-};
-
 static const char *kz_shift_op[] = {
 	"left", "right:l", "right:a",
 };
@@ -60,6 +56,23 @@ static const char *jmp(uint_t inst, char *buf, size_t n) {
 	return buf;
 }
 
+static const char *getf(const struct func *fn, uint_t inst,
+                       char *buf, size_t n) {
+	switch (asm_flag(inst)) {
+	case F_STACK:
+		snprintf(buf, n, "%d", asm_param(inst));
+		break;
+	case F_FAST:
+		assert(asm_param(inst) < fn->u.core->kkz);
+		snprintf(buf, n, "[%s]", fn->u.core->kz[asm_param(inst)]->land);
+		break;
+	default:
+		assert(0);
+		return "<N/A>";
+	}
+	return buf;
+}
+
 int dis_inst(FILE *fp, const struct func *fn, uint_t inst) {
 	char buf[128];
 	int rv;
@@ -67,9 +80,6 @@ int dis_inst(FILE *fp, const struct func *fn, uint_t inst) {
 	switch (asm_op(inst)) {
 	case I_PANIC:
 		rv = fprintf(fp, "panic");
-		break;
-	case I_CLOSURE:
-		rv = fprintf(fp, "closure");
 		break;
 	case I_STORE:
 		rv = fprintf(fp, "store %s", address(fn, inst, BUF));
@@ -80,6 +90,12 @@ int dis_inst(FILE *fp, const struct func *fn, uint_t inst) {
 	case I_JNE:
 		rv = fprintf(fp, "jne %s", jmp(inst, BUF));
 		break;
+	case I_JNN:
+		rv = fprintf(fp, "jnn %s", jmp(inst, BUF));
+		break;
+	case I_JNT:
+		rv = fprintf(fp, "jnt %s", jmp(inst, BUF));
+		break;
 	case I_JMP:
 		rv = fprintf(fp, "jmp %s", jmp(inst, BUF));
 		break;
@@ -87,7 +103,7 @@ int dis_inst(FILE *fp, const struct func *fn, uint_t inst) {
 		rv = fprintf(fp, "foreach %s", jmp(inst, BUF));
 		break;
 	case I_SETF:
-		rv = fprintf(fp, "setf %d", asm_param(inst));
+		rv = fprintf(fp, "setf %s", getf(fn, inst, BUF));
 		break;
 	case I_PUSH:
 		rv = fprintf(fp, "push %s", address(fn, inst, BUF));
@@ -95,11 +111,11 @@ int dis_inst(FILE *fp, const struct func *fn, uint_t inst) {
 	case I_TEST:
 		rv = fprintf(fp, "test <%s>", kz_test_op[asm_flag(inst)]);
 		break;
-	case I_LOGC:
-		rv = fprintf(fp, "logc <%s>", kz_logc_op[asm_flag(inst)]);
+	case I_NOT:
+		rv = fprintf(fp, "not");
 		break;
-	case I_INDEX:
-		rv = fprintf(fp, "index");
+	case I_GETF:
+		rv = fprintf(fp, "getf %s", getf(fn, inst, BUF));
 		break;
 	case I_TYPEOF:
 		rv = fprintf(fp, "typeof");

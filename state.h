@@ -66,7 +66,7 @@ struct context {
 //-----------------------------------------------------------------------------
 // Function table:
 // ----------------------------------------------------------------------------
-struct func *ymd_spawnf(unsigned short *id);
+struct func *ymd_spawnf(struct chunk *blk, const char *name, unsigned short *id);
 
 //-----------------------------------------------------------------------------
 // Misc:
@@ -171,17 +171,6 @@ static inline void ymd_push_func(struct context *l, struct func *fn) {
 	struct variable *v = ymd_push(l);
 	v->value.ref = gcx(fn);
 	v->type = T_FUNC;
-}
-
-static inline void ymd_setf(struct context *l, int n) {
-	int i;
-	n <<= 1;
-	struct variable *var = ymd_top(l, n);
-	for (i = 0; i < n; i += 2) {
-		struct variable *v = ymd_get(var, ymd_top(l, i + 1));
-		*v = *ymd_top(l, i);
-	}
-	ymd_pop(l, n + 1);
 }
 
 static inline void ymd_index(struct context *l) {
