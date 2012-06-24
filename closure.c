@@ -39,6 +39,15 @@ int blk_kz(struct chunk *core, const char *z, int n) {
 	return i;
 }
 
+void blk_final(struct chunk *core) {
+	if (core->inst)
+		vm_free(core->inst);
+	if (core->kz)
+		vm_free(core->kz);
+	if (core->lz)
+		vm_free(core->lz);
+}
+
 // Only find
 int blk_find_lz(struct chunk *core, const char *z) {
 	int rv = kz_find(core->lz, core->klz, z, -1);
@@ -110,12 +119,7 @@ void func_final(struct func *fn) {
 		--(fn->u.core->ref);
 		return;
 	}
-	if (fn->u.core->inst)
-		vm_free(fn->u.core->inst);
-	if (fn->u.core->kz)
-		vm_free(fn->u.core->kz);
-	if (fn->u.core->lz)
-		vm_free(fn->u.core->lz);
+	blk_final(fn->u.core);
 	mm_drop(fn->u.core);
 }
 

@@ -71,7 +71,7 @@ void *gc_realloc(struct gc_struct *gc, void *chunk, size_t old,
 	return vm_realloc(chunk, size);
 }
 
-void gc_release(struct gc_struct *gc, void *chunk, size_t size) {
+void gc_free(struct gc_struct *gc, void *chunk, size_t size) {
 	assert(gc->used >= size);
 	assert(chunk != NULL);
 	gc->used -= size;

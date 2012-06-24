@@ -10,7 +10,7 @@ struct ymd_parser {
 	struct ymd_lex lex;
 	struct ytoken lah; // look a head;
 	struct znode *lnk; // symbol strings
-	struct block *blk; // top block
+	struct chunk *blk; // top block
 	struct loop_info *loop;
 	int for_id; // for iterator id
 	jmp_buf jpt;

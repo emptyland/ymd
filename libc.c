@@ -3,6 +3,7 @@
 #include "value.h"
 #include "memory.h"
 #include "compiler.h"
+#include "encode.h"
 #include "libc.h"
 #include <stdio.h>
 
@@ -845,6 +846,25 @@ static int libx_import(struct context *l) {
 	return func_call(block, ymd_argv(l)->count - 1);
 }
 
+static int libx_env(struct context *l) {
+	struct kstr *which = kstr_of(ymd_argv_get(l, 0));
+	if (strcmp(which->land, "*global") == 0)
+		vset_hmap(ymd_push(l), vm()->global);
+	else if (strcmp(which->land, "*kpool") == 0)
+		vset_hmap(ymd_push(l), vm()->kpool);
+	else if (strcmp(which->land, "*current") == 0)
+		vset_func(ymd_push(l), l->info->chain->run);
+	else
+		vset_nil(ymd_push(l));
+	return 1;
+}
+
+static int libx_atoi(struct context *l) {
+	struct kstr *arg0 = kstr_of(ymd_argv_get(l, 0));
+	vset_int(ymd_push(l), dtoll(arg0->land));
+	return 1;
+}
+
 LIBC_BEGIN(Builtin)
 	LIBC_ENTRY(print)
 	LIBC_ENTRY(insert)
@@ -856,6 +876,7 @@ LIBC_BEGIN(Builtin)
 	LIBC_ENTRY(end)
 	LIBC_ENTRY(done)
 	LIBC_ENTRY(str)
+	LIBC_ENTRY(atoi)
 	LIBC_ENTRY(panic)
 	LIBC_ENTRY(strbuf)
 	LIBC_ENTRY(strcat)
@@ -867,6 +888,7 @@ LIBC_BEGIN(Builtin)
 	LIBC_ENTRY(pattern)
 	LIBC_ENTRY(match)
 	LIBC_ENTRY(import)
+	LIBC_ENTRY(env)
 LIBC_END
 
 

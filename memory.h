@@ -36,7 +36,7 @@ void gc_final(struct gc_struct *gc);
 void *gc_zalloc(struct gc_struct *gc, size_t size);
 void *gc_realloc(struct gc_struct *gc, void *chunk, size_t old,
                  size_t size);
-void gc_release(struct gc_struct *gc, void *chunk, size_t size);
+void gc_free(struct gc_struct *gc, void *chunk, size_t size);
 
 // Memory managemant functions:
 void *mm_need(void *raw, int n, int align, size_t chunk);

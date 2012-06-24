@@ -43,7 +43,8 @@
 	v(FOR, "for") \
 	v(RETURN, "return") \
 	v(BREAK, "break") \
-	v(CONTINUE, "continue")
+	v(CONTINUE, "continue") \
+	v(TYPEOF, "typeof")
 
 #define DEFINE_TOKEN(tok, literal) tok,
 enum ymd_token {
@@ -76,6 +77,8 @@ static inline void lex_init(struct ymd_lex *lex, const char *file,
 	lex->i_line = 1;
 }
 
+// Get current line to `buf`
+const char *lex_line(struct ymd_lex *lex, char *buf, size_t n);
 int lex_next(struct ymd_lex *lex, struct ytoken *rv);
 
 #endif // YMD_LEX_H

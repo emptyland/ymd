@@ -51,7 +51,7 @@ int main(int argc, char *argv[]) {
 		die("Null file!");
 	fn = func_compilef("__main__", opt.name, opt.input);
 	if (!fn)
-		die("Syntax error!");
+		exit(1);
 	ymd_load_lib(lbxBuiltin);
 	if (opt.debug) {
 		int i;

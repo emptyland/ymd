@@ -52,6 +52,7 @@ struct variable {
 // Byte Function
 struct chunk {
 	int ref; // Reference counter
+	struct chunk *chain; // Chain for compiling
 	ymd_inst_t *inst; // Instructions
 	int kinst; // Number of instructions
 	struct kstr **kz; // Local constant strings
@@ -226,6 +227,7 @@ int mand_equals(const struct mand *pm, const struct mand *rhs);
 int mand_compare(const struct mand *pm, const struct mand *rhs);
 
 // Chunk and compiling:
+void blk_final(struct chunk *core);
 int blk_emit(struct chunk *core, ymd_inst_t inst);
 int blk_kz(struct chunk *core, const char *z, int n);
 int blk_find_lz(struct chunk *core, const char *z);

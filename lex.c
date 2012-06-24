@@ -13,7 +13,7 @@
 	case ':': case '.': case '&'
 #define PREX_CHAR \
 	     '-': case '<': case '>': case '=': case '!': case '~': \
-	case '@': case '|': case '/': case '\"'
+	case '@': case '|': case '/': case '\"': case '#'
 
 #define DEFINE_TOKEN(tok, literal) \
 	{ sizeof(literal) - 1, literal, },
@@ -191,6 +191,13 @@ out:
 	return x->token;
 }
 
+void lex_skip_line(struct ymd_lex *lex) {
+	while (lex_read(lex) != '\n')
+		;
+	++lex->i_line;
+	lex->i_column = 0;
+}
+
 int lex_next(struct ymd_lex *lex, struct ytoken *x) {
 	DECL_RV;
 	for (;;) {
@@ -230,12 +237,13 @@ int lex_next(struct ymd_lex *lex, struct ytoken *x) {
 			return lex_token_c(lex, rv);
 		case '/':
 			if (lex_move(lex) == '/') {
-				while (lex_move(lex) != '\n')
-					;
+				lex_skip_line(lex);
 				break;
 			}
-			lex_back(lex);
-			return lex_token_c(lex, rv);
+			return ERROR;
+		case '#':
+			lex_skip_line(lex);
+			break;
 		case '@':
 			rv->off = lex->buf + lex->off;
 			if (lex_move(lex) != '{')
@@ -262,8 +270,24 @@ int lex_next(struct ymd_lex *lex, struct ytoken *x) {
 				return lex_read_dec(lex, 0, rv);
 			else if (isalpha(ch))
 				return lex_read_sym(lex, rv);
+			else
+				return ERROR;
 			break;
 		}
 	}
 	return ERROR;
+}
+
+const char *lex_line(struct ymd_lex *lex, char *buf, size_t n) {
+	size_t len;
+	int i = lex->i_column, line = lex->off;
+	while (i--) --line;
+	i = lex->off;
+	while (lex->buf[i] != '\n' && lex->buf[i] != '\0')
+		++i;
+	len = i - line;
+	n = len < n ? len : n;
+	strncpy(buf, lex->buf + line, n);
+	buf[n] = '\0';
+	return buf;
 }
