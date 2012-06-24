@@ -79,7 +79,7 @@ static const struct variable *skfind(const struct skls *list,
 }
 
 struct skls *skls_new() {
-	struct skls *x = gc_alloc(&vm()->gc, sizeof(struct skls), T_SKLS);
+	struct skls *x = gc_new(&vm()->gc, sizeof(struct skls), T_SKLS);
 	x->lv = 0;
 	x->head = mknode(MAX_LEVEL);
 	return x;

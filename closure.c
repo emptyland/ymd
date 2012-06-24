@@ -83,7 +83,7 @@ static void func_init(struct func *fn, const char *name) {
 }
 
 struct func *func_new_c(ymd_nafn_t nafn, const char *name) {
-	struct func *x = gc_alloc(&vm()->gc, sizeof(*x), T_FUNC);
+	struct func *x = gc_new(&vm()->gc, sizeof(*x), T_FUNC);
 	assert(nafn);
 	x->u.nafn = nafn;
 	x->is_c = 1;
@@ -92,7 +92,7 @@ struct func *func_new_c(ymd_nafn_t nafn, const char *name) {
 }
 
 struct func *func_new(struct chunk *blk, const char *name) {
-	struct func *x = gc_alloc(&vm()->gc, sizeof(*x), T_FUNC);
+	struct func *x = gc_new(&vm()->gc, sizeof(*x), T_FUNC);
 	assert(blk);
 	mm_grab(blk);
 	x->u.core = blk;
@@ -145,7 +145,7 @@ void func_dump(struct func *fn, FILE *fp) {
 }
 
 struct func *func_clone(struct func *fn) {
-	struct func *x = gc_alloc(&vm()->gc, sizeof(*x), T_FUNC);
+	struct func *x = gc_new(&vm()->gc, sizeof(*x), T_FUNC);
 	assert(!fn->is_c);
 	x->proto = fn->proto;
 	x->is_c = fn->is_c;

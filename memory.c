@@ -10,10 +10,11 @@ static inline int track(struct gc_struct *gc, struct gc_node *x) {
 	return ++gc->n_alloced;
 }
 
-void *gc_alloc(struct gc_struct *gc, size_t size,
+void *gc_new(struct gc_struct *gc, size_t size,
                unsigned char type) {
 	struct gc_node *x = vm_zalloc(size);
 	track(gc, x);
+	gc->used += size;
 	assert(type < (1 << 4));
 	x->type = type;
 	return x;
@@ -23,7 +24,7 @@ int gc_init(struct gc_struct *gc, int k) {
 	gc->alloced = NULL;
 	gc->weak = NULL;
 	gc->n_alloced = 0;
-	gc->k_alloced = k;
+	gc->threshold = k;
 	return 0;
 }
 
@@ -52,6 +53,29 @@ void gc_final(struct gc_struct *gc) {
 		vm_free(p);
 		--gc->n_alloced;
 	}
+}
+
+void *gc_zalloc(struct gc_struct *gc, size_t size) {
+	assert(size != 0);
+	gc->used += size;
+	// if (gc->used > gc->threshold) {
+	// TODO: will be full gc ...
+	// }
+	return vm_zalloc(size);
+}
+
+void *gc_realloc(struct gc_struct *gc, void *chunk, size_t old,
+                 size_t size) {
+	assert(size > old);
+	gc->used += (size - old);
+	return vm_realloc(chunk, size);
+}
+
+void gc_release(struct gc_struct *gc, void *chunk, size_t size) {
+	assert(gc->used >= size);
+	assert(chunk != NULL);
+	gc->used -= size;
+	vm_free(chunk);
 }
 
 void *mm_need(void *raw, int n, int align, size_t chunk) {

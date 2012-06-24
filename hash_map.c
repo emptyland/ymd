@@ -144,7 +144,7 @@ struct hmap *hmap_new(int count) {
 		shift = 5;
 	else if (count > 0)
 		shift = log2x(count);
-	x = gc_alloc(&vm()->gc, sizeof(*x), T_HMAP);
+	x = gc_new(&vm()->gc, sizeof(*x), T_HMAP);
 	assert(shift > 0);
 	x->shift = shift;
 	x->item = vm_zalloc(sizeof(struct kvi) * (1 << x->shift));

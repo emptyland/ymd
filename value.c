@@ -171,7 +171,7 @@ struct kstr *kstr_new(const char *z, int count) {
 	struct kstr *x = NULL;
 	if (count < 0)
 		count = strlen(z);
-	x = gc_alloc(&vm()->gc, sizeof(*x) + count, T_KSTR);
+	x = gc_new(&vm()->gc, sizeof(*x) + count, T_KSTR);
 	x->len = count;
 	if (!z)
 		memset(x->land, 0, count + 1);
@@ -204,7 +204,7 @@ int kstr_compare(const struct kstr *kz, const struct kstr *rhs) {
 struct mand *mand_new(const void *data, int size, ymd_final_t final) {
 	struct mand *x = NULL;
 	assert(size >= 0);
-	x = gc_alloc(&vm()->gc, sizeof(*x) + size, T_MAND);
+	x = gc_new(&vm()->gc, sizeof(*x) + size, T_MAND);
 	x->len = size;
 	x->final = final;
 	if (data)

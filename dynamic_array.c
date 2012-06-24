@@ -10,7 +10,7 @@ struct dyay *dyay_new(int count) {
 	struct dyay *x = NULL;
 	if (count <= 0)
 		count = 0;
-	x = gc_alloc(&vm()->gc, sizeof(*x), T_DYAY);
+	x = gc_new(&vm()->gc, sizeof(*x), T_DYAY);
 	x->count = count;
 	x->max = count == 0 ? 0 : count + MAX_ADD;
 	if (x->max > 0)
