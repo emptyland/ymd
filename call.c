@@ -527,7 +527,6 @@ int func_main(struct func *fn, int argc, char *argv[]) {
 	for (i = 0; i < argc; ++i)
 		ymd_push_kstr(l, argv[i], -1);
 	if (setjmp(l->jpt)) {
-		printf("-- Thread exit --\n");
 		return -1;
 	}
 	return func_call(fn, argc);

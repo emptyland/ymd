@@ -52,22 +52,22 @@ bits_00:
 //------------------------------------------------------------------------------
 // Symbol -> Integer -> String
 //------------------------------------------------------------------------------
-static inline ymd_int_t xtol(char x) {
+static inline ymd_int_t xtol(char x, int *ok) {
 	if (x >= '0' && x <= '9')
 		return x - '0';
 	else if (x >= 'a' && x <= 'f')
 		return 10 + x - 'a';
 	else if (x >= 'A' && x <= 'F')
 		return 10 + x - 'A';
-	assert(0);
-	return -1;
+	*ok = 0;
+	return 0;
 }
 
-static inline ymd_int_t dtol(char x) {
+static inline ymd_int_t dtol(char x, int *ok) {
 	if (x >= '0' && x <= '9')
 		return x - '0';
-	assert(0);
-	return -1;
+	*ok = 0;
+	return 0;
 }
 
 static inline char *priv_add(char *priv, int n, char c) {
@@ -81,12 +81,14 @@ static inline char *priv_add(char *priv, int n, char c) {
 		priv = priv_add(priv, n++, c); \
 		break
 #define ESC_BYTE() \
-	c = (char)xtol(*i++) << 4; \
-	c |= (char)xtol(*i++); \
+	c = (char)xtol(*i++, &ok) << 4; \
+	if (!ok) goto error; \
+	c |= (char)xtol(*i++, &ok); \
+	if (!ok) goto error; \
 	priv = priv_add(priv, n++, c)
 int stresc(const char *i, char **rv) {
 	char c, *priv = NULL;
-	int n = 0;
+	int ok = 1, n = 0;
 	while (*i) {
 		if (*i++ == '\\') {
 			switch (*i++) {
@@ -107,8 +109,9 @@ int stresc(const char *i, char **rv) {
 				ESC_BYTE();
 				ESC_BYTE();
 				break;
+			error:
 			default:
-				vm_free(priv);
+				if (priv) vm_free(priv);
 				return -1;
 			}
 			continue;
@@ -121,18 +124,21 @@ int stresc(const char *i, char **rv) {
 #undef ESC_BYTE
 #undef ESC_CHAR
 
-ymd_int_t xtoll(const char *raw) {
+ymd_int_t xtoll(const char *raw, int *ok) {
 	ymd_int_t rv = 0;
 	int k = strlen(raw), i = k;
 	assert(k > 2);
 	assert(raw[0] == '0');
 	assert(raw[1] == 'x');
-	while (i-- > 2)
-		rv |= (xtol(raw[i]) << ((k - i - 1) * 4));
+	while (i-- > 2) {
+		rv |= (xtol(raw[i], ok) << ((k - i - 1) * 4));
+		if (!*ok)
+			return 0LL;
+	}
 	return rv;
 }
 
-ymd_int_t dtoll(const char *raw) {
+ymd_int_t dtoll(const char *raw, int *ok) {
 	ymd_int_t rv = 0;
 	ymd_int_t pow = 1;
 	int k = strlen(raw), i = k;
@@ -141,7 +147,9 @@ ymd_int_t dtoll(const char *raw) {
 	else
 		k = 0;
 	while (i-- > k) {
-		rv += (dtol(raw[i]) * pow);
+		rv += (dtol(raw[i], ok) * pow);
+		if (!*ok)
+			return 0LL;
 		pow *= 10;
 	}
 	return k ? -rv : rv;

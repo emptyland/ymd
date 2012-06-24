@@ -1,4 +1,4 @@
-#include "symbol.h"
+#include "encode.h"
 #include "value.h"
 #include "memory.h"
 #include "state.h"
@@ -6,8 +6,10 @@
 #include "yut.h"
 
 #define ASSERT_ATOL(x) \
-	ASSERT_EQ(large, x, xtoll(#x))
+	ASSERT_EQ(large, x, xtoll(#x, &ok)); \
+	ASSERT_TRUE(ok)
 static int test_atol_hex() {
+	int ok;
 	ASSERT_ATOL(0x1);
 	ASSERT_ATOL(0x0);
 	ASSERT_ATOL(0x000001);
@@ -24,8 +26,10 @@ static int test_atol_hex() {
 }
 #undef ASSERT_ATOL
 #define ASSERT_ATOL(x) \
-	ASSERT_EQ(large, x##LL, dtoll(#x))
+	ASSERT_EQ(large, x##LL, dtoll(#x, &ok)); \
+	ASSERT_TRUE(ok)
 static int test_atol_dec() {
+	int ok;
 	ASSERT_ATOL(0);
 	ASSERT_ATOL(-1);
 	ASSERT_ATOL(-0);
@@ -98,7 +102,7 @@ static int test_encode() {
 	ASSERT_EQ(uint, partal[2], arg2); \
 	ASSERT_EQ(uint, partal[3], arg3)
 static int test_varint16() {
-	ushort_t partal[MAX_VARINT16_LEN];
+	unsigned short partal[MAX_VARINT16_LEN];
 	int i;
 
 	ASSERT_EN(1, 1);

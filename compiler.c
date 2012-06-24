@@ -113,6 +113,8 @@ static void ymk_emit_kz(
 	struct ymd_parser *p, const char *raw) {
 	char *priv = NULL;
 	int i, k = stresc(raw, &priv);
+	if (k < 0)
+		ymc_fail(p, "Bad ESC string.");
 	if (priv) {
 		i = blk_kz(p->blk, priv, k);
 		vm_free(priv);
@@ -456,12 +458,16 @@ static void parse_simple(struct ymd_parser *p) {
 	case FALSE:
 		ymk_emitOfP(p, I_PUSH, F_BOOL, 0);
 		break;
-	case DEC_LITERAL:
-		ymk_emit_int(p, dtoll(ymk_literal(p)));
-		break;
-	case HEX_LITERAL:
-		ymk_emit_int(p, xtoll(ymk_literal(p)));
-		break;
+	case DEC_LITERAL: {
+		int ok = 1;
+		ymk_emit_int(p, dtoll(ymk_literal(p), &ok));
+		assert(ok);
+		} break;
+	case HEX_LITERAL: {
+		int ok = 1;
+		ymk_emit_int(p, xtoll(ymk_literal(p), &ok));
+		assert(ok);
+		} break;
 	case STRING:
 		ymk_emit_kz(p, ymk_literal(p));
 		break;

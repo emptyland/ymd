@@ -19,9 +19,9 @@ ymd_main.o: $(INCS) disassembly.h libc.h ymd_main.c
 #-------------------------------------------------------------------------------
 # Run all test
 test: yut_test memory_test value_test skip_list_test hash_map_test \
-      closure_test dynamic_array_test symbol_test
+      closure_test dynamic_array_test encode_test
 	./memory_test && ./value_test && ./skip_list_test && ./hash_map_test && \
-	./closure_test && ./dynamic_array_test && symbol_test
+	./closure_test && ./dynamic_array_test && encode_test
 
 #-------------------------------------------------------------------------------
 # Unit test rules:
@@ -67,11 +67,11 @@ call_test: $(OBJT) call_test.o
 call_test.o: $(INCT) libc.h call_test.c 
 	$(CC) $(CFLAGS) call_test.c -c -o call_test.o
 
-#symbol_test: $(OBJT) symbol_test.o
-#	$(CC) $(OBJT) symbol_test.o -o symbol_test
+encode_test: $(OBJT) encode_test.o
+	$(CC) $(OBJT) encode_test.o -o encode_test
 
-#symbol_test.o: $(INCT) symbol_test.c symbol.h assembly.h 
-#	$(CC) $(CFLAGS) symbol_test.c -c -o symbol_test.o
+encode_test.o: $(INCT) encode_test.c encode.h assembly.h 
+	$(CC) $(CFLAGS) encode_test.c -c -o encode_test.o
 
 compiler_test: $(OBJT) compiler_test.o compiler.o lex.o
 	$(CC) $(OBJT) compiler_test.o compiler.o lex.o -o compiler_test

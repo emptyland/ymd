@@ -20,8 +20,8 @@ int varint16_encode(ymd_int_t d, unsigned short rv[]);
 ymd_int_t varint16_decode(const unsigned short by[], int n);
 
 int stresc(const char *i, char **rv);
-ymd_int_t xtoll(const char *raw);
-ymd_int_t dtoll(const char *raw);
+ymd_int_t xtoll(const char *raw, int *ok);
+ymd_int_t dtoll(const char *raw, int *ok);
 
 #endif // YMD_ENCODE_H
 

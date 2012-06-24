@@ -6,6 +6,7 @@
 #include "encode.h"
 #include "libc.h"
 #include <stdio.h>
+#include <setjmp.h>
 
 struct posix_regex {
 	regex_t core; // NOTE: This field must be first!
@@ -237,6 +238,9 @@ static int libx_append(struct context *l) {
 static int libx_len(struct context *l) {
 	const struct variable *arg0 = ymd_argv_get(l, 0);
 	switch (arg0->type) {
+	case T_NIL:
+		ymd_push_int(l, 0);
+		break;
 	case T_KSTR:
 		ymd_push_int(l, kstr_k(arg0)->len);
 		break;
@@ -861,8 +865,18 @@ static int libx_env(struct context *l) {
 
 static int libx_atoi(struct context *l) {
 	struct kstr *arg0 = kstr_of(ymd_argv_get(l, 0));
-	vset_int(ymd_push(l), dtoll(arg0->land));
+	int ok = 1;
+	ymd_int_t i = dtoll(arg0->land, &ok);
+	if (ok)
+		vset_int(ymd_push(l), i);
+	else
+		vset_nil(ymd_push(l));
 	return 1;
+}
+
+static int libx_exit(struct context *l) {
+	(void)l;
+	longjmp(l->jpt, 2);
 }
 
 LIBC_BEGIN(Builtin)
@@ -889,6 +903,7 @@ LIBC_BEGIN(Builtin)
 	LIBC_ENTRY(match)
 	LIBC_ENTRY(import)
 	LIBC_ENTRY(env)
+	LIBC_ENTRY(exit)
 LIBC_END
 
 
