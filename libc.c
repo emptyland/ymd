@@ -23,7 +23,6 @@ struct ansic_file {
 static const char *T_STREAM = "stream";
 
 #define PRINT_SPLIT " "
-static void *const kend = (void *)-1;
 
 // Format context
 #define FMTX_STATIC_MAX 260
@@ -307,7 +306,7 @@ static int libx_str(struct context *l) {
 // Foreach closures
 //------------------------------------------------------------------------------
 static int libx_end(struct context *l) {
-	vset_ext(ymd_push(l), kend);
+	vset_nil(ymd_push(l));
 	return 1;
 }
 
@@ -316,8 +315,8 @@ static int step_iter(struct context *l) {
 					*m = ymd_bval(l, 1),
 					*s = ymd_bval(l, 2),
 					rv;
-	rv.type = T_EXT;
-	rv.value.ext = kend;
+	rv.type = T_NIL;
+	rv.value.i = 0;
 	if (s->value.i > 0 && i->value.i <= m->value.i) {
 		rv.type = T_INT;
 		rv.value.i = i->value.i;
@@ -357,7 +356,7 @@ static int dyay_iter(struct context *l) {
 	struct variable *i = ymd_bval(l, 0)->value.ext,
 	                *m = ymd_bval(l, 1)->value.ext;
 	if (i >= m) {
-		vset_ext(ymd_push(l), kend);
+		vset_nil(ymd_push(l));
 		return 1;
 	}
 	switch (int_of(ymd_bval(l, 3))) {
@@ -398,7 +397,7 @@ static int hmap_iter(struct context *l) {
 	struct kvi *i = ymd_bval(l, 0)->value.ext,
 			   *m = ymd_bval(l, 1)->value.ext;
 	if (i >= m) {
-		vset_ext(ymd_push(l), kend);
+		vset_nil(ymd_push(l));
 		return 1;
 	}
 	switch (int_of(ymd_bval(l, 2))) {
@@ -428,7 +427,7 @@ static int hmap_iter(struct context *l) {
 static int skls_iter(struct context *l) {
 	struct sknd *i = ymd_bval(l, 0)->value.ext;
 	if (!i) {
-		vset_ext(ymd_push(l), kend);
+		vset_nil(ymd_push(l));
 		return 1;
 	}
 	switch (int_of(ymd_bval(l, 1))) {
@@ -531,16 +530,6 @@ static int libx_rank(struct context *l) {
 static int libx_ranki(struct context *l) {
 	struct func *iter = new_contain_iter(l, ymd_argv_get(l, 0), ITER_KEY);
 	vset_func(ymd_push(l), iter);
-	return 1;
-}
-
-static int libx_done(struct context *l) {
-	const struct dyay *argv = ymd_argv_chk(l, 1);
-	if (argv->elem[0].type == T_EXT &&
-		argv->elem[0].value.ext == kend)
-		ymd_push_bool(l, 1);
-	else
-		ymd_push_bool(l, 0);
 	return 1;
 }
 
@@ -899,8 +888,6 @@ LIBC_BEGIN(Builtin)
 	LIBC_ENTRY(range)
 	LIBC_ENTRY(rank)
 	LIBC_ENTRY(ranki)
-	LIBC_ENTRY(end)
-	LIBC_ENTRY(done)
 	LIBC_ENTRY(str)
 	LIBC_ENTRY(atoi)
 	LIBC_ENTRY(panic)

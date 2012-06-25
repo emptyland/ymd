@@ -167,9 +167,7 @@ retry:
 			IMPL_JUMP
 			goto retry;
 		case I_FOREACH: {
-			struct variable *cond = ymd_top(l, 0);
-			if (cond->type == T_EXT &&
-				cond->value.ext == (void *)-1) { // FIXME: use a macro or constant
+			if (is_nil(ymd_top(l, 0))) {
 				switch (flag) {
 				case F_FORWARD:
 					info->pc += param;
