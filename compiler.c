@@ -670,7 +670,7 @@ static void ymk_lval_partal(struct ymd_parser *p,
 		ymk_emitOfP(p, I_GETF, F_STACK, 1);
 		break;
 	case VDOT:
-		ymk_emit_setf(p, desc->last);
+		ymk_emit_getf(p, desc->last);
 		break;
 	default:
 		break;
