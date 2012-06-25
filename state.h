@@ -79,6 +79,8 @@ struct variable *ymd_get(struct variable *var,
 
 static inline struct kstr *ymd_kstr(const char *z, int n) {
 	struct kvi *x = kz_index(vm()->kpool, z, n);
+	x->v.type = T_INT;
+	x->v.value.i++;
 	return kstr_x(&x->k);
 }
 
