@@ -851,6 +851,33 @@ static int libx_import(struct context *l) {
 	return func_call(block, ymd_argv(l)->count - 1);
 }
 
+static int libx_eval(struct context *l) {
+	int i;
+	struct func *chunk;
+	struct kstr *script = kstr_of(ymd_argv_get(l, 0));
+	chunk = func_compile("__blk_eval__", NULL, script->land);
+	if (!chunk) {
+		vset_nil(ymd_push(l));
+		return 1;
+	}
+	vset_func(ymd_push(l), chunk);
+	for (i = 1; i < ymd_argv(l)->count; ++i)
+		*ymd_push(l) = *ymd_argv_get(l, i);
+	return func_call(chunk, ymd_argv(l)->count - 1);
+}
+
+static int libx_compile(struct context *l) {
+	struct func *chunk;
+	struct kstr *script = kstr_of(ymd_argv_get(l, 0));
+	chunk = func_compile("__blk_compile__", NULL, script->land);
+	if (!chunk) {
+		vset_nil(ymd_push(l));
+		return 1;
+	}
+	vset_func(ymd_push(l), chunk);
+	return 1;
+}
+
 static int libx_env(struct context *l) {
 	struct kstr *which = kstr_of(ymd_argv_get(l, 0));
 	if (strcmp(which->land, "*global") == 0)
@@ -901,6 +928,8 @@ LIBC_BEGIN(Builtin)
 	LIBC_ENTRY(pattern)
 	LIBC_ENTRY(match)
 	LIBC_ENTRY(import)
+	LIBC_ENTRY(eval)
+	LIBC_ENTRY(compile)
 	LIBC_ENTRY(env)
 	LIBC_ENTRY(exit)
 LIBC_END
