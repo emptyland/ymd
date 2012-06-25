@@ -25,7 +25,7 @@ static int log2x(int n) {
 	return -1;
 }
 
-static inline struct kvi *position(struct hmap *map,
+static inline struct kvi *position(const struct hmap *map,
                                    size_t h) {
 	return map->item + (((h - 1) | 1) % (1 << map->shift));
 }
@@ -118,7 +118,7 @@ static size_t hash(const struct variable *v) {
 	return 0;
 }
 
-static struct variable *hfind(struct hmap *map,
+static struct variable *hfind(const struct hmap *map,
                               const struct variable *key) {
 	size_t h = hash(key);
 	struct kvi *i, *slot = position(map, h);
@@ -134,7 +134,7 @@ static struct variable *hfind(struct hmap *map,
 	default:
 		break;
 	}
-	return knax;
+	return knil;
 }
 
 struct hmap *hmap_new(int count) {
@@ -160,7 +160,7 @@ int hmap_equals(const struct hmap *map, const struct hmap *lhs) {
 	while (i--) {
 		if (map->item[i].flag != KVI_FREE) {
 			const struct kvi *it = map->item + i;
-			if (!equals(&it->v, hfind((struct hmap*)lhs, &it->k)))
+			if (!equals(&it->v, hfind(lhs, &it->k)))
 				return 0;
 		}
 	}
@@ -175,7 +175,7 @@ int hmap_compare(const struct hmap *map, const struct hmap *lhs) {
 	while (i--) {
 		if (map->item[i].flag != KVI_FREE) {
 			const struct kvi *it = map->item + i;
-			rv += compare(&it->v, hfind((struct hmap*)lhs, &it->k));
+			rv += compare(&it->v, hfind(lhs, &it->k));
 		}
 	}
 	return rv;
@@ -233,7 +233,7 @@ static void resize(struct hmap *map, int shift) {
 	// Rehash
 	for (i = bak; i < last; ++i) {
 		if (i->flag != KVI_FREE) {
-			struct variable *pv = hmap_get(map, &i->k);
+			struct variable *pv = hmap_put(map, &i->k);
 			assert(pv != NULL);
 			//assert(is_nil(pv));
 			*pv = i->v;
@@ -286,16 +286,25 @@ static struct kvi *hindex(struct hmap *map, const struct variable *key) {
 		return get_any(map, key, slot, h);
 	default:
 		assert(0);
+		break;
 	}
 	return NULL;
 }
 
-struct variable *hmap_get(struct hmap *map, const struct variable *key) {
-	struct kvi *x = hindex(map, key);
+struct variable *hmap_put(struct hmap *map, const struct variable *key) {
+	struct kvi *x = NULL;
+	assert(!is_nil(key));
+	x = hindex(map, key);
 	x->k = *key;
 	return &x->v;
 }
 
+struct variable *hmap_get(struct hmap *map, const struct variable *key) {
+	assert(!is_nil(key));
+	return hfind(map, key);
+}
+
+// Used by kpool(Constant String Pool)
 struct kvi *kz_index(struct hmap *map, const char *z, int n) {
 	// Make a fake key.
 	struct variable fake;

@@ -110,7 +110,28 @@ static void vm_backtrace(int max) {
 //------------------------------------------------------------------------
 // Generic mapping functions:
 // -----------------------------------------------------------------------
-struct variable *ymd_get(struct variable *var, const struct variable *key) {
+struct variable *ymd_put(struct variable *var,
+                         const struct variable *key) {
+	if (is_nil(key))
+		vm_die("No any key will be `nil`");
+	switch (var->type) {
+	case T_SKLS:
+		return skls_put(skls_x(var), key);
+	case T_HMAP:
+		return hmap_put(hmap_x(var), key);
+	case T_DYAY:
+		return dyay_get(dyay_x(var), int_of(key));
+	default:
+		vm_die("Variable can not be put");
+		break;
+	}
+	return NULL;
+}
+
+struct variable *ymd_get(struct variable *var,
+                         const struct variable *key) {
+	if (is_nil(key))
+		vm_die("No any key will be `nil`");
 	switch (var->type) {
 	case T_SKLS:
 		return skls_get(skls_x(var), key);
@@ -119,10 +140,10 @@ struct variable *ymd_get(struct variable *var, const struct variable *key) {
 	case T_DYAY:
 		return dyay_get(dyay_x(var), int_of(key));
 	default:
-		vm_die("Variable is not a mapping container");
+		vm_die("Variable can not be index");
 		break;
 	}
-	return knax;
+	return NULL;
 }
 
 struct kstr *ymd_strcat(const struct kstr *lhs, const struct kstr *rhs) {

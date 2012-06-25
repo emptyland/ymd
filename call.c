@@ -67,6 +67,33 @@ static inline int vm_bool(const struct variable *lhs) {
 	return 0;
 }
 
+static inline void do_put(struct gc_node *raw, const struct variable *k,
+                          const struct variable *v) {
+	if (is_nil(k) || is_nil(v))
+		vm_die("Value can not be `nil` in k-v pair");
+	switch (raw->type) {
+	case T_HMAP:
+		*hmap_put((struct hmap *)raw, k) = *v;
+		break;
+	case T_SKLS:
+		*skls_put((struct skls *)raw, k) = *v;
+		break;
+	case T_DYAY:
+		*dyay_add((struct dyay *)raw) = *v;
+	default:
+		assert(0);
+		break;
+	}
+}
+
+static inline void vm_put(struct variable *var, const struct variable *k,
+                   const struct variable *v) {
+	struct variable *rv = ymd_put(var, k);
+	if (is_nil(v))
+		vm_die("Value can not be `nil` in k-v pair");
+	*rv = *v;
+}
+
 #define IMPL_JUMP          \
 	switch (flag) {        \
 	case F_FORWARD:        \
@@ -163,17 +190,14 @@ retry:
 			case F_STACK: {
 				int i, k = param << 1;
 				struct variable *var = ymd_top(l, k);
-				for (i = 0; i < k; i += 2) {
-					struct variable *v = ymd_get(var, ymd_top(l, i + 1));
-					*v = *ymd_top(l, i);
-				}
+				for (i = 0; i < k; i += 2)
+					vm_put(var, ymd_top(l, i + 1), ymd_top(l, i));
 				ymd_pop(l, k + 1);
 				} break;
 			case F_FAST: {
-				struct variable key, *v;
+				struct variable key;
 				vset_kstr(&key, core->kz[param]);
-				v = ymd_get(ymd_top(l, 1), &key);
-				*v = *ymd_top(l, 0);
+				vm_put(ymd_top(l, 1), &key, ymd_top(l, 0));
 				ymd_pop(l, 2);
 				} break;
 			default:
@@ -279,7 +303,7 @@ retry:
 		case I_TYPEOF: {
 			const unsigned tt = ymd_top(l, 0)->type;
 			struct kstr *kz;
-			assert(tt < KNAX);
+			assert(tt < T_MAX);
 			kz = typeof_kstr(tt);
 			ymd_top(l, 0)->type = T_KSTR;
 			ymd_top(l, 0)->value.ref = gcx(kz);
@@ -405,36 +429,27 @@ retry:
 			} break;
 		case I_NEWMAP: {
 			struct hmap *map = hmap_new(param);
-			struct variable *var;
 			int i, n = param * 2;
 			for (i = 0; i < n; i += 2)
-				*hmap_get(map, ymd_top(l, i + 1)) = *ymd_top(l, i);
+				do_put(gcx(map), ymd_top(l, i + 1), ymd_top(l, i));
 			ymd_pop(l, n);
-			var = ymd_push(l);
-			var->type = T_HMAP;
-			var->value.ref = gcx(map);
+			vset_hmap(ymd_push(l), map);
 			} break;
 		case I_NEWSKL: {
 			struct skls *map = skls_new();
-			struct variable *var;
 			int i, n = param * 2;
 			for (i = 0; i < n; i += 2)
-				*skls_get(map, ymd_top(l, i + 1)) = *ymd_top(l, i);
+				do_put(gcx(map), ymd_top(l, i + 1), ymd_top(l, i));
 			ymd_pop(l, n);
-			var = ymd_push(l);
-			var->type = T_SKLS;
-			var->value.ref = gcx(map);
+			vset_skls(ymd_push(l), map);
 			} break;
 		case I_NEWDYA: {
 			struct dyay *map = dyay_new(0);
-			struct variable *var;
 			int i = param;
 			while (i--)
-				*dyay_add(map) = *ymd_top(l, i);
+				do_put(gcx(map), NULL, ymd_top(l, i));
 			ymd_pop(l, param);
-			var = ymd_push(l);
-			var->type = T_DYAY;
-			var->value.ref = gcx(map);
+			vset_dyay(ymd_push(l), map);
 			} break;
 		case I_BIND: {
 			struct variable *opd = ymd_top(l, param);

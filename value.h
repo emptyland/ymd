@@ -19,7 +19,7 @@
 #define T_HMAP    7 // Hash map
 #define T_SKLS    8 // Skip list
 #define T_MAND    9 // Managed data(from C/C++)
-#define KNAX     10 // Flag value
+#define T_MAX    10
 
 #define DECL_TREF(v) \
 	v(func, T_FUNC)  \
@@ -134,7 +134,7 @@ struct mand {
 };
 
 // A flag fake variable:
-extern struct variable *knax;
+extern struct variable *knil;
 
 #define DEFINE_REFCAST(name, tt) \
 static inline struct name *name##_x(struct variable *var) { \
@@ -202,6 +202,7 @@ struct hmap *hmap_new(int count);
 void hmap_final(struct hmap *map);
 int hmap_equals(const struct hmap *map, const struct hmap *rhs);
 int hmap_compare(const struct hmap *map, const struct hmap *rhs);
+struct variable *hmap_put(struct hmap *map, const struct variable *key);
 struct variable *hmap_get(struct hmap *map, const struct variable *key);
 
 // Skip list: `skls` functions:
@@ -209,6 +210,7 @@ struct skls *skls_new();
 void skls_final(struct skls *list);
 int skls_equals(const struct skls *list, const struct skls *rhs);
 int skls_compare(const struct skls *list, const struct skls *rhs);
+struct variable *skls_put(struct skls *list, const struct variable *key);
 struct variable *skls_get(struct skls *list, const struct variable *key);
 
 // Dynamic array: `dyay` functions:

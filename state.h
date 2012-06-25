@@ -71,7 +71,11 @@ struct func *ymd_spawnf(struct chunk *blk, const char *name, unsigned short *id)
 //-----------------------------------------------------------------------------
 // Misc:
 // ----------------------------------------------------------------------------
-struct variable *ymd_get(struct variable *var, const struct variable *key);
+struct variable *ymd_put(struct variable *var,
+                         const struct variable *key);
+
+struct variable *ymd_get(struct variable *var,
+                         const struct variable *key);
 
 static inline struct kstr *ymd_kstr(const char *z, int n) {
 	struct kvi *x = kz_index(vm()->kpool, z, n);
@@ -173,11 +177,11 @@ static inline void ymd_push_func(struct context *l, struct func *fn) {
 	v->type = T_FUNC;
 }
 
-static inline void ymd_index(struct context *l) {
+/*static inline void ymd_index(struct context *l) {
 	struct variable *k = ymd_top(l, 0);
 	struct variable *v = ymd_get(ymd_top(l, 1), k);
 	ymd_pop(l, 2);
 	*ymd_push(l) = *v;
-}
+}*/
 
 #endif // YMD_STATE_H

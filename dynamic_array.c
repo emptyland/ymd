@@ -63,7 +63,7 @@ int dyay_compare(const struct dyay *arr, const struct dyay *rhs) {
 struct variable *dyay_get(struct dyay *arr, ymd_int_t i) {
 	size_t pos = (size_t)i;
 	if (i < 0LL || i >= (ymd_int_t)arr->count)
-		return knax;
+		vm_die("Array out of range; index: %lld", i); // Noreached
 	return arr->elem + pos;
 }
 

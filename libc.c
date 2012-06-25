@@ -189,20 +189,32 @@ static void dyay_do_insert(struct dyay *self, struct context *l) {
 	}
 }
 
+static void checked_put(struct variable *arg0,
+                        const struct variable *k,
+						const struct variable *v) {
+	if (is_nil(k) || is_nil(v))
+		vm_die("Value can not be `nil` in k-v pair");
+	switch (arg0->type) {
+	case T_HMAP:
+		*hmap_put(hmap_x(arg0), k) = *v;
+		break;
+	case T_SKLS:
+		*skls_put(skls_x(arg0), k) = *v;
+		break;
+	default:
+		vm_die("This type: `%s` is not be support", typeof_kz(arg0->type));
+		break;
+	}
+}
+
 static int libx_insert(struct context *l) {
 	struct variable *arg0 = ymd_argv_get(l, 0);
 	switch (arg0->type) {
 	case T_DYAY:
 		dyay_do_insert(dyay_x(arg0), l);
 		break;
-	case T_HMAP:
-		*hmap_get(hmap_x(arg0), ymd_argv_get(l, 1)) = *ymd_argv_get(l, 2);
-		break;
-	case T_SKLS:
-		*skls_get(skls_x(arg0), ymd_argv_get(l, 1)) = *ymd_argv_get(l, 2);
-		break;
 	default:
-		vm_die("This type: `%s` is not be support", typeof_kz(arg0->type));
+		checked_put(arg0, ymd_argv_get(l, 1), ymd_argv_get(l, 2));
 		break;
 	}
 	return 0;
@@ -912,12 +924,10 @@ int ymd_load_lib(ymd_libc_t lbx) {
 	for (i = lbx; i->native != NULL; ++i) {
 		struct kstr *kz = ymd_kstr(i->symbol.z, i->symbol.len);
 		struct func *fn = func_new_c(i->native, kz->land);
-		struct variable key, *rv;
+		struct variable key;
 		key.type = T_KSTR;
 		key.value.ref = gcx(kz);
-		rv = hmap_get(vm()->global, &key);
-		rv->type = T_FUNC;
-		rv->value.ref = gcx(fn);
+		vset_func(hmap_put(vm()->global, &key), fn);
 	}
 	return 0;
 }

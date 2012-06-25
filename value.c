@@ -35,11 +35,11 @@ struct kstr *typeof_kstr(unsigned tt) {
 //-------------------------------------------------------------------------
 // Constant variable value:
 //-------------------------------------------------------------------------
-static struct variable knax_fake_var = {
-	.value = { .i = 0xcccccccccccbadeeULL, },
-	.type = KNAX,
+static struct variable knil_fake_var = {
+	.value = { .i = 0LL, },
+	.type = T_NIL,
 };
-struct variable *knax = &knax_fake_var;
+struct variable *knil = &knil_fake_var;
 
 //-------------------------------------------------------------------------
 // Type casting define:

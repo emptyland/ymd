@@ -65,9 +65,9 @@ static struct sknd *skindex(struct skls *list,
 	return (x && equals(&x->k, key)) ? x : append(list, update);
 }
 
-static const struct variable *skfind(const struct skls *list,
-                                     const struct variable *key) {
-	const struct sknd *x = list->head;
+static struct variable *skfind(const struct skls *list,
+                               const struct variable *key) {
+	struct sknd *x = list->head;
 	int i;
 	for (i = list->lv - 1; i >= 0; --i) {
 		while (x->fwd[i] && compare(&x->fwd[i]->k, key) < 0) {
@@ -75,7 +75,7 @@ static const struct variable *skfind(const struct skls *list,
 		}
 	}
 	x = x->fwd[0];
-	return (x && equals(&x->k, key)) ? &x->v : knax; // `knax` means not found;
+	return (x && equals(&x->k, key)) ? &x->v : knil; // `knil` means not found;
 }
 
 struct skls *skls_new() {
@@ -118,9 +118,16 @@ int skls_compare(const struct skls *list, const struct skls *lhs) {
 	return rv;
 }
 
-struct variable *skls_get(struct skls *list, const struct variable *key) {
-	struct sknd *x = skindex(list, key);
+struct variable *skls_put(struct skls *list, const struct variable *key) {
+	struct sknd *x = NULL;
+	assert(!is_nil(key));
+	x = skindex(list, key);
 	x->k = *key;
 	return &x->v;
+}
+
+struct variable *skls_get(struct skls *list, const struct variable *key) {
+	assert(!is_nil(key));
+	return skfind(list, key);
 }
 
