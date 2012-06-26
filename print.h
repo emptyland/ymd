@@ -1,6 +1,8 @@
 #ifndef YMD_PRINT_H
 #define YMD_PRINT_H
 
+#include <stdio.h>
+
 #define yEND     "%{a}"
 #define yRED     "%{b}"
 #define yGREEN   "%{c}"

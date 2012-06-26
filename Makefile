@@ -1,7 +1,8 @@
 include config.mk
 OBJS=state.o value.o memory.o dynamic_array.o hash_map.o skip_list.o closure.o \
-	 call.o libc.o encode.o
-OBJT=$(OBJS) yut_rand.o yut.o main_test.o disassembly.o lex.o compiler.o
+	 call.o libc.o encode.o compiler.o lex.o disassembly.o
+OBJI=yut_rand.o yut.o main_test.o
+OBJT=$(OBJS) $(OBJI)
 INCS=state.h value.h memory.h
 INCT=$(INCS) yut.h yut_rand.h
 
@@ -10,8 +11,8 @@ XLIBS=$(LIB_REGEX)
 
 #-------------------------------------------------------------------------------
 # ymd_main
-ymd_main: $(OBJS) $(XLIBS) ymd_main.o disassembly.o lex.o compiler.o
-	$(CC) $(OBJS) $(XLIBS) ymd_main.o disassembly.o lex.o compiler.o -o ymd_main
+ymd_main: $(OBJS) $(XLIBS) ymd_main.o 
+	$(CC) $(OBJS) $(XLIBS) ymd_main.o -o ymd_main
 
 ymd_main.o: $(INCS) disassembly.h libc.h ymd_main.c
 	$(CC) $(CFLAGS) ymd_main.c -c -o ymd_main.o
@@ -73,17 +74,23 @@ encode_test: $(OBJT) encode_test.o
 encode_test.o: $(INCT) encode_test.c encode.h assembly.h 
 	$(CC) $(CFLAGS) encode_test.c -c -o encode_test.o
 
-compiler_test: $(OBJT) compiler_test.o compiler.o lex.o
-	$(CC) $(OBJT) compiler_test.o compiler.o lex.o -o compiler_test
+compiler_test: $(OBJT) compiler_test.o
+	$(CC) $(OBJT) compiler_test.o -o compiler_test
 
 compiler_test.o: $(INCT) compiler_test.c compiler.h lex.h
 	$(CC) $(CFLAGS) compiler_test.c -c -o compiler_test.o
 
-lex_test: $(OBJT) lex.o lex_test.o
-	$(CC) $(OBJT) lex_test.o lex.o -o lex_test 
+lex_test: $(OBJT) lex_test.o
+	$(CC) $(OBJT) lex_test.o -o lex_test 
 
 lex_test.o: lex_test.c lex.h
 	$(CC) $(CFLAGS) lex_test.c -c -o lex_test.o
+
+print_test: $(OBJT) print_test.o print_posix.o 
+	$(CC) $(OBJT) print_test.o print_posix.o -o print_test
+
+print_test.o: print_test.c print.h
+	$(CC) $(CFLAGS) print_test.c -c -o print_test.o
 
 main_test.o: main_test.c state.h yut.h
 	$(CC) $(CFLAGS) main_test.c -c -o main_test.o
@@ -147,6 +154,9 @@ value.o: value.c value.h state.h
 
 memory.o: memory.c memory.h state.h
 	$(CC) $(CFLAGS) memory.c -c -o memory.o
+
+print_posix.o: print_posix.c print.h
+	$(CC) $(CFLAGS) print_posix.c -c -o print_posix.o
 
 .PHONY: clean
 clean:

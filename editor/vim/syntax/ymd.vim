@@ -5,7 +5,7 @@ syntax keyword ymdKeyword typeof var and or not func with "@"
 syntax keyword ymdFunc panic open read write len strbuf strcat strfin
 syntax keyword ymdFunc end range rank ranki print str close insert
 syntax keyword ymdFunc append match pattern argv self import env atoi
-syntax keyword ymdFunc exit eval compile
+syntax keyword ymdFunc exit eval compile echo
 
 syntax match ymdInteger "\<\d\+\>"
 syntax match ymdInteger "\<\-\d\+\>"
