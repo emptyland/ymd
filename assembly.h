@@ -3,7 +3,7 @@
 
 // Instructions:
 #define I_PANIC   0
-//reserved 5
+#define I_SELFCALL 5 // selfcall "string"
 #define I_STORE   10 // store local|off
 #define I_RET     15 // ret n
 #define I_JNE     20 // jne label

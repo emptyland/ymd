@@ -17,7 +17,7 @@ static int test_call_run_1() {
 		printf("====[%s]====\n", vm()->fn[i]->proto->land);
 		dis_func(stdout, vm()->fn[i]);
 	}
-	func_call(fn, 0);
+	func_call(fn, 0, 0);
 	return 0;
 }
 

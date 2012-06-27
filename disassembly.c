@@ -73,6 +73,11 @@ static const char *getf(const struct func *fn, uint_t inst,
 	return buf;
 }
 
+const char *method(const struct func *fn, uint_t inst) {
+	int i = asm_param(inst);
+	return fn->u.core->kz[i]->land;
+}
+
 int dis_inst(FILE *fp, const struct func *fn, uint_t inst) {
 	char buf[128];
 	int rv;
@@ -80,6 +85,10 @@ int dis_inst(FILE *fp, const struct func *fn, uint_t inst) {
 	switch (asm_op(inst)) {
 	case I_PANIC:
 		rv = fprintf(fp, "panic");
+		break;
+	case I_SELFCALL:
+		rv = fprintf(fp, "call [%s]:%d", method(fn, inst),
+		             asm_flag(inst));
 		break;
 	case I_STORE:
 		rv = fprintf(fp, "store %s", address(fn, inst, BUF));

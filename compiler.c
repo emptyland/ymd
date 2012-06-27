@@ -186,6 +186,12 @@ static void ymk_emit_getf(
 	ymk_emitOfP(p, I_GETF, F_FAST, i);
 }
 
+static void ymk_emit_selfcall(
+	struct ymd_parser *p, const char *method, int argc) {
+	int i = blk_kz(p->blk, method, -1);
+	ymk_emitOfP(p, I_SELFCALL, (uchar_t)argc, i);
+}
+
 static inline void ymk_emit_jmp(struct ymd_parser *p, uint_t target,
                                 int bwd) {
 	ushort_t off;
@@ -377,9 +383,8 @@ static int parse_args(struct ymd_parser *p) {
 	return nargs;
 }
 
-static void parse_callargs(struct ymd_parser *p, int self) {
+static void parse_callargs(struct ymd_parser *p, const char *method) {
 	ushort_t nargs = 0;
-	(void)self;
 	switch (ymc_peek(p)) {
 	case '(':
 		ymc_next(p);
@@ -405,7 +410,10 @@ static void parse_callargs(struct ymd_parser *p, int self) {
 		break;
 	}
 out:
-	ymk_emitOP(p, I_CALL, nargs);
+	if (!method)
+		ymk_emitOP(p, I_CALL, nargs);
+	else
+		ymk_emit_selfcall(p, method, nargs);
 }
 
 static void parse_primary(struct ymd_parser *p) {
@@ -439,7 +447,7 @@ static void parse_suffixed(struct ymd_parser *p) {
 			ymk_emitOfP(p, I_GETF, F_STACK, 1);
 			break;
 		case '(': case STRING: /*case '{':*/
-			parse_callargs(p, 0);
+			parse_callargs(p, NULL);
 			break;
 		default:
 			return;
@@ -722,9 +730,17 @@ static void parse_lval(struct ymd_parser *p, struct lval_desc *desc) {
 			desc->last = NULL;
 			desc->vt = VINDEX;
 			break;
+		case ':':
+			ymk_lval_partal(p, desc);
+			ymc_next(p);
+			desc->last = ymk_symbol(p);
+			parse_callargs(p, desc->last);
+			desc->last = NULL;
+			desc->vt = VCALL;
+			break;
 		case '(': case STRING: /*case '{':*/
 			ymk_lval_partal(p, desc);
-			parse_callargs(p, 0);
+			parse_callargs(p, NULL);
 			desc->last = NULL;
 			desc->vt = VCALL;
 			break;

@@ -420,10 +420,15 @@ retry:
 			ymd_pop(l, 1);
 			} break;
 		case I_CALL: {
+			struct func *called = func_of(ymd_top(l, argc));
+			func_call(called, param, 0);
+			} break;
+		case I_SELFCALL: {
+			struct variable method;
 			struct func *called;
-			int argc = param, nrt = 0;
-			called = func_of(ymd_top(l, argc));
-			nrt = func_call(called, argc);
+			vset_kstr(&method, fn->u.core->kz[param]);
+			called = func_of(ymd_get(ymd_top(l, flag), &method));
+			func_call(called, flag, 1);
 			} break;
 		case I_NEWMAP: {
 			struct hmap *map = hmap_new(param);
@@ -499,11 +504,12 @@ static void copy_args(struct func *fn, int argc) {
 	}
 }
 
-int func_call(struct func *fn, int argc) {
+int func_call(struct func *fn, int argc, int method) {
 	int rv;
 	struct call_info scope;
 	struct context *l = ioslate();
 	int main_fn = (l->info == NULL);
+	if (method) ++argc; // Extra arg0: self
 
 	// Initialize local variable
 	if (main_fn) {
@@ -520,7 +526,7 @@ int func_call(struct func *fn, int argc) {
 	l->info = &scope;
 	copy_args(fn, argc);
 	// Pop all args
-	ymd_pop(l, argc + 1);
+	ymd_pop(l, argc + (method ? 0 : 1));
 	if (fn->is_c) {
 		rv = (*fn->u.nafn)(ioslate());
 		goto ret;
@@ -542,6 +548,6 @@ int func_main(struct func *fn, int argc, char *argv[]) {
 	if (setjmp(l->jpt)) {
 		return -1;
 	}
-	return func_call(fn, argc);
+	return func_call(fn, argc, 0);
 }
 

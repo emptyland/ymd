@@ -44,6 +44,8 @@ int blk_kz(struct chunk *core, const char *z, int n) {
 void blk_final(struct chunk *core) {
 	if (core->inst)
 		vm_free(core->inst);
+	if (core->line)
+		vm_free(core->line);
 	if (core->kz)
 		vm_free(core->kz);
 	if (core->lz)

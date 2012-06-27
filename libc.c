@@ -848,7 +848,7 @@ static int libx_import(struct context *l) {
 	vset_func(ymd_push(l), block);
 	for (i = 1; i < ymd_argv(l)->count; ++i)
 		*ymd_push(l) = *ymd_argv_get(l, i);
-	return func_call(block, ymd_argv(l)->count - 1);
+	return func_call(block, ymd_argv(l)->count - 1, 0);
 }
 
 static int libx_eval(struct context *l) {
@@ -863,7 +863,7 @@ static int libx_eval(struct context *l) {
 	vset_func(ymd_push(l), chunk);
 	for (i = 1; i < ymd_argv(l)->count; ++i)
 		*ymd_push(l) = *ymd_argv_get(l, i);
-	return func_call(chunk, ymd_argv(l)->count - 1);
+	return func_call(chunk, ymd_argv(l)->count - 1, 0);
 }
 
 static int libx_compile(struct context *l) {

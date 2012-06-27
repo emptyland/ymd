@@ -243,7 +243,7 @@ struct func *func_new_c(ymd_nafn_t nafn, const char *name);
 struct func *func_clone(struct func *fn);
 void func_final(struct func *fn);
 int func_bind(struct func *fn, int i, const struct variable *var);
-int func_call(struct func *fn, int argc);
+int func_call(struct func *fn, int argc, int method);
 int func_main(struct func *fn, int argc, char *argv[]);
 void func_dump(struct func *fn, FILE *fp);
 static inline int func_nlocal(const struct func *fn) {
