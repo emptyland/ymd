@@ -75,7 +75,7 @@ static inline struct chunk *ymk_leave(struct ymd_parser *p) {
 
 static inline void ymk_emitOfP(
 	struct ymd_parser *p, uchar_t o, uchar_t f, ushort_t param) {
-	blk_emit(p->blk, asm_build(o, f, param));
+	blk_emit(p->blk, asm_build(o, f, param), p->lex.i_line);
 }
 static inline void ymk_emitOf(
 	struct ymd_parser *p, uchar_t o, uchar_t f) {

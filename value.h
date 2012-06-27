@@ -54,6 +54,7 @@ struct chunk {
 	int ref; // Reference counter
 	struct chunk *chain; // Chain for compiling
 	ymd_inst_t *inst; // Instructions
+	int *line; // Instruction-line mapping
 	int kinst; // Number of instructions
 	struct kstr **kz; // Local constant strings
 	struct kstr **lz; // Local variable mapping
@@ -230,7 +231,7 @@ int mand_compare(const struct mand *pm, const struct mand *rhs);
 
 // Chunk and compiling:
 void blk_final(struct chunk *core);
-int blk_emit(struct chunk *core, ymd_inst_t inst);
+int blk_emit(struct chunk *core, ymd_inst_t inst, int line);
 int blk_kz(struct chunk *core, const char *z, int n);
 int blk_find_lz(struct chunk *core, const char *z);
 int blk_add_lz(struct chunk *core, const char *z);

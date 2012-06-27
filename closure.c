@@ -22,11 +22,13 @@ static int kz_find(struct kstr **kz, int count, const char *z, int n) {
 //-----------------------------------------------------------------------------
 // Chunk functions:
 //-----------------------------------------------------------------------------
-int blk_emit(struct chunk *core, ymd_inst_t inst) {
+int blk_emit(struct chunk *core, ymd_inst_t inst, int line) {
 	assert(asm_op(inst) % 5 == 0);
 	core->inst = mm_need(core->inst, core->kinst, INST_ALIGN, sizeof(inst));
-	core->inst[core->kinst++] = inst;
-	return core->kinst;
+	core->line = mm_need(core->line, core->kinst, INST_ALIGN, sizeof(line));
+	core->inst[core->kinst] = inst;
+	core->line[core->kinst] = line;
+	return ++core->kinst;
 }
 
 int blk_kz(struct chunk *core, const char *z, int n) {
