@@ -420,7 +420,7 @@ retry:
 			ymd_pop(l, 1);
 			} break;
 		case I_CALL: {
-			struct func *called = func_of(ymd_top(l, argc));
+			struct func *called = func_of(ymd_top(l, param));
 			func_call(called, param, 0);
 			} break;
 		case I_SELFCALL: {

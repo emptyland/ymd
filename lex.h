@@ -44,7 +44,8 @@
 	v(RETURN, "return") \
 	v(BREAK, "break") \
 	v(CONTINUE, "continue") \
-	v(TYPEOF, "typeof")
+	v(TYPEOF, "typeof") \
+	v(IN, "in")
 
 #define DEFINE_TOKEN(tok, literal) tok,
 enum ymd_token {

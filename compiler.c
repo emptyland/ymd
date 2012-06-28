@@ -446,6 +446,12 @@ static void parse_suffixed(struct ymd_parser *p) {
 			ymc_match(p, ']');
 			ymk_emitOfP(p, I_GETF, F_STACK, 1);
 			break;
+		case ':': {
+			const char *method;
+			ymc_next(p);
+			method = ymk_symbol(p);
+			parse_callargs(p, method);
+			} break;
 		case '(': case STRING: /*case '{':*/
 			parse_callargs(p, NULL);
 			break;
@@ -787,9 +793,13 @@ out:
 	return nbind;
 }
 
-static void parse_params(struct ymd_parser *p) {
+static void parse_params(struct ymd_parser *p, int method) {
 	int nparam = 0;
 	ymc_match(p, '(');
+	if (method) {
+		ymk_new_locvar(p, "self");
+		++nparam;
+	}
 	do {
 		switch (ymc_peek(p)) {
 		case ')':
@@ -815,27 +825,55 @@ static void parse_block(struct ymd_parser *p) {
 	ymc_next(p);
 }
 
+struct func_decl_desc {
+	int method; // is method ?
+	char name[260]; // func real name
+	ushort_t load_p; // load point
+	ushort_t id;
+};
+
+static void parse_func_decl(struct ymd_parser *p, const char *prefix,
+                            int local, struct func_decl_desc *desc) {
+	strcpy(desc->name, prefix); // FIXME: strncpy
+	if (ymc_peek(p) == '.') {
+		ymk_emit_push(p, prefix);
+		prefix = NULL;
+		do {
+			if (prefix)
+				ymk_emit_getf(p, prefix);
+			ymc_match(p, '.');
+			prefix = ymk_symbol(p);
+			strcat(desc->name, ".");
+			strcat(desc->name, prefix);
+		} while (ymc_peek(p) != '(');
+		desc->load_p = ymk_hold(p);
+		ymk_emit_setf(p, prefix);
+		desc->method = 1;
+	} else {
+		desc->load_p = ymk_hold(p);
+		if (local)
+			ymk_new_locvar(p, prefix);
+		ymk_emit_store(p, prefix);
+		desc->method = 0;
+	}
+}
+
 static void parse_func(struct ymd_parser *p, int local) {
 	struct chunk *blk;
-	ushort_t i, id;
-	const char *name;
+	struct func_decl_desc desc;
 	ymc_next(p);
 	if (ymc_peek(p) != SYMBOL)
 		ymc_fail(p, "Function need a name.");
-	name = ymk_symbol(p);
-	i = ymk_hold(p);
-	if (local)
-		ymk_new_locvar(p, name);
-	ymk_emit_store(p, name);
+	parse_func_decl(p, ymk_symbol(p), local, &desc);
 	blk = ymk_chunk();
 	ymk_enter(p, blk);
-		parse_params(p);
+		parse_params(p, desc.method);
 		ymk_chunk_reserved(blk);
 		parse_block(p);
 		ymk_emit_end(p);
 	blk = ymk_leave(p);
-	ymd_spawnf(blk, name, &id); // spawn func and fillback code.
-	ymk_hack(p, i, emitAP(LOAD, id));
+	ymd_spawnf(blk, desc.name, &desc.id); // spawn func and fillback code.
+	ymk_hack(p, desc.load_p, emitAP(LOAD, desc.id));
 }
 
 static void parse_closure(struct ymd_parser *p) {
@@ -847,7 +885,7 @@ static void parse_closure(struct ymd_parser *p) {
 	if (ymc_peek(p) == '[')
 		nbind = parse_bind(p, blk);
 	ymk_enter(p, blk);
-		parse_params(p);
+		parse_params(p, 0);
 		ymk_chunk_reserved(blk);
 		parse_block(p);
 		ymk_emit_end(p);
@@ -934,7 +972,7 @@ static void parse_for(struct ymd_parser *p) {
 		ymc_fail(p, "Syntax error.");
 		return;
 	}
-	ymc_match(p, ':'); // : expr
+	ymc_match(p, IN); // in expr
 	parse_expr(p, 0);
 	snprintf(iter, sizeof(iter), "__loop_iter_%d__", p->for_id++);
 	ymk_emitOfP(p, I_STORE, F_LOCAL, ymk_new_locvar(p, iter));
