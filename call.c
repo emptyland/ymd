@@ -69,7 +69,7 @@ static inline int vm_bool(const struct variable *lhs) {
 
 static inline void do_put(struct gc_node *raw, const struct variable *k,
                           const struct variable *v) {
-	if (is_nil(k) || is_nil(v))
+	if ((k && is_nil(k)) || is_nil(v))
 		vm_die("Value can not be `nil` in k-v pair");
 	switch (raw->type) {
 	case T_HMAP:
@@ -80,6 +80,7 @@ static inline void do_put(struct gc_node *raw, const struct variable *k,
 		break;
 	case T_DYAY:
 		*dyay_add((struct dyay *)raw) = *v;
+		break;
 	default:
 		assert(0);
 		break;
