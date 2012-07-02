@@ -358,9 +358,18 @@ static void parse_map(struct ymd_parser *p, int ord) {
 			parse_expr(p, 0);
 			++count;
 			break;
-		default:
+		case STRING:
+			ymk_emit_kz(p, ymk_literal(p));
+			ymc_next(p);
+			ymc_match(p, ':');
 			parse_expr(p, 0);
-			ymc_match(p, DICT);
+			++count;
+			break;
+		default:
+			ymc_match(p, '[');
+			parse_expr(p, 0);
+			ymc_match(p, ']');
+			ymc_match(p, '=');
 			parse_expr(p, 0);
 			++count;
 			break;
