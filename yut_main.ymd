@@ -1,0 +1,35 @@
+assert = {}
+
+func assert.fail (hint, ops) {
+	var msg = "Assert fail, " + hint + " "
+	if len(ops) == 1 {
+		msg = msg + "Unexpected<" + ops[0] + ">"
+	} elif len(ops) == 2 {
+		msg = msg + "Expected<" + ops[0] + ">, "
+		          + "Unexpected<" + ops[1] + ">"
+	}
+	panic(msg)
+}
+
+func assert.eq (lhs, rhs) {
+	if not (lhs == rhs) { self:fail("equals", argv) }
+}
+
+func assert.ne (lhs, rhs) {
+	if not (lhs != rhs) { self:fail("not equals", argv) }
+}
+
+var file = argv[0]
+var test = import(file)
+if not test { exit() }
+
+for kv in rank(test) {
+	if test.setup { test:setup() }
+	if kv[0] ~= "^test_.*" {
+		print("test", kv[0], "...")
+		kv[1](test)
+		print("pass")
+	}
+	if test.teardown { test:teardown() }
+}
+

@@ -28,7 +28,7 @@ static inline struct variable *vm_find_local(struct func *fn,
 	return vm_local(fn, i);
 }
 
-static inline struct variable *vm_global(struct func *fn, int i) {
+static inline struct variable *vm_global(struct func *fn, int i, int put) {
 	struct kstr *k;
 	struct variable key;
 	struct chunk *core = fn->u.core;
@@ -37,7 +37,16 @@ static inline struct variable *vm_global(struct func *fn, int i) {
 	k = core->kz[i];
 	key.type = T_KSTR;
 	key.value.ref = gcx(k);
-	return hmap_get(vm()->global, &key);
+	return put ? hmap_put(vm()->global, &key)
+	           : hmap_get(vm()->global, &key);
+}
+
+static inline struct variable *vm_getg(struct func *fn, int i) {
+	return vm_global(fn, i, 0);
+}
+
+static inline void vm_setg(struct func *fn, int i, const struct variable *v) {
+	*vm_global(fn, i, 1) = *v;
 }
 
 static inline int vm_match(const struct kstr *lhs, const struct kstr *pattern) {
@@ -135,7 +144,7 @@ retry:
 				*vm_local(fn, param) = *ymd_top(l, 0);
 				break;
 			case F_OFF:
-				*vm_global(fn, param) = *ymd_top(l, 0);
+				vm_setg(fn, param, ymd_top(l, 0));
 				break;
 			}
 			ymd_pop(l, 1);
@@ -240,7 +249,7 @@ retry:
 				var.value.i = 0;
 				break;
 			case F_OFF:
-				var = *vm_global(fn, param);
+				var = *vm_getg(fn, param);
 				break;
 			}
 			*ymd_push(l) = var;
