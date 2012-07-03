@@ -28,25 +28,28 @@ static inline struct variable *vm_find_local(struct func *fn,
 	return vm_local(fn, i);
 }
 
-static inline struct variable *vm_global(struct func *fn, int i, int put) {
+static inline const struct variable *do_keyz(struct func *fn, int i,
+                                             struct variable *key) {
 	struct kstr *k;
-	struct variable key;
 	struct chunk *core = fn->u.core;
 	assert(i >= 0);
 	assert(i < core->kkz);
 	k = core->kz[i];
-	key.type = T_KSTR;
-	key.value.ref = gcx(k);
-	return put ? hmap_put(vm()->global, &key)
-	           : hmap_get(vm()->global, &key);
+	key->type = T_KSTR;
+	key->value.ref = gcx(k);
+	return key;
 }
 
 static inline struct variable *vm_getg(struct func *fn, int i) {
-	return vm_global(fn, i, 0);
+	struct variable k;
+	return hmap_get(vm()->global, do_keyz(fn, i, &k));
 }
 
-static inline void vm_setg(struct func *fn, int i, const struct variable *v) {
-	*vm_global(fn, i, 1) = *v;
+static inline void vm_putg(struct func *fn, int i, const struct variable *v) {
+	struct variable k;
+	if (is_nil(v))
+		vm_die("Value can not be `nil` in k-v pair");
+	*hmap_put(vm()->global, do_keyz(fn, i, &k)) = *v;
 }
 
 static inline int vm_match(const struct kstr *lhs, const struct kstr *pattern) {
@@ -144,7 +147,7 @@ retry:
 				*vm_local(fn, param) = *ymd_top(l, 0);
 				break;
 			case F_OFF:
-				vm_setg(fn, param, ymd_top(l, 0));
+				vm_putg(fn, param, ymd_top(l, 0));
 				break;
 			}
 			ymd_pop(l, 1);
