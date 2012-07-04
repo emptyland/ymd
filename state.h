@@ -80,7 +80,7 @@ struct variable *ymd_get(struct variable *var,
 static inline struct kstr *ymd_kstr(const char *z, int n) {
 	struct kvi *x = kz_index(vm()->kpool, z, n);
 	x->v.type = T_INT;
-	x->v.value.i++;
+	x->v.value.i++; // Value field is used counter
 	return kstr_x(&x->k);
 }
 
@@ -114,6 +114,10 @@ static inline struct variable *ymd_bval(struct context *l, int i) {
 	assert(i < ymd_called(l)->n_bind);
 	return ymd_called(l)->bind + i;
 }
+
+struct variable *ymd_def(void *o, const char *field);
+
+struct variable *ymd_mem(void *o, const char *field);
 
 //-----------------------------------------------------------------------------
 // Stack functions:
@@ -178,12 +182,5 @@ static inline void ymd_push_func(struct context *l, struct func *fn) {
 	v->value.ref = gcx(fn);
 	v->type = T_FUNC;
 }
-
-/*static inline void ymd_index(struct context *l) {
-	struct variable *k = ymd_top(l, 0);
-	struct variable *v = ymd_get(ymd_top(l, 1), k);
-	ymd_pop(l, 2);
-	*ymd_push(l) = *v;
-}*/
 
 #endif // YMD_STATE_H

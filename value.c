@@ -66,6 +66,14 @@ ymd_int_t bool_of(const struct variable *var) {
 DECL_TREF(DEFINE_REFOF)
 #undef DEFINE_REFOF
 
+void *mand_land(struct variable *var, const char *tt) {
+	struct mand *m = mand_of(var);
+	if (tt == m->tt || strcmp(tt, m->tt) == 0)
+		return m->land;
+	vm_die("Unexpected managed type `%s`", tt);
+	return NULL;
+}
+
 //-------------------------------------------------------------------------
 // Generic functions:
 //-------------------------------------------------------------------------

@@ -156,6 +156,38 @@ struct kstr *ymd_strcat(const struct kstr *lhs, const struct kstr *rhs) {
 	return kstr_x(&x->k);
 }
 
+struct variable *ymd_def(void *o, const char *field) {
+	struct variable k;
+	switch (gcx(o)->type) {
+	case T_HMAP:
+		vset_kstr(&k, ymd_kstr(field, -1));
+		return hmap_put(o, &k);
+	case T_SKLS:
+		vset_kstr(&k, ymd_kstr(field, -1));
+		return skls_put(o, &k);
+	default:
+		assert(0);
+		break;
+	}
+	return NULL;
+}
+
+struct variable *ymd_mem(void *o, const char *field) {
+	struct variable k;
+	switch (gcx(o)->type) {
+	case T_HMAP:
+		vset_kstr(&k, ymd_kstr(field, -1));
+		return hmap_get(o, &k);
+	case T_SKLS:
+		vset_kstr(&k, ymd_kstr(field, -1));
+		return skls_get(o, &k);
+	default:
+		assert(0);
+		break;
+	}
+	return NULL;
+}
+
 //-----------------------------------------------------------------------------
 // Function table:
 // ----------------------------------------------------------------------------

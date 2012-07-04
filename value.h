@@ -160,6 +160,9 @@ struct name *name##_of(struct variable *var);
 DECL_TREF(DECL_REFOF)
 #undef DECL_REFOF
 
+void *mand_land(struct variable *var, const char *tt);
+#define mand_cast(var, tt, type) ((type)mand_land(var, tt))
+
 static inline void vset_nil(struct variable *v) {
 	v->type = T_NIL;
 	v->value.i = 0;
