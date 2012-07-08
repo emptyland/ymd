@@ -4,6 +4,7 @@
 #include "state.h"
 #include "compiler.h"
 #include "libc.h"
+#include "libtest.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -13,6 +14,7 @@ struct cmd_opt {
 	int external;
 	int debug;
 	int argv_off;
+	int test;
 };
 
 static struct cmd_opt opt = {
@@ -21,6 +23,7 @@ static struct cmd_opt opt = {
 	0,
 	0,
 	1,
+	0,
 };
 
 static void die(const char *msg) {
@@ -37,6 +40,8 @@ int main(int argc, char *argv[]) {
 		} else if (strcmp(argv[i], "--argv") == 0) {
 			opt.argv_off = i + 1;
 			break;
+		} else if (strcmp(argv[i], "--test") == 0) {
+			opt.test = 1;
 		} else {
 			opt.external = 1;
 			opt.name = argv[i];
@@ -53,6 +58,7 @@ int main(int argc, char *argv[]) {
 	if (!fn)
 		exit(1);
 	ymd_load_lib(lbxBuiltin);
+	if (opt.test) ymd_load_ut();
 	if (opt.debug) {
 		int i;
 		printf("====[main]====\n");
@@ -62,7 +68,10 @@ int main(int argc, char *argv[]) {
 			dis_func(stdout, vm()->fn[i]);
 		}
 	}
-	i = func_main(fn, argc - opt.argv_off, argv + opt.argv_off);
+	if (opt.test)
+		i =  ymd_test(fn, argc - opt.argv_off, argv + opt.argv_off);
+	else
+		i = func_main(fn, argc - opt.argv_off, argv + opt.argv_off);
 	if (opt.external)
 		fclose(opt.input);
 	vm_final_context();

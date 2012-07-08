@@ -555,7 +555,7 @@ ret:
 int func_main(struct func *fn, int argc, char *argv[]) {
 	int i;
 	struct context *l = ioslate();
-	ymd_push_func(l, fn);
+	vset_func(ymd_push(l), fn);
 	for (i = 0; i < argc; ++i)
 		ymd_push_kstr(l, argv[i], -1);
 	if (setjmp(l->jpt)) {

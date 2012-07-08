@@ -71,11 +71,22 @@ struct func *ymd_spawnf(struct chunk *blk, const char *name, unsigned short *id)
 //-----------------------------------------------------------------------------
 // Misc:
 // ----------------------------------------------------------------------------
+// Get/Put a container: hashmap/skiplist/array
 struct variable *ymd_put(struct variable *var,
                          const struct variable *key);
 
 struct variable *ymd_get(struct variable *var,
                          const struct variable *key);
+
+// Get/Put global variable
+struct variable *ymd_putg(const char *field);
+
+struct variable *ymd_getg(const char *field);
+
+// Define/Get object's member
+struct variable *ymd_def(void *o, const char *field);
+
+struct variable *ymd_mem(void *o, const char *field);
 
 static inline struct kstr *ymd_kstr(const char *z, int n) {
 	struct kvi *x = kz_index(vm()->kpool, z, n);
@@ -114,10 +125,6 @@ static inline struct variable *ymd_bval(struct context *l, int i) {
 	assert(i < ymd_called(l)->n_bind);
 	return ymd_called(l)->bind + i;
 }
-
-struct variable *ymd_def(void *o, const char *field);
-
-struct variable *ymd_mem(void *o, const char *field);
 
 //-----------------------------------------------------------------------------
 // Stack functions:

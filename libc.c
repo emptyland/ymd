@@ -937,13 +937,27 @@ LIBC_END
 
 int ymd_load_lib(ymd_libc_t lbx) {
 	const struct libfn_entry *i;
+	int rv = 0;
 	for (i = lbx; i->native != NULL; ++i) {
-		struct kstr *kz = ymd_kstr(i->symbol.z, i->symbol.len);
-		struct func *fn = func_new_c(i->native, kz->land);
-		struct variable key;
-		key.type = T_KSTR;
-		key.value.ref = gcx(kz);
-		vset_func(hmap_put(vm()->global, &key), fn);
+		vset_func(ymd_putg(i->symbol.z),
+		          func_new_c(i->native, i->symbol.z));
+		++rv;
 	}
-	return 0;
+	return rv;
+}
+
+int ymd_load_mem(const char *clazz, void *o, ymd_libc_t lbx) {
+	int rv = 0;
+	const struct libfn_entry *i;
+	for (i = lbx; i->native != NULL; ++i) {
+		char name[128];
+		struct func *method;
+		strncpy(name, clazz, sizeof(name));
+		strcat(name, ".");
+		strcat(name, i->symbol.z);
+		method = func_new_c(i->native, name);
+		vset_func(ymd_def(o, i->symbol.z), method);
+		++rv;
+	}
+	return rv;
 }

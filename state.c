@@ -188,6 +188,18 @@ struct variable *ymd_mem(void *o, const char *field) {
 	return NULL;
 }
 
+struct variable *ymd_getg(const char *field) {
+	struct variable k;
+	vset_kstr(&k, ymd_kstr(field, -1));
+	return hmap_get(vm()->global, &k);
+}
+
+struct variable *ymd_putg(const char *field) {
+	struct variable k;
+	vset_kstr(&k, ymd_kstr(field, -1));
+	return hmap_put(vm()->global, &k);
+}
+
 //-----------------------------------------------------------------------------
 // Function table:
 // ----------------------------------------------------------------------------
