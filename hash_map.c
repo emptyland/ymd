@@ -157,6 +157,8 @@ int hmap_equals(const struct hmap *map, const struct hmap *lhs) {
 	if (map == lhs)
 		return 1;
 	i = (1 << map->shift);
+	if (i != (1 << lhs->shift))
+		return 0;
 	while (i--) {
 		if (map->item[i].flag != KVI_FREE) {
 			const struct kvi *it = map->item + i;

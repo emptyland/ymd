@@ -91,16 +91,18 @@ int equals(const struct variable *lhs, const struct variable *rhs) {
 	case T_KSTR:
 		return kstr_equals(kstr_k(lhs), kstr_k(rhs));
 	//case T_CLOSURE:
+	// TODO:
 	//	break;
 	case T_EXT:
 		return lhs->value.ext == rhs->value.ext;
 	case T_DYAY:
 		return dyay_equals(dyay_k(lhs), dyay_k(rhs));
 	case T_HMAP:
-		return hmap_equals(hmap_k(lhs), hmap_k(lhs));
+		return hmap_equals(hmap_k(lhs), hmap_k(rhs));
 	case T_SKLS:
-		return skls_equals(skls_k(rhs), skls_k(lhs));
+		return skls_equals(skls_k(lhs), skls_k(rhs));
 	//case T_MAND:
+	// TODO:
 	//	return mand_equals(mand_k(lhs), mand_k(rhs));
 	default:
 		assert(0);

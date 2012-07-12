@@ -1,3 +1,4 @@
+#include "tostring.h"
 #include "state.h"
 #include "memory.h"
 #include "value.h"
@@ -37,10 +38,17 @@ static void yut_fail2(L, const struct variable *arg0,
                       const struct variable *arg1) {
 	struct call_info *up = l->info->chain;
 	struct func *fn = up->run;
-	ymd_printf(yYELLOW
-	           "[ INFO ] :%d Assert fail, expected<>, unexpected<>;\n"
-			   yEND,
-			   fn->u.core->line[up->pc - 1]);
+	struct fmtx fx0 = FMTX_INIT, fx1 = FMTX_INIT;
+	ymd_printf(yYELLOW"[ INFO ] :%d Assert fail, expected"yEND
+			   yPURPLE"<%s>"yEND
+			   yYELLOW", unexpected"yEND
+			   yPURPLE"<%s>"yEND
+			   ";\n",
+			   fn->u.core->line[up->pc - 1],
+			   tostring(&fx0, arg0),
+			   tostring(&fx1, arg1));
+	fmtx_final(&fx0);
+	fmtx_final(&fx1);
 	yut_raise(l);
 }
 
@@ -48,10 +56,16 @@ static void yut_fail1(L, const char *expected,
                       const struct variable *arg0) {
 	struct call_info *up = l->info->chain;
 	struct func *fn = up->run;
+	struct fmtx fx = FMTX_INIT;
 	ymd_printf(yYELLOW"[ INFO ] :%d Assert fail, expected"yEND
 			   yPURPLE"<%s>"yEND
-			   yYELLOW", unexpected<>;\n"yEND,
-			   fn->u.core->line[up->pc - 1], expected);
+			   yYELLOW", unexpected"yEND
+			   yPURPLE"<%s>"yEND
+			   ";\n",
+			   fn->u.core->line[up->pc - 1],
+			   expected,
+			   tostring(&fx, arg0));
+	fmtx_final(&fx);
 	yut_raise(l);
 }
 
@@ -61,6 +75,27 @@ static int libx_True(L) {
 		yut_fail1(l, "not nil", arg0);
 	if (arg0->type == T_BOOL && !arg0->value.i)
 		yut_fail1(l, "true or not nil", arg0);
+	return 0;
+}
+
+static int libx_False(L) {
+	struct variable *arg0 = ymd_argv_get(l, 1);
+	if (!is_nil(arg0) && (arg0->type == T_BOOL && arg0->value.i))
+		yut_fail1(l, "false or nil", arg0);
+	return 0;
+}
+
+static int libx_Nil(L) {
+	struct variable *arg0 = ymd_argv_get(l, 1);
+	if (!is_nil(arg0))
+		yut_fail1(l, "nil", arg0);
+	return 0;
+}
+
+static int libx_NotNil(L) {
+	struct variable *arg0 = ymd_argv_get(l, 1);
+	if (is_nil(arg0))
+		yut_fail1(l, "not nil", arg0);
 	return 0;
 }
 
@@ -111,7 +146,6 @@ static int yut_case(
 }
 
 static int yut_test(const char *clazz, struct variable *test) {
-	struct variable v;
 	struct sknd *i;
 	struct func *setup, *teardown;
 	if (test->type != T_SKLS)
@@ -131,6 +165,9 @@ static int yut_test(const char *clazz, struct variable *test) {
 
 LIBC_BEGIN(YutAssertMethod)
 	LIBC_ENTRY(True)
+	LIBC_ENTRY(False)
+	LIBC_ENTRY(Nil)
+	LIBC_ENTRY(NotNil)
 	LIBC_ENTRY(EQ)
 LIBC_END
 
