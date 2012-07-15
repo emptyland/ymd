@@ -1,0 +1,44 @@
+
+CalcTest = @{
+	test00VarDecl : func (self) {
+		Assert:EQ(0, 0)
+		Assert:EQ(-1, -1)
+		Assert:EQ(nil, nil)
+		Assert:EQ(true, true)
+		Assert:EQ("", "")
+		Assert:EQ("hash", "hash")
+		Assert:NE("hash", " hash")
+	},
+
+	test01Add : func (self) {
+		var m = 1, n = 100
+		Assert:EQ(101, m + n)
+		Assert:EQ(99,  n - m)
+		Assert:EQ(-99, m - n)
+		Assert:GT(2, 1)
+		Assert:GE(2, 1)
+		m = m + 1
+		Assert:EQ(2, m)
+		n = n + 100
+		Assert:EQ(200, n)
+	},
+
+	// Mul and Div:
+	test02Mul : func (self) {
+		var m = 1, n = 100
+		Assert:EQ(100, m * n)
+		Assert:EQ(100, n * m)
+		Assert:EQ(100, n / m)
+		Assert:EQ(0, m / n)
+		Assert:EQ(1, m % n)
+		Assert:EQ(0, n % m)
+		m = 9
+		n = 9
+		Assert:EQ(81, m * n)
+		Assert:EQ(m * n, n * m)
+		Assert:EQ(1, m / n)
+		Assert:EQ(m / n, n / m)
+		Assert:EQ(0, m % n)
+		Assert:EQ(m % n, n % m)
+	}
+}

@@ -320,11 +320,11 @@ static void ymc_fail(struct ymd_parser *p, const char *fmt, ...) {
 }
 
 static int ymc_match(struct ymd_parser *p, int need) {
-	char buf[2];
+	char exp[2], unexp[2];
 	if (need != p->lah.token)
 		ymc_fail(p, "Error token! unexpected `%s`, expected `%s`",
-		         ymc_ttoa(p->lah.token, buf),
-		         ymc_ttoa(need, buf));
+		         ymc_ttoa(p->lah.token, exp),
+		         ymc_ttoa(need, unexp));
 	return lex_next(&p->lex, &p->lah);
 }
 

@@ -1,6 +1,0 @@
-a = @{aaa:nil, bb:nil, abc:nil, bbc:nil}
-print(a)
-b = @{a:nil}
-h = {aaa:nil, bb:nil, abc:nil, bbc:nil}
-print(h)
-

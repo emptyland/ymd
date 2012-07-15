@@ -1,5 +1,0 @@
-print(argv)
-
-for var kv: rank(argv) {
-	print(kv[0], ":", kv[1])
-}

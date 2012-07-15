@@ -34,19 +34,25 @@ static void yut_raise(L) {
 	longjmp(cookie->jpt, 1);
 }
 
-static void yut_fail2(L, const struct variable *arg0,
+// [ INFO ] Line:%d <%s> Assert fail.
+static void yut_fail2(L, const char *op,
+                      const struct variable *arg0,
                       const struct variable *arg1) {
 	struct call_info *up = l->info->chain;
 	struct func *fn = up->run;
 	struct fmtx fx0 = FMTX_INIT, fx1 = FMTX_INIT;
-	ymd_printf(yYELLOW"[ INFO ] :%d Assert fail, expected"yEND
-			   yPURPLE"<%s>"yEND
-			   yYELLOW", unexpected"yEND
-			   yPURPLE"<%s>"yEND
-			   ";\n",
+	tostring(&fx0, arg0);
+	tostring(&fx1, arg1);
+	ymd_printf(yYELLOW"Line:%d Assert fail: "yEND
+	           "("yPURPLE"%s"yEND") %s ("yPURPLE"%s"yEND")\n"
+			   "Expected : <"yPURPLE"%s"yEND">\n"
+			   "Actual   : <"yPURPLE"%s"yEND">\n",
 			   fn->u.core->line[up->pc - 1],
-			   tostring(&fx0, arg0),
-			   tostring(&fx1, arg1));
+			   fmtx_buf(&fx0),
+			   op,
+			   fmtx_buf(&fx1),
+			   fmtx_buf(&fx0),
+			   fmtx_buf(&fx1));
 	fmtx_final(&fx0);
 	fmtx_final(&fx1);
 	yut_raise(l);
@@ -57,14 +63,14 @@ static void yut_fail1(L, const char *expected,
 	struct call_info *up = l->info->chain;
 	struct func *fn = up->run;
 	struct fmtx fx = FMTX_INIT;
-	ymd_printf(yYELLOW"[ INFO ] :%d Assert fail, expected"yEND
-			   yPURPLE"<%s>"yEND
-			   yYELLOW", unexpected"yEND
-			   yPURPLE"<%s>"yEND
-			   ";\n",
-			   fn->u.core->line[up->pc - 1],
-			   expected,
-			   tostring(&fx, arg0));
+	ymd_printf(yYELLOW"[ INFO ] Line:%d Assert fail, expected"yEND
+	           yPURPLE"<%s>"yEND
+	           yYELLOW", unexpected"yEND
+	           yPURPLE"<%s>"yEND
+	           ";\n",
+	           fn->u.core->line[up->pc - 1],
+	           expected,
+	           tostring(&fx, arg0));
 	fmtx_final(&fx);
 	yut_raise(l);
 }
@@ -99,13 +105,30 @@ static int libx_NotNil(L) {
 	return 0;
 }
 
-static int libx_EQ(L) {
-	struct variable *arg0 = ymd_argv_get(l, 1),
-					*arg1 = ymd_argv_get(l, 2);
-	if (!equals(arg0, arg1))
-		yut_fail2(l, arg0, arg1);
-	return 0;
+
+#define EQ_LITERAL "=="
+#define NE_LITERAL "!="
+#define LT_LITERAL "<"
+#define LE_LITERAL "<="
+#define GT_LITERAL ">"
+#define GE_LITERAL ">="
+#define DEFINE_BIN_ASSERT(name, func, cond) \
+static int libx_##name(L) { \
+	struct variable *arg0 = ymd_argv_get(l, 1), \
+					*arg1 = ymd_argv_get(l, 2); \
+	if (func(arg0, arg1) cond) \
+		yut_fail2(l, name##_LITERAL, arg0, arg1); \
+	return 0; \
 }
+
+DEFINE_BIN_ASSERT(EQ, equals,  == 0)
+DEFINE_BIN_ASSERT(NE, equals,  != 0)
+DEFINE_BIN_ASSERT(LT, compare, >= 0)
+DEFINE_BIN_ASSERT(LE, compare, > 0 )
+DEFINE_BIN_ASSERT(GT, compare, <= 0)
+DEFINE_BIN_ASSERT(GE, compare, < 0 )
+
+#undef DEFINE_BIN_ASSERT
 
 static struct func *yut_method(void *o, const char *field) {
 	struct variable *found = ymd_mem(o, field);
@@ -145,6 +168,10 @@ static int yut_case(
 	return 0;
 }
 
+static void yut_fault() {
+	ymd_printf(yRED"[ FAIL ]"yEND" Test fail, stop all.\n");
+}
+
 static int yut_test(const char *clazz, struct variable *test) {
 	struct sknd *i;
 	struct func *setup, *teardown;
@@ -152,8 +179,10 @@ static int yut_test(const char *clazz, struct variable *test) {
 		return 0;
 	setup = yut_method(test->value.ref, "setup");
 	teardown = yut_method(test->value.ref, "teardown");
-	if (setjmp(yut_jpt(ymd_getg("Assert"))->jpt))
+	if (setjmp(yut_jpt(ymd_getg("Assert"))->jpt)) {
+		yut_fault(); // Print failed message
 		return -1; // Test Fail
+	}
 	for (i = skls_x(test)->head->fwd[0]; i != NULL; i = i->fwd[0]) {
 		const char *caze = kstr_of(&i->k)->land;
 		if (!strstr(caze, "test") || i->v.type != T_FUNC)
@@ -169,6 +198,11 @@ LIBC_BEGIN(YutAssertMethod)
 	LIBC_ENTRY(Nil)
 	LIBC_ENTRY(NotNil)
 	LIBC_ENTRY(EQ)
+	LIBC_ENTRY(NE)
+	LIBC_ENTRY(LT)
+	LIBC_ENTRY(LE)
+	LIBC_ENTRY(GT)
+	LIBC_ENTRY(GE)
 LIBC_END
 
 int ymd_load_ut() {

@@ -1,6 +1,0 @@
-var a = {1,2,3}
-var print = print
-var len = len
-print(a)
-print(len(a))
-

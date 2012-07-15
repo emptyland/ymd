@@ -1,0 +1,106 @@
+LiteralTest = @{
+	test00Number : func (self) {
+		Assert:EQ(0, 0)
+		Assert:EQ(1, 1)
+		Assert:NE(1, 0)
+		Assert:NE(0, 1)
+
+		Assert:LT(1, 2)
+		Assert:LE(1, 1)
+		Assert:LE(1, 2)
+
+		Assert:GT(2, 1)
+		Assert:GE(2, 2)
+		Assert:GE(2, 1)
+
+		Assert:EQ(255, 0xff)
+		Assert:EQ(128, 0x80)
+		Assert:EQ(-1, 0xffffffffffffffff)
+		Assert:EQ(0, 0x0)
+		Assert:EQ(1, 0x1)
+		Assert:EQ(2, 0x2)
+	},
+
+	test01Bool : func (self) {
+		Assert:True(true)
+		Assert:False(false)
+
+		Assert:EQ(true, true)
+		Assert:NE(true, false)
+		Assert:NE(false, true)
+
+		// non nil value and true will be true
+		Assert:True(0)
+		Assert:True("")
+		Assert:True(func () {})
+		Assert:True([])
+		Assert:True({})
+		Assert:True(@{})
+		Assert:True(true)
+
+		// nil value and false will be false
+		Assert:False(nil)
+		Assert:False(false)
+	},
+
+	test02Nil : func (self) {
+		Assert:Nil(nil)
+		Assert:NotNil(0)
+		Assert:False(nil)
+		Assert:True(0)
+
+		// nil only equals itself
+		// Only nil == nil will be true
+		Assert:EQ(nil, nil)
+		Assert:NE(nil, 0)
+		Assert:NE(nil, "")
+		Assert:NE(nil, true)
+		Assert:NE(nil, false)
+		Assert:NE(nil, func () {})
+		Assert:NE(nil, {})
+		Assert:NE(nil, @{})
+		Assert:NE(nil, [])
+	},
+
+	test03String : func (self) {
+		Assert:NotNil("")
+		Assert:True("")
+		Assert:EQ("", "")
+
+		// Readable string:
+		var str_text = "Hello, World!"
+		Assert:EQ(str_text, str_text)
+		Assert:EQ(str_text, "Hello, World!")
+		Assert:EQ("Hello, World!", str_text)
+		Assert:NE(str_text, "")
+
+		// ESC string:
+		var str_esc = "\a\b\f\n\r\t\v\0\\\"\x01\uABcd"
+		Assert:EQ(str_esc, str_esc)
+		Assert:EQ(str_esc, "\a\b\f\n\r\t\v\0\\\"\x01\uABcd")
+		Assert:EQ("\a\b\f\n\r\t\v\0\\\"\x01\uABcd", str_esc)
+	},
+
+	test04Func : func (self) {
+		Assert:NotNil(func () {})
+		Assert:True(func () {})
+		
+		// TODO:
+	},
+
+	test05Array : func (self) {
+		Assert:NotNil([])
+		Assert:True([])
+		Assert:EQ([], [])
+		Assert:EQ([1], [1])
+		Assert:EQ([[]], [[]])
+
+		var arr = [0, false, true, "", []]
+		Assert:EQ(arr, arr)
+		Assert:EQ(0, arr[0])
+		Assert:EQ(false, arr[1])
+		Assert:EQ(true, arr[2])
+		Assert:EQ("", arr[3])
+		Assert:EQ([], arr[4])
+	}
+}

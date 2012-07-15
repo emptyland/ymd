@@ -240,7 +240,8 @@ int lex_next(struct ymd_lex *lex, struct ytoken *x) {
 				lex_skip_line(lex);
 				break;
 			}
-			return ERROR;
+			lex_back(lex);
+			return lex_token_c(lex, rv);
 		case '#':
 			lex_skip_line(lex);
 			break;
