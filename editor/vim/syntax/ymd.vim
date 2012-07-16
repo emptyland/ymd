@@ -6,6 +6,7 @@ syntax keyword ymdFunc panic open read write len strbuf strcat strfin
 syntax keyword ymdFunc end range rank ranki print str close insert
 syntax keyword ymdFunc append match pattern argv self import env atoi
 syntax keyword ymdFunc exit eval compile echo
+syntax keyword ymdTest Assert True False Nil NotNil EQ NE LT LE GT GE
 
 syntax match ymdInteger "\<\d\+\>"
 syntax match ymdInteger "\<\-\d\+\>"
@@ -33,3 +34,4 @@ hi ymdHex ctermfg=5
 hi ymdString ctermfg=5
 hi ymdComment ctermfg=2
 hi ymdContant ctermfg=5 guifg=#FFFF00
+hi ymdTest ctermfg=3

@@ -9,6 +9,7 @@
 #define MAX_MSG_LEN 1024
 
 static void vm_backtrace(struct ymd_context *l, int max);
+static int vm_nearline(struct ymd_context *l);
 
 static void *default_zalloc(struct ymd_mach *m, size_t size) {
 	void *chunk = calloc(size, 1);
@@ -39,7 +40,7 @@ static void default_die(struct ymd_mach *vm, const char *msg) {
 	struct ymd_context *l = ioslate(vm);
 	if (!msg || !*msg)
 		msg = "Unknown!";
-	fprintf(stderr, "== VM Panic!\n%%%% %s\n", msg);
+	fprintf(stderr, "== VM Panic!\n%%:%d %s\n", vm_nearline(l), msg);
 	fprintf(stderr, "-- Back trace:\n");
 	vm_backtrace(l, 6);
 	longjmp(l->jpt, 1);
@@ -79,7 +80,6 @@ void ymd_final(struct ymd_mach *vm) {
 int ymd_init_context(struct ymd_mach *vm) {
 	vm->curr = vm_zalloc(vm, sizeof(*vm->curr));
 	vm->curr->vm = vm;
-	//owned_ctx->run = func_new(NULL);
 	vm->curr->top = vm->curr->stk;
 	return 0;
 }
@@ -98,6 +98,18 @@ static void vm_backtrace(struct ymd_context *l, int max) {
 	}
 	if (i != NULL)
 		fprintf(stderr, " > ... more calls ...\n");
+}
+
+static int vm_nearline(struct ymd_context *l) {
+	struct call_info *i = l->info;
+	if (!i->run)
+		return -1;
+	while (i && i->run->is_c) {
+		i = i->chain;
+	}
+	if (!i)
+		return -1;
+	return i->run->u.core->line[i->pc - 1];
 }
 
 //------------------------------------------------------------------------
@@ -122,6 +134,14 @@ struct variable *ymd_put(struct ymd_mach *vm,
 	return NULL;
 }
 
+static struct variable *ymd_at(struct ymd_mach *vm,
+                               struct dyay *arr,
+							   ymd_int_t i) {
+	if (i < 0 || i >= arr->count)
+		vm_die(vm, "Array out of range, index:%d, count:%d", i, arr->count);
+	return dyay_get(arr, i);
+}
+
 struct variable *ymd_get(struct ymd_mach *vm,
                          struct variable *var,
                          const struct variable *key) {
@@ -133,22 +153,23 @@ struct variable *ymd_get(struct ymd_mach *vm,
 	case T_HMAP:
 		return hmap_get(hmap_x(var), key);
 	case T_DYAY:
-		return dyay_get(dyay_x(var), int_of(vm, key));
+		return ymd_at(vm, dyay_x(var), int_of(vm, key));
 	default:
 		vm_die(vm, "Variable can not be index");
 		break;
 	}
+	assert(0); // Noreached!
 	return NULL;
 }
 
 struct kstr *ymd_strcat(struct ymd_mach *vm, const struct kstr *lhs, const struct kstr *rhs) {
 	char *tmp = vm_zalloc(vm, lhs->len + rhs->len);
-	struct kvi *x;
+	struct kstr *x;
 	memcpy(tmp, lhs->land, lhs->len);
 	memcpy(tmp + lhs->len, rhs->land, rhs->len);
-	x = kz_index(vm, vm->kpool, tmp, lhs->len + rhs->len);
+	x = ymd_kstr(vm, tmp, lhs->len + rhs->len);
 	vm_free(vm, tmp);
-	return kstr_x(&x->k);
+	return x;
 }
 
 struct variable *ymd_def(struct ymd_mach *vm, void *o, const char *field) {

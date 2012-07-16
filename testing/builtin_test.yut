@@ -1,0 +1,87 @@
+BuiltinTest = @{
+	test00len : func (self) {
+		Assert:EQ(0, len(""))
+		Assert:EQ(1, len("0"))
+		Assert:EQ(2, len("\n\r"))
+
+		Assert:EQ(0, len(nil))
+		Assert:EQ(0, len([]))
+		Assert:EQ(0, len({}))
+		Assert:EQ(0, len(@{}))
+
+		var val = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+		Assert:EQ(13, len(val))
+		insert(val, 13)
+		Assert:EQ(14, len(val))
+
+		val = {[0] = 0, [1] = 1, [2] = 2, [3] = 3, [4] = 4,
+			[5] = 5, [6] = 6, [7] = 7, [8] = 8, [9] = 9,
+			[10] = 10, [11] = 11, [12] = 12}
+		Assert:EQ(13, len(val))
+		insert(val, 13, 13)
+		Assert:EQ(14, len(val))
+
+		val = @{[0] = 0, [1] = 1, [2] = 2, [3] = 3, [4] = 4,
+			[5] = 5, [6] = 6, [7] = 7, [8] = 8, [9] = 9,
+			[10] = 10, [11] = 11, [12] = 12}
+		Assert:EQ(13, len(val))
+		insert(val, 13, 13)
+		Assert:EQ(14, len(val))
+	},
+
+	test01insert : func (self) {
+		var val = []
+		Assert:EQ(0, len(val))
+
+		insert(val, 0)
+		Assert:EQ(1, len(val))
+		Assert:EQ(0, val[0])
+
+		insert(val, false)
+		Assert:EQ(2, len(val))
+		Assert:EQ(false, val[1])
+
+		insert(val, "Element")
+		Assert:EQ(3, len(val))
+		Assert:EQ("Element", val[2])
+
+		insert(val, func () {})
+		Assert:EQ(4, len(val))
+		Assert:EQ("function", typeof val[3])
+
+		insert(val, [])
+		Assert:EQ(5, len(val))
+		Assert:EQ([], val[4])
+
+		insert(val, {})
+		Assert:EQ(6, len(val))
+		Assert:EQ({}, val[5])
+
+		insert(val, @{})
+		Assert:EQ(7, len(val))
+		Assert:EQ(@{}, val[6])
+	},
+
+	test02insert_ordered : func (self) {
+		var val = [0, 1, 2, 3, 4, 5, 6, 7]
+		var i = len(val);
+		Assert:EQ(0, val[0])
+		Assert:EQ(1, val[1])
+		Assert:EQ(i, len(val))
+
+		// Insert to [0]
+		// "a", 0, 1, 2, ...
+		insert(val, 0, "a")
+		Assert:EQ("a", val[0])
+		Assert:EQ(0, val[1])
+		Assert:EQ(1, val[2])
+		Assert:EQ(i + 1, len(val))
+
+		// Insert to [2]
+		// "a", 0, "b", 1, 2, ...
+		insert(val, 2, "b")
+		Assert:EQ(0, val[1])
+		Assert:EQ("b", val[2])
+		Assert:EQ(1, val[3])
+	}
+}

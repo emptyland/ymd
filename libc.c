@@ -40,21 +40,23 @@ static int libx_print(struct ymd_context *l) {
 	return 0;
 }
 
-static inline void dyay_range_chk(struct ymd_mach *vm,
-                                  const struct dyay *arr, ymd_int_t i) {
-	if (i < 0 || i >= arr->count)
-		vm_die(vm, "array index out of range, %lld", i);
-}
-
-static void dyay_do_insert(struct ymd_context *l, struct dyay *self) {
+static void do_insert(struct ymd_context *l, struct dyay *self) {
+	struct variable *elem;
 	switch (ymd_argv_chk(l, 2)->count) {
 	case 2:
-		*dyay_add(l->vm, self) = *ymd_argv_get(l, 1);
+		elem = ymd_argv_get(l, 1);
+		if (is_nil(elem))
+			vm_die(l->vm, "Element of array can not be `nil`");
+		*dyay_add(l->vm, self) = *elem;
 		break;
 	case 3: {
 		ymd_int_t i = int_of(l->vm, ymd_argv_get(l, 1));
-		dyay_range_chk(l->vm, self, i);
-		*dyay_insert(l->vm, self, i) = *ymd_argv_get(l, 2);
+		if (i < 0 || i >= self->count)
+			vm_die(l->vm, "array index out of range, %lld", i);
+		elem = ymd_argv_get(l, 2);
+		if (is_nil(elem))
+			vm_die(l->vm, "Element in array can not be `nil`");
+		*dyay_insert(l->vm, self, i) = *elem;
 		} break;
 	default:
 		vm_die(l->vm, "Too many arguments, %d", ymd_argv(l)->count);
@@ -81,11 +83,17 @@ static void checked_put(struct ymd_context *l,
 	}
 }
 
+// insert to array:
+//     insert(array, elem)
+//     insert(array, position, elem)
+// insert to map:
+//     insert(map, key, value)
+//
 static int libx_insert(struct ymd_context *l) {
 	struct variable *arg0 = ymd_argv_get(l, 0);
 	switch (arg0->type) {
 	case T_DYAY:
-		dyay_do_insert(l, dyay_x(arg0));
+		do_insert(l, dyay_x(arg0));
 		break;
 	default:
 		checked_put(l, arg0, ymd_argv_get(l, 1), ymd_argv_get(l, 2));
@@ -121,6 +129,13 @@ static int libx_append(struct ymd_context *l) {
 	return 0;
 }
 
+// len(arg)
+// argument follow:
+// nil      : always be 0;
+// string   : length;
+// array    : number of elements; 
+// hashmap  : number of k-v pairs;
+// skiplist : number of k-v pairs;
 static int libx_len(struct ymd_context *l) {
 	const struct variable *arg0 = ymd_argv_get(l, 0);
 	switch (arg0->type) {
@@ -259,6 +274,7 @@ static int dyay_iter(struct ymd_context *l) {
 	return 1;
 }
 
+// Move hash map's slot to next valid one:
 static inline struct kvi *move2valid(struct kvi *i, struct kvi *m) {
 	while (i->flag == 0 && i < m) ++i;
 	return i;
@@ -426,14 +442,6 @@ static int libx_panic(struct ymd_context *l) {
 //------------------------------------------------------------------------------
 // String Buffer: strbuf
 //------------------------------------------------------------------------------
-static inline struct fmtx *strbuf_of(struct ymd_mach *vm,
-                                     struct variable *var) {
-	struct mand *pm = mand_of(vm, var);
-	if (pm->tt != T_STRBUF)
-		vm_die(vm, "Builtin fatal:%s:%d", __FILE__, __LINE__);
-	return (struct fmtx *)pm->land;
-}
-
 static int strbuf_final(struct fmtx *sb) {
 	fmtx_final(sb);
 	return 0;
@@ -449,9 +457,9 @@ static int libx_strbuf(struct ymd_context *l) {
 }
 
 static int libx_strfin(struct ymd_context *l) {
-	struct fmtx *self;
+	struct fmtx *self = mand_land(l->vm, ymd_argv_get(l, 0),
+	                              T_STRBUF);
 	struct kstr *rv;
-	self = strbuf_of(l->vm, ymd_argv_get(l, 0));
 	if (self->last == 0) {
 		vset_nil(ymd_push(l));
 		goto done;
@@ -466,7 +474,7 @@ done:
 static int libx_strcat(struct ymd_context *l) {
 	int i;
 	struct dyay *argv = ymd_argv_chk(l, 2);
-	struct fmtx *self = strbuf_of(l->vm, argv->elem);
+	struct fmtx *self = mand_land(l->vm, argv->elem, T_STRBUF);
 	for (i = 1; i < argv->count; ++i)
 		tostring(self, argv->elem + i);
 	return 0;
@@ -503,7 +511,7 @@ static struct kstr *ansic_file_readline(struct ymd_mach *vm,
 	char *rv = fgets(line, sizeof(line), self->fp);
 	if (!rv)
 		return NULL;
-	return kstr_new(vm, line, -1);
+	return ymd_kstr(vm, line, -1);
 }
 
 static int ansic_file_read(struct ymd_context *l) {

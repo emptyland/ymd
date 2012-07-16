@@ -337,6 +337,7 @@ struct kvi *kz_index(struct ymd_mach *vm, struct hmap *map, const char *z, int n
 	x = hindex(vm, map, &fake);
 	if (!equals(&x->k, &fake)) {
 		x->k.type = T_KSTR;
+		// NOTE: Here is kpool, DO NOT use ymd_kstr.
 		x->k.value.ref = gcx(kstr_new(vm, z, kz->len));
 	}
 	if (kz->len > MAX_CHUNK_LEN) vm_free(vm, kz);
