@@ -70,8 +70,18 @@ static inline ymd_int_t dtol(char x, int *ok) {
 	return 0;
 }
 
+static inline void *priv_need(void *raw, int n, int align,
+                              size_t chunk) {
+	char *rv;
+	if (n % align)
+		return raw;
+	rv = realloc(raw, chunk * (n + align));
+	memset(rv + chunk * n, 0, chunk * align);
+	return rv;
+}
+
 static inline char *priv_add(char *priv, int n, char c) {
-	priv = mm_need(priv, n, 64, 1);
+	priv = priv_need(priv, n, 64, 1);
 	priv[n] = c;
 	return priv;
 }
@@ -111,7 +121,7 @@ int stresc(const char *i, char **rv) {
 				break;
 			error:
 			default:
-				if (priv) vm_free(priv);
+				if (priv) free(priv);
 				return -1;
 			}
 			continue;

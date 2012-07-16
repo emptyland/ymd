@@ -22,34 +22,37 @@ static int kz_find(struct kstr **kz, int count, const char *z, int n) {
 //-----------------------------------------------------------------------------
 // Chunk functions:
 //-----------------------------------------------------------------------------
-int blk_emit(struct chunk *core, ymd_inst_t inst, int line) {
+int blk_emit(struct ymd_mach *vm, struct chunk *core, ymd_inst_t inst, int line) {
 	assert(asm_op(inst) % 5 == 0);
-	core->inst = mm_need(core->inst, core->kinst, INST_ALIGN, sizeof(inst));
-	core->line = mm_need(core->line, core->kinst, INST_ALIGN, sizeof(line));
+	core->inst = mm_need(vm, core->inst, core->kinst, INST_ALIGN,
+	                     sizeof(inst));
+	core->line = mm_need(vm, core->line, core->kinst, INST_ALIGN,
+	                     sizeof(line));
 	core->inst[core->kinst] = inst;
 	core->line[core->kinst] = line;
 	return ++core->kinst;
 }
 
-int blk_kz(struct chunk *core, const char *z, int n) {
+int blk_kz(struct ymd_mach *vm, struct chunk *core, const char *z, int n) {
 	int i = kz_find(core->kz, core->kkz, z, n);
 	if (i >= core->kkz) {
-		core->kz = mm_need(core->kz, core->kkz, KSTR_ALIGN, sizeof(*core->kz));
-		core->kz[core->kkz++] = ymd_kstr(z, n);
+		core->kz = mm_need(vm, core->kz, core->kkz, KSTR_ALIGN,
+		                   sizeof(*core->kz));
+		core->kz[core->kkz++] = ymd_kstr(vm, z, n);
 		return core->kkz - 1;
 	}
 	return i;
 }
 
-void blk_final(struct chunk *core) {
+void blk_final(struct ymd_mach *vm, struct chunk *core) {
 	if (core->inst)
-		vm_free(core->inst);
+		vm_free(vm, core->inst);
 	if (core->line)
-		vm_free(core->line);
+		vm_free(vm, core->line);
 	if (core->kz)
-		vm_free(core->kz);
+		vm_free(vm, core->kz);
 	if (core->lz)
-		vm_free(core->lz);
+		vm_free(vm, core->lz);
 }
 
 // Only find
@@ -59,79 +62,84 @@ int blk_find_lz(struct chunk *core, const char *z) {
 }
 
 // Only add
-int blk_add_lz(struct chunk *core, const char *z) {
+int blk_add_lz(struct ymd_mach *vm, struct chunk *core, const char *z) {
 	int rv = blk_find_lz(core, z);
 	if (rv >= 0)
 		return -1;
-	core->lz = mm_need(core->lz, core->klz, LVAR_ALIGN, sizeof(*core->lz));
-	core->lz[core->klz++] = ymd_kstr(z, -1);
+	core->lz = mm_need(vm, core->lz, core->klz, LVAR_ALIGN,
+	                   sizeof(*core->lz));
+	core->lz[core->klz++] = ymd_kstr(vm, z, -1);
 	return core->klz - 1;
 }
 
-void blk_shrink(struct chunk *core) {
+void blk_shrink(struct ymd_mach *vm, struct chunk *core) {
 	if (core->inst)
-		core->inst = mm_shrink(core->inst, core->kinst, INST_ALIGN,
+		core->inst = mm_shrink(vm, core->inst, core->kinst, INST_ALIGN,
 		                       sizeof(core->inst));
 	if (core->kz)
-		core->kz = mm_shrink(core->kz, core->kkz, KSTR_ALIGN,
+		core->kz = mm_shrink(vm, core->kz, core->kkz, KSTR_ALIGN,
 		                     sizeof(*core->kz));
 	if (core->lz)
-		core->lz = mm_shrink(core->lz, core->klz, LVAR_ALIGN,
+		core->lz = mm_shrink(vm, core->lz, core->klz, LVAR_ALIGN,
 		                     sizeof(*core->lz));
 }
 
 //-----------------------------------------------------------------------------
 // Closure functions:
 //-----------------------------------------------------------------------------
-static void func_init(struct func *fn, const char *name) {
+static void func_init(struct ymd_mach *vm, struct func *fn,
+                      const char *name) {
 	assert(fn->proto == NULL);
 	if (fn->is_c) {
-		fn->proto = ymd_format("func %s(...) {[native:%p]}",
+		fn->proto = ymd_format(vm, "func %s(...) {[native:%p]}",
 							   !name ? "" : name, fn->u.nafn);
 	} else {
-		fn->proto = ymd_format("func %s[*%d] (*%d) {...}",
+		fn->proto = ymd_format(vm, "func %s[*%d] (*%d) {...}",
 							   !name ? "" : name, fn->n_bind,
 							   fn->u.core->kargs);
 	}
 }
 
-struct func *func_new_c(ymd_nafn_t nafn, const char *name) {
-	struct func *x = gc_new(&vm()->gc, sizeof(*x), T_FUNC);
+struct func *func_new_c(struct ymd_mach *vm, ymd_nafn_t nafn,
+                        const char *name) {
+	struct func *x = gc_new(vm, sizeof(*x), T_FUNC);
 	assert(nafn);
 	x->u.nafn = nafn;
 	x->is_c = 1;
-	func_init(x, name);
+	func_init(vm, x, name);
 	return x;
 }
 
-struct func *func_new(struct chunk *blk, const char *name) {
-	struct func *x = gc_new(&vm()->gc, sizeof(*x), T_FUNC);
+struct func *func_new(struct ymd_mach *vm, struct chunk *blk,
+                      const char *name) {
+	struct func *x = gc_new(vm, sizeof(*x), T_FUNC);
 	assert(blk);
 	mm_grab(blk);
 	x->u.core = blk;
 	x->is_c = 0;
-	func_init(x, name);
+	func_init(vm, x, name);
 	return x;
 }
 
-void func_final(struct func *fn) {
+void func_final(struct ymd_mach *vm, struct func *fn) {
 	if (fn->bind)
-		vm_free(fn->bind);
+		vm_free(vm, fn->bind);
 	if (fn->is_c)
 		return;
 	if (fn->u.core->ref > 1) { // drop it!
 		--(fn->u.core->ref);
 		return;
 	}
-	blk_final(fn->u.core);
-	mm_drop(fn->u.core);
+	blk_final(vm, fn->u.core);
+	mm_drop(vm, fn->u.core);
 }
 
-int func_bind(struct func *fn, int i, const struct variable *var) {
+int func_bind(struct ymd_mach *vm, struct func *fn, int i,
+              const struct variable *var) {
 	assert(i >= 0);
 	assert(i < fn->n_bind);
 	if (!fn->bind) // Lazy allocating
-		fn->bind = vm_zalloc(sizeof(*fn->bind) * fn->n_bind);
+		fn->bind = vm_zalloc(vm, sizeof(*fn->bind) * fn->n_bind);
 	fn->bind[i] = *var;
 	return i;
 }
@@ -152,8 +160,8 @@ void func_dump(struct func *fn, FILE *fp) {
 	fprintf(fp, "\n");
 }
 
-struct func *func_clone(struct func *fn) {
-	struct func *x = gc_new(&vm()->gc, sizeof(*x), T_FUNC);
+struct func *func_clone(struct ymd_mach *vm, struct func *fn) {
+	struct func *x = gc_new(vm, sizeof(*x), T_FUNC);
 	assert(!fn->is_c);
 	x->proto = fn->proto;
 	x->is_c = fn->is_c;
@@ -161,3 +169,4 @@ struct func *func_clone(struct func *fn) {
 	x->u.core = mm_grab(fn->u.core);
 	return x;
 }
+

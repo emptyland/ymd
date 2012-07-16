@@ -6,22 +6,22 @@
 
 #define MAX_ADD 16
 
-struct dyay *dyay_new(int count) {
+struct dyay *dyay_new(struct ymd_mach *vm, int count) {
 	struct dyay *x = NULL;
 	if (count <= 0)
 		count = 0;
-	x = gc_new(&vm()->gc, sizeof(*x), T_DYAY);
+	x = gc_new(vm, sizeof(*x), T_DYAY);
 	x->count = count;
 	x->max = count == 0 ? 0 : count + MAX_ADD;
 	if (x->max > 0)
-		x->elem = vm_zalloc(sizeof(*x->elem) * x->max);
+		x->elem = vm_zalloc(vm, sizeof(*x->elem) * x->max);
 	return x;
 }
 
-void dyay_final(struct dyay *arr) {
+void dyay_final(struct ymd_mach *vm, struct dyay *arr) {
 	if (arr->elem) {
 		assert(arr->max > 0);
-		vm_free(arr->elem);
+		vm_free(vm, arr->elem);
 		arr->elem = NULL;
 		arr->count = 0;
 		arr->max = 0;
@@ -62,30 +62,30 @@ int dyay_compare(const struct dyay *arr, const struct dyay *rhs) {
 
 struct variable *dyay_get(struct dyay *arr, ymd_int_t i) {
 	size_t pos = (size_t)i;
-	if (i < 0LL || i >= (ymd_int_t)arr->count)
-		vm_die("Array out of range; index: %lld", i); // Noreached
+	assert(i >= 0LL && i < (ymd_int_t)arr->count);
 	return arr->elem + pos;
 }
 
-static inline void resize(struct dyay *arr) {
+static inline void resize(struct ymd_mach *vm, struct dyay *arr) {
 	arr->max = arr->count * 3 / 2 + MAX_ADD;
 	if (arr->elem)
-		arr->elem = vm_realloc(arr->elem, sizeof(*arr->elem) * arr->max);
+		arr->elem = vm_realloc(vm, arr->elem,
+		                       sizeof(*arr->elem) * arr->max);
 	else
-		arr->elem = vm_zalloc(sizeof(*arr->elem) * arr->max);
+		arr->elem = vm_zalloc(vm, sizeof(*arr->elem) * arr->max);
 }
 
-struct variable *dyay_add(struct dyay *arr) {
+struct variable *dyay_add(struct ymd_mach *vm, struct dyay *arr) {
 	if (arr->count >= arr->max) // Resize
-		resize(arr);
+		resize(vm, arr);
 	memset(arr->elem + arr->count, 0, sizeof(*arr->elem));
 	return arr->elem + arr->count++;
 }
 
-struct variable *dyay_insert(struct dyay *arr, ymd_int_t i) {
+struct variable *dyay_insert(struct ymd_mach *vm, struct dyay *arr, ymd_int_t i) {
 	int j;
 	if (arr->count >= arr->max) // Resize
-		resize(arr);
+		resize(vm, arr);
 	assert(i >= 0);
 	assert(i < arr->count);
 	j = arr->count;

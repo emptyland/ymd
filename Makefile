@@ -1,7 +1,7 @@
 include config.mk
 OBJS=state.o value.o memory.o dynamic_array.o hash_map.o skip_list.o closure.o \
-	 call.o libc.o libtest.o encode.o compiler.o lex.o disassembly.o print.o \
-	 tostring.o
+	 call.o libc.o libtest.o encode.o compiler.o lex.o tostring.o
+OBJX=print.o disassembly.o
 OBJI=yut_rand.o yut.o main_test.o
 OBJT=$(OBJS) $(OBJI)
 INCS=state.h value.h memory.h
@@ -12,8 +12,8 @@ XLIBS=$(LIB_REGEX)
 
 #-------------------------------------------------------------------------------
 # ymd_main
-ymd_main: $(OBJS) $(XLIBS) ymd_main.o 
-	$(CC) $(OBJS) $(XLIBS) ymd_main.o -o ymd_main
+ymd_main: $(OBJS) $(OBJX) $(XLIBS) ymd_main.o 
+	$(CC) $(OBJS) $(OBJX) $(XLIBS) ymd_main.o -o ymd_main
 
 ymd_main.o: $(INCS) disassembly.h libc.h ymd_main.c
 	$(CC) $(CFLAGS) ymd_main.c -c -o ymd_main.o
@@ -23,72 +23,72 @@ ymd_main.o: $(INCS) disassembly.h libc.h ymd_main.c
 test: yut_test memory_test value_test skip_list_test hash_map_test \
       closure_test dynamic_array_test encode_test
 	./memory_test && ./value_test && ./skip_list_test && ./hash_map_test && \
-	./closure_test && ./dynamic_array_test && encode_test
+	./closure_test && ./dynamic_array_test && ./encode_test
 
 #-------------------------------------------------------------------------------
 # Unit test rules:
-memory_test: $(OBJT) memory_test.o
-	$(CC) $(OBJT) memory_test.o -o memory_test
+memory_test: $(OBJT) $(OBJX) memory_test.o
+	$(CC) $(OBJT) $(OBJX) memory_test.o -o memory_test
 
 memory_test.o: $(INCT) memory_test.c
 	$(CC) $(CFLAGS) memory_test.c -c -o memory_test.o
 
-value_test: $(OBJT) value_test.o
-	$(CC) $(OBJT) value_test.o -o value_test
+value_test: $(OBJT) $(OBJX) value_test.o
+	$(CC) $(OBJT) $(OBJX) value_test.o -o value_test
 
 value_test.o: $(INCT) value_test.c 
 	$(CC) $(CFLAGS) value_test.c -c -o value_test.o
 
-skip_list_test: $(OBJT) skip_list_test.o
-	$(CC) $(OBJT) skip_list_test.o -o skip_list_test
+skip_list_test: $(OBJT) $(OBJX) skip_list_test.o
+	$(CC) $(OBJT) $(OBJX) skip_list_test.o -o skip_list_test
 
 skip_list_test.o: $(INCT) skip_list_test.c 
 	$(CC) $(CFLAGS) skip_list_test.c -c -o skip_list_test.o
 
-hash_map_test: $(OBJT) hash_map_test.o
-	$(CC) $(OBJT) hash_map_test.o -o hash_map_test
+hash_map_test: $(OBJT) $(OBJX) hash_map_test.o
+	$(CC) $(OBJT) $(OBJX) hash_map_test.o -o hash_map_test
 
 hash_map_test.o: $(INCT) hash_map_test.c 
 	$(CC) $(CFLAGS) hash_map_test.c -c -o hash_map_test.o
 
-dynamic_array_test: $(OBJT) dynamic_array_test.o
-	$(CC) $(OBJT) dynamic_array_test.o -o dynamic_array_test
+dynamic_array_test: $(OBJT) $(OBJX) dynamic_array_test.o
+	$(CC) $(OBJT) $(OBJX) dynamic_array_test.o -o dynamic_array_test
 
 dynamic_array_test.o: $(INCT) dynamic_array_test.c
 	$(CC) $(CFLAGS) dynamic_array_test.c -c -o dynamic_array_test.o
 
-closure_test: $(OBJT) closure_test.o
-	$(CC) $(OBJT) closure_test.o -o closure_test
+closure_test: $(OBJT) $(OBJX) closure_test.o
+	$(CC) $(OBJT) $(OBJX) closure_test.o -o closure_test
 
 closure_test.o: $(INCT) closure_test.c
 	$(CC) $(CFLAGS) closure_test.c -c -o closure_test.o
 
-call_test: $(OBJT) call_test.o 
-	$(CC) $(OBJT) call_test.o -o call_test
+call_test: $(OBJT) $(OBJX) call_test.o 
+	$(CC) $(OBJT) $(OBJX) call_test.o -o call_test
 
 call_test.o: $(INCT) libc.h call_test.c 
 	$(CC) $(CFLAGS) call_test.c -c -o call_test.o
 
-encode_test: $(OBJT) encode_test.o
-	$(CC) $(OBJT) encode_test.o -o encode_test
+encode_test: $(OBJT) $(OBJX) encode_test.o
+	$(CC) $(OBJT) $(OBJX) encode_test.o -o encode_test
 
 encode_test.o: $(INCT) encode_test.c encode.h assembly.h 
 	$(CC) $(CFLAGS) encode_test.c -c -o encode_test.o
 
-compiler_test: $(OBJT) compiler_test.o
+compiler_test: $(OBJT) $(OBJX) compiler_test.o
 	$(CC) $(OBJT) compiler_test.o -o compiler_test
 
 compiler_test.o: $(INCT) compiler_test.c compiler.h lex.h
 	$(CC) $(CFLAGS) compiler_test.c -c -o compiler_test.o
 
-lex_test: $(OBJT) lex_test.o
+lex_test: $(OBJT) $(OBJX) lex_test.o
 	$(CC) $(OBJT) lex_test.o -o lex_test 
 
 lex_test.o: lex_test.c lex.h
 	$(CC) $(CFLAGS) lex_test.c -c -o lex_test.o
 
-print_test: $(OBJT) print_test.o print_posix.o 
-	$(CC) $(OBJT) print_test.o print_posix.o -o print_test
+print_test: $(OBJT) $(OBJX) print_test.o print.o 
+	$(CC) $(OBJT) print_test.o print.o -o print_test
 
 print_test.o: print_test.c print.h
 	$(CC) $(CFLAGS) print_test.c -c -o print_test.o

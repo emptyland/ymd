@@ -27,9 +27,9 @@ const char *typeof_kz(unsigned tt) {
 	return typeof_name[tt].name;
 }
 
-struct kstr *typeof_kstr(unsigned tt) {
+struct kstr *typeof_kstr(struct ymd_mach *vm, unsigned tt) {
 	assert(tt < sizeof(typeof_name)/sizeof(typeof_name[0]));
-	return ymd_kstr(typeof_name[tt].name, typeof_name[tt].len);
+	return ymd_kstr(vm, typeof_name[tt].name, typeof_name[tt].len);
 }
 
 //-------------------------------------------------------------------------
@@ -44,33 +44,34 @@ struct variable *knil = &knil_fake_var;
 //-------------------------------------------------------------------------
 // Type casting define:
 //-------------------------------------------------------------------------
-ymd_int_t int_of(const struct variable *var) {
+ymd_int_t int_of(struct ymd_mach *vm, const struct variable *var) {
 	if (var->type != T_INT)
-		vm_die("Variable is not `int`");
+		vm_die(vm, "Variable is not `int`");
 	return var->value.i;
 }
 
-ymd_int_t bool_of(const struct variable *var) {
+ymd_int_t bool_of(struct ymd_mach *vm, const struct variable *var) {
 	if (var->type != T_BOOL)
-		vm_die("Variable is not `bool`");
+		vm_die(vm, "Variable is not `bool`");
 	return var->value.i;
 }
 
-#define DEFINE_REFOF(name, tt)                     \
-	struct name *name##_of(struct variable *var) { \
-		if (var->type != tt)                       \
-			vm_die("Variable is not `"#name"`");   \
-		assert(var->value.ref != NULL);            \
-		return (struct name *)var->value.ref;      \
-	}
+#define DEFINE_REFOF(name, tt)                   \
+struct name *name##_of(struct ymd_mach *vm,      \
+		struct variable *var) {                  \
+	if (var->type != tt)                         \
+		vm_die(vm, "Variable is not `"#name"`"); \
+	assert(var->value.ref != NULL);              \
+	return (struct name *)var->value.ref;        \
+}
 DECL_TREF(DEFINE_REFOF)
 #undef DEFINE_REFOF
 
-void *mand_land(struct variable *var, const char *tt) {
-	struct mand *m = mand_of(var);
+void *mand_land(struct ymd_mach *vm, struct variable *var, const char *tt) {
+	struct mand *m = mand_of(vm, var);
 	if (tt == m->tt || strcmp(tt, m->tt) == 0)
 		return m->land;
-	vm_die("Unexpected managed type `%s`", tt);
+	vm_die(vm, "Unexpected managed type `%s`", tt);
 	return NULL;
 }
 
@@ -177,11 +178,11 @@ static int kz_compare(const unsigned char *z1, int n1,
 	return 0;
 }
 
-struct kstr *kstr_new(const char *z, int count) {
+struct kstr *kstr_new(struct ymd_mach *vm, const char *z, int count) {
 	struct kstr *x = NULL;
 	if (count < 0)
 		count = strlen(z);
-	x = gc_new(&vm()->gc, sizeof(*x) + count, T_KSTR);
+	x = gc_new(vm, sizeof(*x) + count, T_KSTR);
 	x->len = count;
 	if (!z)
 		memset(x->land, 0, count + 1);
@@ -211,23 +212,21 @@ int kstr_compare(const struct kstr *kz, const struct kstr *rhs) {
 //-------------------------------------------------------------------------
 // Managed data: `mand` functions:
 //-------------------------------------------------------------------------
-struct mand *mand_new(const void *data, int size, ymd_final_t final) {
+struct mand *mand_new(struct ymd_mach *vm, int size, ymd_final_t final) {
 	struct mand *x = NULL;
 	assert(size >= 0);
-	x = gc_new(&vm()->gc, sizeof(*x) + size, T_MAND);
+	x = gc_new(vm, sizeof(*x) + size, T_MAND);
 	x->len = size;
 	x->final = final;
-	if (data)
-		memcpy(x->land, data, size);
 	return x;
 }
 
-void mand_final(struct mand *pm) {
+void mand_final(struct ymd_mach *vm, struct mand *pm) {
 	int rv = 0;
 	if (pm->final)
 		rv = (*pm->final)(pm->land);
 	if (rv < 0)
-		vm_die("Managed data finalize failed.");
+		vm_die(vm, "Managed data finalize failed.");
 }
 
 int mand_equals(const struct mand *pm, const struct mand *rhs) {

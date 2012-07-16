@@ -13,8 +13,9 @@
 #define KVI_NODE 2
 
 static size_t hash(const struct variable *v);
-static struct kvi *hindex(struct hmap *map, const struct variable *key);
-static void resize(struct hmap *map, int shift);
+static struct kvi *hindex(struct ymd_mach *vm, struct hmap *map,
+                          const struct variable *key);
+static void resize(struct ymd_mach *vm, struct hmap *map, int shift);
 
 static int log2x(int n) {
 	int i;
@@ -137,17 +138,17 @@ static struct variable *hfind(const struct hmap *map,
 	return knil;
 }
 
-struct hmap *hmap_new(int count) {
+struct hmap *hmap_new(struct ymd_mach *vm, int count) {
 	int shift = 0;
 	struct hmap *x = NULL;
 	if (count <= 0)
 		shift = 5;
 	else if (count > 0)
 		shift = log2x(count);
-	x = gc_new(&vm()->gc, sizeof(*x), T_HMAP);
+	x = gc_new(vm, sizeof(*x), T_HMAP);
 	assert(shift > 0);
 	x->shift = shift;
-	x->item = vm_zalloc(sizeof(struct kvi) * (1 << x->shift));
+	x->item = vm_zalloc(vm, sizeof(struct kvi) * (1 << x->shift));
 	x->free = x->item + (1 << x->shift) - 1;
 	return x;
 }
@@ -183,8 +184,8 @@ int hmap_compare(const struct hmap *map, const struct hmap *lhs) {
 	return rv;
 }
 
-void hmap_final(struct hmap *map) {
-	vm_free(map->item);
+void hmap_final(struct ymd_mach *vm, struct hmap *map) {
+	vm_free(vm, map->item);
 }
 
 static struct kvi *alloc_free(struct hmap *map) {
@@ -196,7 +197,8 @@ static struct kvi *alloc_free(struct hmap *map) {
 	return NULL;
 }
 
-struct kvi *get_head(struct hmap *map, const struct variable *key,
+struct kvi *get_head(struct ymd_mach *vm, struct hmap *map,
+                     const struct variable *key,
                      struct kvi *slot, size_t h) {
 	struct kvi *pos = slot;
 	struct kvi *i, *fnd;
@@ -207,8 +209,8 @@ struct kvi *get_head(struct hmap *map, const struct variable *key,
 	}
 	fnd = alloc_free(map);
 	if (!fnd) {
-		resize(map, map->shift + 1);
-		return hindex(map, key);
+		resize(vm, map, map->shift + 1);
+		return hindex(vm, map, key);
 	}
 	assert(!pos->next);
 	fnd->hash = h;
@@ -218,7 +220,7 @@ struct kvi *get_head(struct hmap *map, const struct variable *key,
 	return fnd;
 }
 
-static void resize(struct hmap *map, int shift) {
+static void resize(struct ymd_mach *vm, struct hmap *map, int shift) {
 	struct kvi *bak;
 	const struct kvi *last, *i;
 	int total_count;
@@ -230,27 +232,28 @@ static void resize(struct hmap *map, int shift) {
 	// Allocate new slots
 	map->shift = shift;
 	total_count = (1 << map->shift);
-	map->item = vm_zalloc(sizeof(*map->item) * total_count);
+	map->item = vm_zalloc(vm, sizeof(*map->item) * total_count);
 	map->free = map->item + total_count - 1; // To last node!!
 	// Rehash
 	for (i = bak; i < last; ++i) {
 		if (i->flag != KVI_FREE) {
-			struct variable *pv = hmap_put(map, &i->k);
+			struct variable *pv = hmap_put(vm, map, &i->k);
 			assert(pv != NULL);
 			//assert(is_nil(pv));
 			*pv = i->v;
 		}
 	}
-	vm_free(bak);
+	vm_free(vm, bak);
 }
 
-struct kvi *get_any(struct hmap *map, const struct variable *key,
+struct kvi *get_any(struct ymd_mach *vm, struct hmap *map,
+                    const struct variable *key,
                     struct kvi *slot, size_t h) {
 	struct kvi *fnd = alloc_free(map), *prev;
 	size_t slot_h;
 	if (!fnd) {
-		resize(map, map->shift + 1);
-		return hindex(map, key);
+		resize(vm, map, map->shift + 1);
+		return hindex(vm, map, key);
 	}
 	// Find real head node `prev`.
 	slot_h = hash(&slot->k);
@@ -274,7 +277,8 @@ struct kvi *get_any(struct hmap *map, const struct variable *key,
 	return slot;
 }
 
-static struct kvi *hindex(struct hmap *map, const struct variable *key) {
+static struct kvi *hindex(struct ymd_mach *vm, struct hmap *map,
+                          const struct variable *key) {
 	size_t h = hash(key);
 	struct kvi *slot = position(map, h);
 	switch (slot->flag) {
@@ -283,9 +287,9 @@ static struct kvi *hindex(struct hmap *map, const struct variable *key) {
 		slot->hash = h;
 		return slot;
 	case KVI_SLOT:
-		return get_head(map, key, slot, h);
+		return get_head(vm, map, key, slot, h);
 	case KVI_NODE:
-		return get_any(map, key, slot, h);
+		return get_any(vm, map, key, slot, h);
 	default:
 		assert(0);
 		break;
@@ -293,10 +297,11 @@ static struct kvi *hindex(struct hmap *map, const struct variable *key) {
 	return NULL;
 }
 
-struct variable *hmap_put(struct hmap *map, const struct variable *key) {
+struct variable *hmap_put(struct ymd_mach *vm, struct hmap *map,
+                          const struct variable *key) {
 	struct kvi *x = NULL;
 	assert(!is_nil(key));
-	x = hindex(map, key);
+	x = hindex(vm, map, key);
 	x->k = *key;
 	return &x->v;
 }
@@ -307,7 +312,7 @@ struct variable *hmap_get(struct hmap *map, const struct variable *key) {
 }
 
 // Used by kpool(Constant String Pool)
-struct kvi *kz_index(struct hmap *map, const char *z, int n) {
+struct kvi *kz_index(struct ymd_mach *vm, struct hmap *map, const char *z, int n) {
 	// Make a fake key.
 	struct variable fake;
 	struct kvi *x;
@@ -315,7 +320,7 @@ struct kvi *kz_index(struct hmap *map, const char *z, int n) {
 	char chunk[sizeof(struct kstr) + MAX_CHUNK_LEN];
 	int lzn = n >= 0 ? n : (int)strlen(z);
 	if (lzn > MAX_CHUNK_LEN) {
-		kz = vm_zalloc(sizeof(struct kstr) + lzn);
+		kz = vm_zalloc(vm, sizeof(struct kstr) + lzn);
 	} else {
 		memset(chunk, 0, sizeof(struct kstr) + lzn);
 		kz = (struct kstr *)chunk;
@@ -329,12 +334,12 @@ struct kvi *kz_index(struct hmap *map, const char *z, int n) {
 	fake.type = T_KSTR;
 	fake.value.ref = gcx(kz);
 	// Find position
-	x = hindex(map, &fake);
+	x = hindex(vm, map, &fake);
 	if (!equals(&x->k, &fake)) {
 		x->k.type = T_KSTR;
-		x->k.value.ref = gcx(kstr_new(z, kz->len));
+		x->k.value.ref = gcx(kstr_new(vm, z, kz->len));
 	}
-	if (kz->len > MAX_CHUNK_LEN) vm_free(kz);
+	if (kz->len > MAX_CHUNK_LEN) vm_free(vm, kz);
 	return x;
 }
 

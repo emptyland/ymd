@@ -27,14 +27,14 @@ unsigned short randlv() {
 	return lvl;
 }
 
-static struct sknd *mknode(unsigned short lv) {
-	struct sknd *x = vm_zalloc(sizeof(struct sknd) +
+static struct sknd *mknode(struct ymd_mach *vm, unsigned short lv) {
+	struct sknd *x = vm_zalloc(vm, sizeof(struct sknd) +
 	                           (lv - 1) * sizeof(struct sknd*));
 	x->n = lv;
 	return x;
 }
 
-static struct sknd *append(struct skls *list, struct sknd *update[]) {
+static struct sknd *append(struct ymd_mach *vm, struct skls *list, struct sknd *update[]) {
 	struct sknd *x;
 	unsigned short i, lvl = randlv();
 	if (lvl > list->lv) {
@@ -42,7 +42,7 @@ static struct sknd *append(struct skls *list, struct sknd *update[]) {
 			update[i] = list->head;
 		list->lv = lvl;
 	}
-	x = mknode(lvl); ++list->count;
+	x = mknode(vm, lvl); ++list->count;
 	for (i = 0; i < lvl; ++i) {
 		x->fwd[i] = update[i]->fwd[i];
 		update[i]->fwd[i] = x;
@@ -50,7 +50,7 @@ static struct sknd *append(struct skls *list, struct sknd *update[]) {
 	return x;
 }
 
-static struct sknd *skindex(struct skls *list,
+static struct sknd *skindex(struct ymd_mach *vm, struct skls *list,
                             const struct variable *key) {
 	struct sknd *x = list->head, *update[MAX_LEVEL];
 	int i;
@@ -62,7 +62,7 @@ static struct sknd *skindex(struct skls *list,
 		update[i] = x;
 	}
 	x = x->fwd[0];
-	return (x && equals(&x->k, key)) ? x : append(list, update);
+	return (x && equals(&x->k, key)) ? x : append(vm, list, update);
 }
 
 static struct variable *skfind(const struct skls *list,
@@ -78,20 +78,20 @@ static struct variable *skfind(const struct skls *list,
 	return (x && equals(&x->k, key)) ? &x->v : knil; // `knil` means not found;
 }
 
-struct skls *skls_new() {
-	struct skls *x = gc_new(&vm()->gc, sizeof(struct skls), T_SKLS);
+struct skls *skls_new(struct ymd_mach *vm) {
+	struct skls *x = gc_new(vm, sizeof(struct skls), T_SKLS);
 	x->lv = 0;
-	x->head = mknode(MAX_LEVEL);
+	x->head = mknode(vm, MAX_LEVEL);
 	return x;
 }
 
-void skls_final(struct skls *list) {
+void skls_final(struct ymd_mach *vm, struct skls *list) {
 	struct sknd *i = list->head, *p = i;
 	assert(i != NULL);
 	while (i) {
 		p = i;
 		i = i->fwd[0];
-		vm_free(p);
+		vm_free(vm, p);
 	}
 }
 
@@ -118,10 +118,11 @@ int skls_compare(const struct skls *list, const struct skls *lhs) {
 	return rv;
 }
 
-struct variable *skls_put(struct skls *list, const struct variable *key) {
+struct variable *skls_put(struct ymd_mach *vm, struct skls *list,
+                          const struct variable *key) {
 	struct sknd *x = NULL;
 	assert(!is_nil(key));
-	x = skindex(list, key);
+	x = skindex(vm, list, key);
 	x->k = *key;
 	return &x->v;
 }

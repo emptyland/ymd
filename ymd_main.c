@@ -34,6 +34,7 @@ static void die(const char *msg) {
 int main(int argc, char *argv[]) {
 	int i;
 	struct func *fn;
+	struct ymd_mach *vm;
 	for (i = 1; i < argc; ++i) {
 		if (strcmp(argv[i], "-d") == 0) {
 			opt.debug = 1;
@@ -50,31 +51,31 @@ int main(int argc, char *argv[]) {
 				die("Bad file!");
 		}
 	}
-	vm_init();
-	vm_init_context();
+	vm = ymd_init();
+	ymd_init_context(vm);
 	if (!opt.input)
 		die("Null file!");
-	fn = func_compilef("__main__", opt.name, opt.input);
+	fn = ymd_compilef(vm, "__main__", opt.name, opt.input);
 	if (!fn)
 		exit(1);
-	ymd_load_lib(lbxBuiltin);
-	if (opt.test) ymd_load_ut();
+	ymd_load_lib(vm, lbxBuiltin);
+	if (opt.test) ymd_load_ut(vm);
 	if (opt.debug) {
 		int i;
 		printf("====[main]====\n");
 		dis_func(stdout, fn);
-		for (i = 0; i < vm()->n_fn; ++i) {
-			printf("====[%s]====\n", vm()->fn[i]->proto->land);
-			dis_func(stdout, vm()->fn[i]);
+		for (i = 0; i < vm->n_fn; ++i) {
+			printf("====[%s]====\n", vm->fn[i]->proto->land);
+			dis_func(stdout, vm->fn[i]);
 		}
 	}
 	if (opt.test)
-		i =  ymd_test(fn, argc - opt.argv_off, argv + opt.argv_off);
+		i =  ymd_test(vm, fn, argc - opt.argv_off, argv + opt.argv_off);
 	else
-		i = func_main(fn, argc - opt.argv_off, argv + opt.argv_off);
+		i = ymd_main(vm, fn, argc - opt.argv_off, argv + opt.argv_off);
 	if (opt.external)
 		fclose(opt.input);
-	vm_final_context();
-	vm_final();
+	ymd_final_context(vm);
+	ymd_final(vm);
 	return i;
 }

@@ -1,10 +1,9 @@
 #include "tostring.h"
-#include "state.h"
-#include "memory.h"
 #include "value.h"
+#include <stdlib.h>
 
 void fmtx_final(struct fmtx *self) {
-	if (self->dy) vm_free(self->dy);
+	if (self->dy) free(self->dy);
 	memset(self->kbuf, 0, sizeof(self->kbuf));
 	self->dy = NULL;
 	self->last = 0;
@@ -18,10 +17,10 @@ void fmtx_need(struct fmtx *self, int n) {
 		return;
 	self->max = (self->last + n) * 3 / 2 + FMTX_STATIC_MAX;
 	if (!self->dy) {
-		self->dy = vm_zalloc(self->max);
+		self->dy = calloc(self->max, 1);
 		memcpy(self->dy, self->kbuf, self->last);
 	} else {
-		self->dy = vm_realloc(self->dy, self->max);
+		self->dy = realloc(self->dy, self->max);
 	}
 }
 

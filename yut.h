@@ -244,4 +244,7 @@ struct yut_ent yut_intl_test[] = {
 	.name = #func"."#postfix, \
 },
 
+struct ymd_mach;
+extern struct ymd_mach *tvm;
+
 #endif //TEST_YUT_H

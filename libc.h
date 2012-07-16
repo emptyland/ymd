@@ -3,6 +3,7 @@
 
 #include "value.h"
 
+struct ymd_mach;
 //--------------------------------------------------------------------------
 // Stream define
 //--------------------------------------------------------------------------
@@ -33,8 +34,9 @@ typedef const struct libfn_entry ymd_libc_t[];
 
 extern ymd_libc_t lbxBuiltin;
 
-int ymd_load_lib(ymd_libc_t lbx);
-int ymd_load_mem(const char *clazz, void *o, ymd_libc_t lbx);
+int ymd_load_lib(struct ymd_mach *vm, ymd_libc_t lbx);
+int ymd_load_mem(struct ymd_mach *vm, const char *clazz, void *o,
+                 ymd_libc_t lbx);
 
 #endif // YMD_LIBC_H
 

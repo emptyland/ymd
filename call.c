@@ -12,20 +12,21 @@
 // +--------+-------------+
 // | n_bind |n_lz - n_bind|
 // +----------------------+
-static inline struct variable *vm_local(struct func *fn, int i) {
-	struct context *l = ioslate();
+static inline struct variable *vm_local(struct ymd_context *l,
+                                        struct func *fn, int i) {
 	assert(fn == l->info->run);
 	if (i < fn->n_bind)
 		return fn->bind + i;
 	return l->info->loc + i - fn->n_bind;
 }
 
-static inline struct variable *vm_find_local(struct func *fn,
+static inline struct variable *vm_find_local(struct ymd_context *l,
+                                             struct func *fn,
                                              const char *name) {
 	int i = blk_find_lz(fn->u.core, name);
 	if (i < 0)
-		vm_die("Can not find local: %s", name);
-	return vm_local(fn, i);
+		vm_die(l->vm, "Can not find local: %s", name);
+	return vm_local(l, fn, i);
 }
 
 static inline const struct variable *do_keyz(struct func *fn, int i,
@@ -40,26 +41,30 @@ static inline const struct variable *do_keyz(struct func *fn, int i,
 	return key;
 }
 
-static inline struct variable *vm_getg(struct func *fn, int i) {
+static inline struct variable *vm_getg(struct ymd_mach *vm, int i) {
 	struct variable k;
-	return hmap_get(vm()->global, do_keyz(fn, i, &k));
+	struct func *fn = ymd_called(ioslate(vm));
+	return hmap_get(vm->global, do_keyz(fn, i, &k));
 }
 
-static inline void vm_putg(struct func *fn, int i, const struct variable *v) {
+static inline void vm_putg(struct ymd_mach *vm, int i, const struct variable *v) {
 	struct variable k;
+	struct func *fn = ymd_called(ioslate(vm));
 	if (is_nil(v))
-		vm_die("Value can not be `nil` in k-v pair");
-	*hmap_put(vm()->global, do_keyz(fn, i, &k)) = *v;
+		vm_die(vm, "Value can not be `nil` in k-v pair");
+	*hmap_put(vm, vm->global, do_keyz(fn, i, &k)) = *v;
 }
 
-static inline int vm_match(const struct kstr *lhs, const struct kstr *pattern) {
+static inline int vm_match(struct ymd_mach *vm,
+                           const struct kstr *lhs,
+                           const struct kstr *pattern) {
 	regex_t regex;
 	int err = regcomp(&regex, pattern->land, REG_NOSUB|REG_EXTENDED);
 	if (err) {
 		char msg[128];
 		regerror(err, &regex, msg, sizeof(msg));
 		regfree(&regex);
-		vm_die("Regex match fatal: %s", msg);
+		vm_die(vm, "Regex match fatal: %s", msg);
 		return 0;
 	}
 	err = regexec(&regex, lhs->land, 0, NULL, 0);
@@ -79,19 +84,21 @@ static inline int vm_bool(const struct variable *lhs) {
 	return 0;
 }
 
-static inline void do_put(struct gc_node *raw, const struct variable *k,
+static inline void do_put(struct ymd_mach *vm,
+                          struct gc_node *raw,
+						  const struct variable *k,
                           const struct variable *v) {
 	if ((k && is_nil(k)) || is_nil(v))
-		vm_die("Value can not be `nil` in k-v pair");
+		vm_die(vm, "Value can not be `nil` in k-v pair");
 	switch (raw->type) {
 	case T_HMAP:
-		*hmap_put((struct hmap *)raw, k) = *v;
+		*hmap_put(vm, (struct hmap *)raw, k) = *v;
 		break;
 	case T_SKLS:
-		*skls_put((struct skls *)raw, k) = *v;
+		*skls_put(vm, (struct skls *)raw, k) = *v;
 		break;
 	case T_DYAY:
-		*dyay_add((struct dyay *)raw) = *v;
+		*dyay_add(vm, (struct dyay *)raw) = *v;
 		break;
 	default:
 		assert(0);
@@ -99,11 +106,13 @@ static inline void do_put(struct gc_node *raw, const struct variable *k,
 	}
 }
 
-static inline void vm_put(struct variable *var, const struct variable *k,
-                   const struct variable *v) {
-	struct variable *rv = ymd_put(var, k);
+static inline void vm_put(struct ymd_mach *vm,
+                          struct variable *var,
+						  const struct variable *k,
+                          const struct variable *v) {
+	struct variable *rv = ymd_put(vm, var, k);
 	if (is_nil(v))
-		vm_die("Value can not be `nil` in k-v pair");
+		vm_die(vm, "Value can not be `nil` in k-v pair");
 	*rv = *v;
 }
 
@@ -122,11 +131,11 @@ static inline void vm_put(struct variable *var, const struct variable *k,
 //-----------------------------------------------------------------------------
 // Stack functions:
 // ----------------------------------------------------------------------------
-int vm_run(struct func *fn, int argc) {
+int vm_run(struct ymd_context *l, struct func *fn, int argc) {
 	uint_t inst;
-	struct context *l = ioslate();
 	struct call_info *info = l->info;
 	struct chunk *core = fn->u.core;
+	struct ymd_mach *vm = l->vm;
 
 	(void)argc;
 	assert(fn == info->run);
@@ -139,15 +148,15 @@ retry:
 		ushort_t param = asm_param(inst);
 		switch (op) {
 		case I_PANIC:
-			vm_die("%s Panic!", fn->proto->land);
+			vm_die(vm, "%s Panic!", fn->proto->land);
 			break;
 		case I_STORE:
 			switch (flag) {
 			case F_LOCAL:
-				*vm_local(fn, param) = *ymd_top(l, 0);
+				*vm_local(l, fn, param) = *ymd_top(l, 0);
 				break;
 			case F_OFF:
-				vm_putg(fn, param, ymd_top(l, 0));
+				vm_putg(vm, param, ymd_top(l, 0));
 				break;
 			}
 			ymd_pop(l, 1);
@@ -202,13 +211,13 @@ retry:
 				int i, k = param << 1;
 				struct variable *var = ymd_top(l, k);
 				for (i = 0; i < k; i += 2)
-					vm_put(var, ymd_top(l, i + 1), ymd_top(l, i));
+					vm_put(vm, var, ymd_top(l, i + 1), ymd_top(l, i));
 				ymd_pop(l, k + 1);
 				} break;
 			case F_FAST: {
 				struct variable key;
 				vset_kstr(&key, core->kz[param]);
-				vm_put(ymd_top(l, 1), &key, ymd_top(l, 0));
+				vm_put(vm, ymd_top(l, 1), &key, ymd_top(l, 0));
 				ymd_pop(l, 2);
 				} break;
 			default:
@@ -241,7 +250,7 @@ retry:
 				var.value.ref = gcx(core->kz[param]);
 				break;
 			case F_LOCAL:
-				var = *vm_local(fn, param);
+				var = *vm_local(l, fn, param);
 				break;
 			case F_BOOL:
 				var.type = T_BOOL;
@@ -252,7 +261,7 @@ retry:
 				var.value.i = 0;
 				break;
 			case F_OFF:
-				var = *vm_getg(fn, param);
+				var = *vm_getg(vm, param);
 				break;
 			}
 			*ymd_push(l) = var;
@@ -280,7 +289,7 @@ retry:
 				rhs->value.i = compare(rhs, lhs) <= 0;
 				break;
 			case F_MATCH:
-				rhs->value.i = vm_match(kstr_of(rhs), kstr_of(lhs));
+				rhs->value.i = vm_match(vm, kstr_of(vm, rhs), kstr_of(vm, lhs));
 				break;
 			default:
 				assert(0);
@@ -297,14 +306,14 @@ retry:
 			switch (flag) {
 			case F_STACK: {
 				struct variable *k = ymd_top(l, 0),
-								*v = ymd_get(ymd_top(l, 1), k);
+								*v = ymd_get(vm, ymd_top(l, 1), k);
 				ymd_pop(l, 2);
 				*ymd_push(l) = *v;
 				} break;
 			case F_FAST: {
 				struct variable k;
 				vset_kstr(&k, core->kz[param]);
-				*ymd_top(l, 0) = *ymd_get(ymd_top(l, 0), &k);
+				*ymd_top(l, 0) = *ymd_get(vm, ymd_top(l, 0), &k);
 				} break;
 			default:
 				assert(0);
@@ -315,27 +324,27 @@ retry:
 			const unsigned tt = ymd_top(l, 0)->type;
 			struct kstr *kz;
 			assert(tt < T_MAX);
-			kz = typeof_kstr(tt);
+			kz = typeof_kstr(vm, tt);
 			ymd_top(l, 0)->type = T_KSTR;
 			ymd_top(l, 0)->value.ref = gcx(kz);
 			} break;
 		case I_INV: {
 			struct variable *opd = ymd_top(l, 0);
-			opd->value.i = -int_of(opd);
+			opd->value.i = -int_of(vm, opd);
 			} break;
 		case I_MUL: {
 			struct variable *rhs = ymd_top(l, 1),
 							*lhs = ymd_top(l, 0);
-			rhs->value.i = int_of(rhs) * int_of(lhs);
+			rhs->value.i = int_of(vm, rhs) * int_of(vm, lhs);
 			ymd_pop(l, 1);
 			} break;
 		case I_DIV: {
 			struct variable *rhs = ymd_top(l, 1),
 							*lhs = ymd_top(l, 0);
-			ymd_int_t opd2 = int_of(lhs);
+			ymd_int_t opd2 = int_of(vm, lhs);
 			if (opd2 == 0LL)
-				vm_die("Div to zero");
-			rhs->value.i = int_of(rhs) / opd2;
+				vm_die(vm, "Div to zero");
+			rhs->value.i = int_of(vm, rhs) / opd2;
 			ymd_pop(l, 1);
 			} break;
 		case I_ADD: {
@@ -343,14 +352,14 @@ retry:
 							*lhs = ymd_top(l, 0);
 			switch (rhs->type) {
 			case T_INT:
-				rhs->value.i = rhs->value.i + int_of(lhs);
+				rhs->value.i = rhs->value.i + int_of(vm, lhs);
 				break;
 			case T_KSTR:
-				rhs->value.ref = gcx(ymd_strcat(kstr_of(rhs),
-					kstr_of(lhs)));
+				rhs->value.ref = gcx(ymd_strcat(vm, kstr_of(vm, rhs),
+				                                kstr_of(vm, lhs)));
 				break;
 			default:
-				vm_die("Operator + don't support this type");
+				vm_die(vm, "Operator + don't support this type");
 				break;
 			}
 			ymd_pop(l, 1);
@@ -358,24 +367,24 @@ retry:
 		case I_SUB: {
 			struct variable *rhs = ymd_top(l, 1),
 							*lhs = ymd_top(l, 0);
-			rhs->value.i = int_of(rhs) - int_of(lhs);
+			rhs->value.i = int_of(vm, rhs) - int_of(vm, lhs);
 			ymd_pop(l, 1);
 			} break;
 		case I_MOD: {
 			struct variable *rhs = ymd_top(l, 1),
 							*lhs = ymd_top(l, 0);
-			ymd_int_t opd1 = int_of(lhs);
+			ymd_int_t opd1 = int_of(vm, lhs);
 			if (opd1 == 0LL)
-				vm_die("Mod to zero");
-			rhs->value.i = int_of(rhs) % int_of(lhs);
+				vm_die(vm, "Mod to zero");
+			rhs->value.i = int_of(vm, rhs) % int_of(vm, lhs);
 			ymd_pop(l, 1);
 			} break;
 		case I_POW: {
 			struct variable *rhs = ymd_top(l, 1),
 							*lhs = ymd_top(l, 0);
-			ymd_int_t opd0 = int_of(rhs), opd1 = int_of(lhs);
+			ymd_int_t opd0 = int_of(vm, rhs), opd1 = int_of(vm, lhs);
 			if (opd1 < 0) {
-				vm_die("Pow must be great or equals 0");
+				vm_die(vm, "Pow must be great or equals 0");
 			} else if (opd1 == 0) {
 				rhs->value.i = 1;
 			} else if (opd0 == 1) {
@@ -392,19 +401,19 @@ retry:
 		case I_ANDB: {
 			struct variable *rhs = ymd_top(l, 1),
 							*lhs = ymd_top(l, 0);
-			rhs->value.i = int_of(rhs) & int_of(lhs);
+			rhs->value.i = int_of(vm, rhs) & int_of(vm, lhs);
 			ymd_pop(l, 1);
 			} break;
 		case I_ORB: {
 			struct variable *rhs = ymd_top(l, 1),
 							*lhs = ymd_top(l, 0);
-			rhs->value.i = int_of(rhs) | int_of(lhs);
+			rhs->value.i = int_of(vm, rhs) | int_of(vm, lhs);
 			ymd_pop(l, 1);
 			} break;
 		case I_XORB: {
 			struct variable *rhs = ymd_top(l, 1),
 							*lhs = ymd_top(l, 0);
-			rhs->value.i = int_of(rhs) ^ int_of(lhs);
+			rhs->value.i = int_of(vm, rhs) ^ int_of(vm, lhs);
 			ymd_pop(l, 1);
 			} break;
 		case I_INVB: {
@@ -414,17 +423,17 @@ retry:
 		case I_SHIFT: {
 			struct variable *rhs = ymd_top(l, 1),
 							*lhs = ymd_top(l, 0);
-			if (int_of(lhs) < 0)
-				vm_die("Shift must be great than 0");
+			if (int_of(vm, lhs) < 0)
+				vm_die(vm, "Shift must be great than 0");
 			switch (flag) {
 			case F_LEFT:
-				rhs->value.i = int_of(rhs) << int_of(lhs);
+				rhs->value.i = int_of(vm, rhs) << int_of(vm, lhs);
 				break;
 			case F_RIGHT_L:
-				rhs->value.i = ((unsigned long long)int_of(rhs)) >> int_of(lhs);
+				rhs->value.i = ((unsigned long long)int_of(vm, rhs)) >> int_of(vm, lhs);
 				break;
 			case F_RIGHT_A:
-				rhs->value.i = int_of(rhs) >> int_of(lhs);
+				rhs->value.i = int_of(vm, rhs) >> int_of(vm, lhs);
 				break;
 			default:
 				assert(0);
@@ -433,53 +442,53 @@ retry:
 			ymd_pop(l, 1);
 			} break;
 		case I_CALL: {
-			struct func *called = func_of(ymd_top(l, param));
-			func_call(called, param, 0);
+			struct func *called = func_of(vm, ymd_top(l, param));
+			ymd_call(l, called, param, 0);
 			} break;
 		case I_SELFCALL: {
 			struct variable method;
 			struct func *called;
 			vset_kstr(&method, fn->u.core->kz[param]);
-			called = func_of(ymd_get(ymd_top(l, flag), &method));
-			func_call(called, flag, 1);
+			called = func_of(vm, ymd_get(vm, ymd_top(l, flag), &method));
+			ymd_call(l, called, flag, 1);
 			} break;
 		case I_NEWMAP: {
-			struct hmap *map = hmap_new(param);
+			struct hmap *map = hmap_new(vm, param);
 			int i, n = param * 2;
 			for (i = 0; i < n; i += 2)
-				do_put(gcx(map), ymd_top(l, i + 1), ymd_top(l, i));
+				do_put(vm, gcx(map), ymd_top(l, i + 1), ymd_top(l, i));
 			ymd_pop(l, n);
 			vset_hmap(ymd_push(l), map);
 			} break;
 		case I_NEWSKL: {
-			struct skls *map = skls_new();
+			struct skls *map = skls_new(vm);
 			int i, n = param * 2;
 			for (i = 0; i < n; i += 2)
-				do_put(gcx(map), ymd_top(l, i + 1), ymd_top(l, i));
+				do_put(vm, gcx(map), ymd_top(l, i + 1), ymd_top(l, i));
 			ymd_pop(l, n);
 			vset_skls(ymd_push(l), map);
 			} break;
 		case I_NEWDYA: {
-			struct dyay *map = dyay_new(0);
+			struct dyay *map = dyay_new(vm, 0);
 			int i = param;
 			while (i--)
-				do_put(gcx(map), NULL, ymd_top(l, i));
+				do_put(vm, gcx(map), NULL, ymd_top(l, i));
 			ymd_pop(l, param);
 			vset_dyay(ymd_push(l), map);
 			} break;
 		case I_BIND: {
 			struct variable *opd = ymd_top(l, param);
-			struct func *copied = func_clone(func_of(opd));
+			struct func *copied = func_clone(vm, func_of(vm, opd));
 			int i = param;
 			assert(copied->n_bind == param);
 			while (i--)
-				func_bind(copied, param - i - 1, ymd_top(l, i));
+				func_bind(vm, copied, param - i - 1, ymd_top(l, i));
 			opd->value.ref = gcx(copied); // Copy-on-wirte bind
 			ymd_pop(l, param);
 			} break;
 		case I_LOAD: {
 			struct variable *var = ymd_push(l);
-			struct func *land = vm()->fn[param];
+			struct func *land = vm->fn[param];
 			var->type = T_FUNC;
 			var->value.ref = gcx(land);
 			} break;
@@ -493,34 +502,32 @@ retry:
 }
 #undef IMPL_JUMP
 
-static void copy_args(struct func *fn, int argc) {
+static void vm_copy_args(struct ymd_context *l, struct func *fn, int argc) {
 	int i;
 	struct variable *argv = NULL;
-	struct context *l = ioslate();
 	if (!fn->is_c) {
 		struct chunk *core = fn->u.core;
 		const int k = core->kargs < argc ? core->kargs : argc;
-		argv = vm_find_local(fn, "argv");
+		argv = vm_find_local(l, fn, "argv");
 		vset_nil(argv);
 		i = k;
 		while (i--) // Copy to local variable
-			*vm_local(fn, k - i - 1) = *ymd_top(l, i);
+			*vm_local(l, fn, k - i - 1) = *ymd_top(l, i);
 	}
 	if (argc > 0) {
 		// Lazy creating
-		fn->argv = !fn->argv ? dyay_new(0) : fn->argv;
+		fn->argv = !fn->argv ? dyay_new(l->vm, 0) : fn->argv;
 		i = argc;
 		while (i--) // Copy to array: argv
-			*dyay_add(fn->argv) = *ymd_top(l, i);
+			*dyay_add(l->vm, fn->argv) = *ymd_top(l, i);
 		if (!fn->is_c)
 			vset_dyay(argv, fn->argv);
 	}
 }
 
-int func_call(struct func *fn, int argc, int method) {
+int ymd_call(struct ymd_context *l, struct func *fn, int argc, int method) {
 	int rv;
 	struct call_info scope;
-	struct context *l = ioslate();
 	int main_fn = (l->info == NULL);
 	if (method) ++argc; // Extra arg0: self
 
@@ -537,30 +544,31 @@ int func_call(struct func *fn, int argc, int method) {
 	scope.run = fn;
 	scope.chain = l->info;
 	l->info = &scope;
-	copy_args(fn, argc);
+	vm_copy_args(l, fn, argc);
 	// Pop all args
 	ymd_pop(l, argc + (method ? 0 : 1));
 	if (fn->is_c) {
-		rv = (*fn->u.nafn)(ioslate());
+		rv = (*fn->u.nafn)(l);
 		goto ret;
 	}
-	rv = vm_run(fn, argc);
+	rv = vm_run(l, fn, argc);
 ret:
 	if (fn->argv)
-		dyay_final(fn->argv);
+		dyay_final(l->vm, fn->argv);
 	l->info = l->info->chain;
 	return rv;
 }
 
-int func_main(struct func *fn, int argc, char *argv[]) {
+int ymd_main(struct ymd_mach *vm, struct func *fn, int argc, char *argv[]) {
 	int i;
-	struct context *l = ioslate();
+	struct ymd_context *l = ioslate(vm);
 	vset_func(ymd_push(l), fn);
 	for (i = 0; i < argc; ++i)
-		ymd_push_kstr(l, argv[i], -1);
+		vset_kstr(ymd_push(l), ymd_kstr(vm, argv[i], -1));
 	if (setjmp(l->jpt)) {
+		// TODO:
 		return -1;
 	}
-	return func_call(fn, argc, 0);
+	return ymd_call(l, fn, argc, 0);
 }
 

@@ -31,13 +31,13 @@
 
 #define MAX_CHUNK_LEN 512
 
-struct context;
-struct mach;
+struct ymd_context;
+struct ymd_mach;
 
 typedef long long          ymd_int_t;
 typedef unsigned long long ymd_uint_t;
 typedef unsigned int       ymd_inst_t;
-typedef int (*ymd_nafn_t)(struct context *);
+typedef int (*ymd_nafn_t)(struct ymd_context *);
 
 
 struct variable {
@@ -153,14 +153,14 @@ DECL_TREF(DEFINE_REFCAST)
 static inline int is_nil(const struct variable *v) {
 	return v->type == T_NIL;
 }
-ymd_int_t int_of(const struct variable *var);
-ymd_int_t bool_of(const struct variable *var);
+ymd_int_t int_of(struct ymd_mach *vm, const struct variable *var);
+ymd_int_t bool_of(struct ymd_mach *vm, const struct variable *var);
 #define DECL_REFOF(name, tt) \
-struct name *name##_of(struct variable *var);
+struct name *name##_of(struct ymd_mach *vm, struct variable *var);
 DECL_TREF(DECL_REFOF)
 #undef DECL_REFOF
 
-void *mand_land(struct variable *var, const char *tt);
+void *mand_land(struct ymd_mach *vm, struct variable *var, const char *tt);
 #define mand_cast(var, tt, type) ((type)mand_land(var, tt))
 
 static inline void vset_nil(struct variable *v) {
@@ -188,73 +188,83 @@ DECL_TREF(DEFINE_SETTER)
 #undef DEFINE_SETTER
 
 const char *typeof_kz(unsigned tt);
-struct kstr *typeof_kstr(unsigned tt);
+struct kstr *typeof_kstr(struct ymd_mach *vm, unsigned tt);
 
 // Generic comparing
 int equals(const struct variable *lhs, const struct variable *rhs);
 int compare(const struct variable *lhs, const struct variable *rhs);
 
-// Constant string: `kstr`
-struct kstr *kstr_new(const char *z, int n);
+// Internal comparing
 int kstr_equals(const struct kstr *kz, const struct kstr *rhs);
 int kstr_compare(const struct kstr *kz, const struct kstr *rhs);
-size_t kz_hash(const char *z, int n);
-struct kvi *kz_index(struct hmap *map, const char *z, int n);
-
-// Hash map: `hmap` functions:
-struct hmap *hmap_new(int count);
-void hmap_final(struct hmap *map);
 int hmap_equals(const struct hmap *map, const struct hmap *rhs);
 int hmap_compare(const struct hmap *map, const struct hmap *rhs);
-struct variable *hmap_put(struct hmap *map, const struct variable *key);
-struct variable *hmap_get(struct hmap *map, const struct variable *key);
-
-// Skip list: `skls` functions:
-struct skls *skls_new();
-void skls_final(struct skls *list);
 int skls_equals(const struct skls *list, const struct skls *rhs);
 int skls_compare(const struct skls *list, const struct skls *rhs);
-struct variable *skls_put(struct skls *list, const struct variable *key);
-struct variable *skls_get(struct skls *list, const struct variable *key);
-
-// Dynamic array: `dyay` functions:
-struct dyay *dyay_new(int count);
-void dyay_final(struct dyay *arr);
 int dyay_equals(const struct dyay *arr, const struct dyay *rhs);
 int dyay_compare(const struct dyay *arr, const struct dyay *rhs);
-struct variable *dyay_get(struct dyay *arr, ymd_int_t i);
-struct variable *dyay_add(struct dyay *arr);
-struct variable *dyay_insert(struct dyay *arr, ymd_int_t i);
-
-// Managed data: `mand` functions:
-struct mand *mand_new(const void *data, int size, ymd_final_t final);
-void mand_final(struct mand *pm);
 int mand_equals(const struct mand *pm, const struct mand *rhs);
 int mand_compare(const struct mand *pm, const struct mand *rhs);
 
+// Constant string: `kstr`
+struct kstr *kstr_new(struct ymd_mach *vm, const char *z, int n);
+size_t kz_hash(const char *z, int n);
+
+// Hash map: `hmap` functions:
+struct hmap *hmap_new(struct ymd_mach *vm, int count);
+void hmap_final(struct ymd_mach *vm, struct hmap *map);
+struct variable *hmap_put(struct ymd_mach *vm, struct hmap *map,
+                          const struct variable *key);
+struct variable *hmap_get(struct hmap *map, const struct variable *key);
+struct kvi *kz_index(struct ymd_mach *vm, struct hmap *map, const char *z,
+                     int n);
+
+// Skip list: `skls` functions:
+struct skls *skls_new(struct ymd_mach *vm);
+void skls_final(struct ymd_mach *vm, struct skls *list);
+struct variable *skls_put(struct ymd_mach *vm, struct skls *list,
+                          const struct variable *key);
+struct variable *skls_get(struct skls *list, const struct variable *key);
+
+// Dynamic array: `dyay` functions:
+struct dyay *dyay_new(struct ymd_mach *vm, int count);
+void dyay_final(struct ymd_mach *vm, struct dyay *arr);
+struct variable *dyay_get(struct dyay *arr, ymd_int_t i);
+struct variable *dyay_add(struct ymd_mach *vm, struct dyay *arr);
+struct variable *dyay_insert(struct ymd_mach *vm, struct dyay *arr, ymd_int_t i);
+
+// Managed data: `mand` functions:
+struct mand *mand_new(struct ymd_mach *vm, int size, ymd_final_t final);
+void mand_final(struct ymd_mach *vm, struct mand *pm);
+
 // Chunk and compiling:
-void blk_final(struct chunk *core);
-int blk_emit(struct chunk *core, ymd_inst_t inst, int line);
-int blk_kz(struct chunk *core, const char *z, int n);
+void blk_final(struct ymd_mach *vm, struct chunk *core);
+int blk_emit(struct ymd_mach *vm, struct chunk *core, ymd_inst_t inst,
+             int line);
+int blk_kz(struct ymd_mach *vm, struct chunk *core, const char *z, int n);
 int blk_find_lz(struct chunk *core, const char *z);
-int blk_add_lz(struct chunk *core, const char *z);
-void blk_shrink(struct chunk *core);
+int blk_add_lz(struct ymd_mach *vm, struct chunk *core, const char *z);
+void blk_shrink(struct ymd_mach *vm, struct chunk *core);
 
 // Closure functions:
-struct func *func_new(struct chunk *blk, const char *name);
-struct func *func_new_c(ymd_nafn_t nafn, const char *name);
-struct func *func_clone(struct func *fn);
-void func_final(struct func *fn);
-int func_bind(struct func *fn, int i, const struct variable *var);
-int func_call(struct func *fn, int argc, int method);
-int func_main(struct func *fn, int argc, char *argv[]);
+struct func *func_new(struct ymd_mach *vm, struct chunk *blk,
+                      const char *name);
+struct func *func_new_c(struct ymd_mach *vm, ymd_nafn_t nafn,
+                        const char *name);
+struct func *func_clone(struct ymd_mach *vm, struct func *fn);
+void func_final(struct ymd_mach *vm, struct func *fn);
+int func_bind(struct ymd_mach *vm, struct func *fn, int i,
+              const struct variable *var);
 void func_dump(struct func *fn, FILE *fp);
+
 static inline int func_nlocal(const struct func *fn) {
 	return fn->is_c ? 0 : fn->u.core->klz - fn->n_bind;
 }
-static inline struct variable *func_bval(struct func *fn, int i) {
+
+static inline struct variable *func_bval(struct ymd_mach *vm,
+                                         struct func *fn, int i) {
 	struct variable nil; memset(&nil, 0, sizeof(nil));
-	func_bind(fn, i, &nil);
+	func_bind(vm, fn, i, &nil);
 	return fn->bind + i;
 }
 #endif // YMD_VALUE_H

@@ -5,25 +5,6 @@
 	rv = lex_next(&lex, &token); \
 	ASSERT_EQ(int, rv, act); \
 	ASSERT_EQ(int, rv, token.token)
-/*
-static int test_lex_token_1() {
-	struct ymd_lex lex;
-	struct ytoken token;
-	int rv;
-	lex_init(&lex, NULL, "(2), \t\n (3- 11111)");
-
-	ASSERT_TOKEN('(');
-	ASSERT_TOKEN(DEC_LITERAL);
-	ASSERT_TOKEN(')');
-	ASSERT_TOKEN(',');
-	ASSERT_TOKEN(EL);
-	ASSERT_TOKEN('(');
-	ASSERT_TOKEN(DEC_LITERAL);
-	ASSERT_TOKEN('-');
-	ASSERT_TOKEN(DEC_LITERAL);
-	ASSERT_TOKEN(')');
-	return 0;
-}*/
 
 static int test_lex_punc_1() {
 	struct ymd_lex lex;
@@ -39,7 +20,6 @@ static int test_lex_punc_1() {
 	ASSERT_TOKEN('<');
 	ASSERT_TOKEN('>');
 	ASSERT_TOKEN('/');
-	ASSERT_TOKEN(EL);
 	ASSERT_TOKEN('.');
 	ASSERT_TOKEN('%');
 	ASSERT_TOKEN('^');
@@ -109,9 +89,7 @@ static int test_lex_sym_literal_1() {
 	int rv;
 	lex_init(&lex, NULL, " a\nb\n\t__\t_1\t_1abcdef\n(ab)");
 	ASSERT_SYM(a);
-	ASSERT_TOKEN(EL);
 	ASSERT_SYM(b);
-	ASSERT_TOKEN(EL);
 	lex_init(&lex, NULL, "4 * (b + 2) / a\n");
 	ASSERT_DEC(4);
 	ASSERT_TOKEN('*');

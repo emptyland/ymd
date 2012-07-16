@@ -1,12 +1,14 @@
 #include "state.h"
 #include "yut.h"
 
+struct ymd_mach *tvm;
+
 int main(int argc, char *argv[]) {
 	int rv;
-	vm_init();
-	vm_init_context();
+	tvm = ymd_init();
+	ymd_init_context(tvm);
 	rv = yut_run_all(argc, argv);
-	vm_final_context();
-	vm_final();
+	ymd_final_context(tvm);
+	ymd_final(tvm);
 	return rv;
 }

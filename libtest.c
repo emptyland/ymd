@@ -6,31 +6,32 @@
 #include "print.h"
 #include <setjmp.h>
 
-#define L struct context *l
+#define L struct ymd_context *l
 
 struct yut_cookie {
 	jmp_buf jpt;
 };
 
-static struct hmap *yut_assert_new() {
-	struct hmap *o = hmap_new(0);
-	vset_hmap(ymd_putg("Assert"), o);
+static struct hmap *yut_assert_new(struct ymd_mach *vm) {
+	struct hmap *o = hmap_new(vm, 0);
+	vset_hmap(ymd_putg(vm, "Assert"), o);
 	return o;
 }
 
-static struct mand *yut_cookie_new() {
-	struct mand *cookie = mand_new(NULL, sizeof(struct yut_cookie), NULL);
+static struct mand *yut_cookie_new(struct ymd_mach *vm) {
+	struct mand *cookie = mand_new(vm, sizeof(struct yut_cookie), NULL);
 	return cookie;
 }
 
-static struct yut_cookie *yut_jpt(struct variable *self) {
-	struct hmap *o = hmap_of(self);
-	struct mand *cookie = mand_of(ymd_mem(o, "__cookie__"));
+static struct yut_cookie *yut_jpt(struct ymd_mach *vm,
+                                  struct variable *self) {
+	struct hmap *o = hmap_of(vm, self);
+	struct mand *cookie = mand_of(vm, ymd_mem(vm, o, "__cookie__"));
 	return (struct yut_cookie *)cookie->land;
 }
 
 static void yut_raise(L) {
-	struct yut_cookie *cookie = yut_jpt(ymd_argv_get(l, 0));
+	struct yut_cookie *cookie = yut_jpt(l->vm, ymd_argv_get(l, 0));
 	longjmp(cookie->jpt, 1);
 }
 
@@ -130,23 +131,25 @@ DEFINE_BIN_ASSERT(GE, compare, < 0 )
 
 #undef DEFINE_BIN_ASSERT
 
-static struct func *yut_method(void *o, const char *field) {
-	struct variable *found = ymd_mem(o, field);
+static struct func *yut_method(struct ymd_mach *vm, void *o,
+                               const char *field) {
+	struct variable *found = ymd_mem(vm, o, field);
 	if (is_nil(found) || found->type != T_FUNC)
 		return NULL;
 	return func_x(found);
 }
 
-static int yut_call(struct variable *test, struct func *method) {
-	struct context *l = ioslate();
+static int yut_call(struct ymd_context *l, struct variable *test,
+                    struct func *method) {
 	if (!method)
 		return -1;
 	vset_func(ymd_push(l), method);
 	*ymd_push(l) = *test;
-	return func_call(method, 1, 0);
+	return ymd_call(l, method, 1, 0);
 }
 
 static int yut_case(
+	struct ymd_mach *vm,
 	const char *clazz,
 	const char *caze,
 	struct variable *test,
@@ -154,16 +157,17 @@ static int yut_case(
 	struct func *teardown,
 	struct func *unit) {
 	char full_name[128];
+	struct ymd_context *l = ioslate(vm);
 	strncpy(full_name, clazz, sizeof(full_name));
 	strcat(full_name, ".");
 	strcat(full_name, caze);
 	ymd_printf(yGREEN"[======]"yEND" Test "yPURPLE"%s"yEND" setup.\n",
 			   full_name);
-	yut_call(test, setup);
+	yut_call(l, test, setup);
 	ymd_printf(yGREEN"[ RUN  ]"yEND" Running ...\n");
-	yut_call(test, unit);
+	yut_call(l, test, unit);
 	ymd_printf(yGREEN"[   OK ]"yEND" Passed!\n");
-	yut_call(test, teardown);
+	yut_call(l, test, teardown);
 	ymd_printf(yGREEN"[------]"yEND" Test teardown.\n");
 	return 0;
 }
@@ -172,22 +176,23 @@ static void yut_fault() {
 	ymd_printf(yRED"[ FAIL ]"yEND" Test fail, stop all.\n");
 }
 
-static int yut_test(const char *clazz, struct variable *test) {
+static int yut_test(struct ymd_mach *vm, const char *clazz,
+                    struct variable *test) {
 	struct sknd *i;
 	struct func *setup, *teardown;
 	if (test->type != T_SKLS)
 		return 0;
-	setup = yut_method(test->value.ref, "setup");
-	teardown = yut_method(test->value.ref, "teardown");
-	if (setjmp(yut_jpt(ymd_getg("Assert"))->jpt)) {
+	setup = yut_method(vm, test->value.ref, "setup");
+	teardown = yut_method(vm, test->value.ref, "teardown");
+	if (setjmp(yut_jpt(vm, ymd_getg(vm, "Assert"))->jpt)) {
 		yut_fault(); // Print failed message
 		return -1; // Test Fail
 	}
 	for (i = skls_x(test)->head->fwd[0]; i != NULL; i = i->fwd[0]) {
-		const char *caze = kstr_of(&i->k)->land;
+		const char *caze = kstr_of(vm, &i->k)->land;
 		if (!strstr(caze, "test") || i->v.type != T_FUNC)
 			continue;
-		yut_case(clazz, caze, test, setup, teardown, func_x(&i->v));
+		yut_case(vm, clazz, caze, test, setup, teardown, func_x(&i->v));
 	}
 	return 0;
 }
@@ -205,26 +210,27 @@ LIBC_BEGIN(YutAssertMethod)
 	LIBC_ENTRY(GE)
 LIBC_END
 
-int ymd_load_ut() {
-	struct hmap *o = yut_assert_new();
-	vset_mand(ymd_def(o, "__cookie__"), yut_cookie_new());
-	vset_int(ymd_def(o, "file"), -1);
-	vset_int(ymd_def(o, "line"), -1);
-	return ymd_load_mem("Assert", o, lbxYutAssertMethod);
+int ymd_load_ut(struct ymd_mach *vm) {
+	struct hmap *o = yut_assert_new(vm);
+	vset_mand(ymd_def(vm, o, "__cookie__"), yut_cookie_new(vm));
+	vset_int(ymd_def(vm, o, "file"), -1);
+	vset_int(ymd_def(vm, o, "line"), -1);
+	return ymd_load_mem(vm, "Assert", o, lbxYutAssertMethod);
 }
 
-int ymd_test(struct func *fn, int argc, char *argv[]) {
-	struct kvi *i, *kend = vm()->global->item + (1 << vm()->global->shift);
+int ymd_test(struct ymd_mach *vm, struct func *fn, int argc, char *argv[]) {
+	struct kvi *i, *kend = vm->global->item + (1 << vm->global->shift);
 	(void)argc;
 	(void)argv;
-	func_main(fn, argc, argv);
-	for (i = vm()->global->item; i != kend; ++i) {
+	if (ymd_main(vm, fn, argc, argv) < 0)
+		return -1;
+	for (i = vm->global->item; i != kend; ++i) {
 		const char *clazz;
 		if (!i->flag)
 			continue;
-		clazz = kstr_of(&i->k)->land;
+		clazz = kstr_of(vm, &i->k)->land;
 		if (strstr(clazz, "Test")) {
-			if (yut_test(clazz, &i->v) < 0)
+			if (yut_test(vm, clazz, &i->v) < 0)
 				return -1;
 		}
 	}

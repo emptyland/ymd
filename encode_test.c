@@ -1,7 +1,4 @@
 #include "encode.h"
-#include "value.h"
-#include "memory.h"
-#include "state.h"
 #include "yut_rand.h"
 #include "yut.h"
 
@@ -41,7 +38,7 @@ static int test_atol_dec() {
 #define ASSERT_ESC(rhs, lhs) \
 	ASSERT_EQ(int, stresc(rhs, &x), sizeof(lhs) - 1); \
 	ASSERT_STREQ(x, lhs); \
-	vm_free(x)
+	free(x)
 static int test_stresc() {
 	char *x;
 	ASSERT_ESC("\\\"", "\"");
