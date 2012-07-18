@@ -9,6 +9,8 @@
 #define MAX_MSG_LEN 1024
 
 static void vm_backtrace(struct ymd_context *l, int max);
+static int vm_init_context(struct ymd_mach *vm);
+static void vm_final_context(struct ymd_mach *vm);
 
 static void *default_zalloc(struct ymd_mach *m, size_t size) {
 	void *chunk = calloc(size, 1);
@@ -74,23 +76,26 @@ struct ymd_mach *ymd_init() {
 	// Load symbols
 	// `reached` variable: for all of loaded chunks
 	vset_hmap(ymd_putg(vm, "__reached__"), hmap_new(vm, -1));
+	// Init context
+	vm_init_context(vm);
 	return vm;
 }
 
 void ymd_final(struct ymd_mach *vm) {
+	vm_final_context(vm);
 	if (vm->fn)
 		vm_free(vm, vm->fn);
 	gc_final(vm);
 }
 
-int ymd_init_context(struct ymd_mach *vm) {
+static int vm_init_context(struct ymd_mach *vm) {
 	vm->curr = vm_zalloc(vm, sizeof(*vm->curr));
 	vm->curr->vm = vm;
 	vm->curr->top = vm->curr->stk;
 	return 0;
 }
 
-void ymd_final_context(struct ymd_mach *vm) {
+static void vm_final_context(struct ymd_mach *vm) {
 	vm_free(vm, vm->curr);
 	vm->curr = NULL;
 }

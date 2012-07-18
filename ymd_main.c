@@ -52,7 +52,6 @@ int main(int argc, char *argv[]) {
 		}
 	}
 	vm = ymd_init();
-	ymd_init_context(vm);
 	if (!opt.input)
 		die("Null file!");
 	fn = ymd_compilef(vm, "__main__", opt.name, opt.input);
@@ -75,7 +74,6 @@ int main(int argc, char *argv[]) {
 		i = ymd_main(vm, fn, argc - opt.argv_off, argv + opt.argv_off);
 	if (opt.external)
 		fclose(opt.input);
-	ymd_final_context(vm);
 	ymd_final(vm);
 	return i;
 }

@@ -25,13 +25,11 @@ struct ymd_mach {
 	struct variable knil; // nil flag
 };
 
-struct ymd_context *ioslate(struct ymd_mach *vm);
-
 struct ymd_mach *ymd_init();
+
 void ymd_final(struct ymd_mach *vm);
 
-int ymd_init_context(struct ymd_mach *vm);
-void ymd_final_context(struct ymd_mach *vm);
+struct ymd_context *ioslate(struct ymd_mach *vm);
 
 // Mach functions:
 static inline void *vm_zalloc(struct ymd_mach *vm, size_t size) {
