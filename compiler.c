@@ -91,6 +91,12 @@ static inline void ymk_emitOP(
 	struct ymd_parser *p, uchar_t o, ushort_t param) {
 	ymk_emitOfP(p, o, 0, param);
 }
+static inline void ymk_emit_call(
+	struct ymd_parser *p, uchar_t o, uchar_t aret,
+	uchar_t argc, ushort_t method) {
+	blk_emit(p->vm, p->blk, asm_call(o, aret, argc, method),
+	         p->lex.i_line);
+}
 
 static inline ushort_t ymk_ipos(struct ymd_parser *p) {
 	return p->blk->kinst;
@@ -189,9 +195,9 @@ static void ymk_emit_getf(
 }
 
 static void ymk_emit_selfcall(
-	struct ymd_parser *p, const char *method, int argc) {
+	struct ymd_parser *p, int adjust, int argc, const char *method) {
 	int i = blk_kz(p->vm, p->blk, method, -1);
-	ymk_emitOfP(p, I_SELFCALL, (uchar_t)argc, i);
+	ymk_emit_call(p, I_SELFCALL, adjust, argc, i);
 }
 
 static inline void ymk_emit_jmp(struct ymd_parser *p, uint_t target,
@@ -394,7 +400,8 @@ static int parse_args(struct ymd_parser *p) {
 	return nargs;
 }
 
-static void parse_callargs(struct ymd_parser *p, const char *method) {
+static void parse_callargs(struct ymd_parser *p, int adjust,
+                           const char *method) {
 	ushort_t nargs = 0;
 	switch (ymc_peek(p)) {
 	case '(':
@@ -422,9 +429,9 @@ static void parse_callargs(struct ymd_parser *p, const char *method) {
 	}
 out:
 	if (!method)
-		ymk_emitOP(p, I_CALL, nargs);
+		ymk_emit_call(p, I_CALL, adjust, nargs, 0);
 	else
-		ymk_emit_selfcall(p, method, nargs);
+		ymk_emit_selfcall(p, adjust, nargs, method);
 }
 
 static void parse_primary(struct ymd_parser *p) {
@@ -461,10 +468,10 @@ static void parse_suffixed(struct ymd_parser *p) {
 			const char *method;
 			ymc_next(p);
 			method = ymk_symbol(p);
-			parse_callargs(p, method);
+			parse_callargs(p, 1, method);
 			} break;
 		case '(': case STRING: /*case '{':*/
-			parse_callargs(p, NULL);
+			parse_callargs(p, 1, NULL);
 			break;
 		default:
 			return;
@@ -751,13 +758,13 @@ static void parse_lval(struct ymd_parser *p, struct lval_desc *desc) {
 			ymk_lval_partal(p, desc);
 			ymc_next(p);
 			desc->last = ymk_symbol(p);
-			parse_callargs(p, desc->last);
+			parse_callargs(p, 0, desc->last);
 			desc->last = NULL;
 			desc->vt = VCALL;
 			break;
 		case '(': case STRING: /*case '{':*/
 			ymk_lval_partal(p, desc);
-			parse_callargs(p, NULL);
+			parse_callargs(p, 0, NULL);
 			desc->last = NULL;
 			desc->vt = VCALL;
 			break;
@@ -990,7 +997,7 @@ static void parse_for(struct ymd_parser *p) {
 
 	p->loop->i_retry = ymk_ipos(p); // set retry
 	ymk_emit_push(p, iter); // push iter
-	ymk_emitOP(p, I_CALL, 0); // call 0
+	ymk_emit_call(p, I_CALL, 1, 0, 0); // call 0, ret:1
 	p->loop->i_jcond = ymk_hold(p); // set jcond foreach
 	ymk_emit_store(p, tmp); // store tmp
 done:

@@ -90,6 +90,8 @@ int vm_reached(struct ymd_mach *vm, const char *name);
 // ----------------------------------------------------------------------------
 int ymd_call(struct ymd_context *l, struct func *fn, int argc, int method);
 
+int ymd_ncall(struct ymd_context *l, struct func *fn, int nret, int narg);
+
 int ymd_main(struct ymd_mach *vm, struct func *fn, int argc, char *argv[]);
 
 //-----------------------------------------------------------------------------
@@ -174,6 +176,19 @@ static inline void ymd_pop(struct ymd_context *l, int n) {
 	assert(n <= l->top - l->stk); // "Bad pop"
 	l->top -= n;
 	memset(l->top, 0, sizeof(*l->top) * n);
+}
+
+// Adjust return variables
+static inline void ymd_adjust(struct ymd_context *l, int adjust, int ret) {
+	if (adjust < ret) {
+		ymd_pop(l, ret - adjust);
+		return;
+	}
+	if (adjust > ret) {
+		int i = adjust - ret;
+		while (i--)
+			vset_nil(ymd_push(l));
+	}
 }
 
 #endif // YMD_STATE_H

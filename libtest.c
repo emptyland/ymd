@@ -147,11 +147,11 @@ static int yut_call(struct ymd_context *l, struct variable *test,
 		return -1;
 	vset_func(ymd_push(l), method);
 	*ymd_push(l) = *test;
-	return ymd_call(l, method, 1, 0);
+	return ymd_ncall(l, method, 0, 1);
 }
 
 static int yut_case(
-	struct ymd_mach *vm,
+	struct ymd_context *l,
 	const char *clazz,
 	const char *caze,
 	struct variable *test,
@@ -159,7 +159,6 @@ static int yut_case(
 	struct func *teardown,
 	struct func *unit) {
 	char full_name[128];
-	struct ymd_context *l = ioslate(vm);
 	strncpy(full_name, clazz, sizeof(full_name));
 	strcat(full_name, ".");
 	strcat(full_name, caze);
@@ -181,21 +180,26 @@ static void yut_fault() {
 static int yut_test(struct ymd_mach *vm, const char *clazz,
                     struct variable *test) {
 	struct sknd *i;
-	struct func *setup, *teardown;
+	struct func *setup, *teardown, *init, *final;
+	struct ymd_context *l = ioslate(vm);
 	if (test->type != T_SKLS)
 		return 0;
-	setup = yut_method(vm, test->value.ref, "setup");
+	setup    = yut_method(vm, test->value.ref, "setup");
 	teardown = yut_method(vm, test->value.ref, "teardown");
+	init     = yut_method(vm, test->value.ref, "init");
+	final    = yut_method(vm, test->value.ref, "final");
 	if (setjmp(yut_jpt(vm, ymd_getg(vm, "Assert"))->jpt)) {
 		yut_fault(); // Print failed message
 		return -1; // Test Fail
 	}
+	yut_call(l, test, init); // ---- Initialize
 	for (i = skls_x(test)->head->fwd[0]; i != NULL; i = i->fwd[0]) {
 		const char *caze = kstr_of(vm, &i->k)->land;
 		if (!strstr(caze, "test") || i->v.type != T_FUNC)
 			continue;
-		yut_case(vm, clazz, caze, test, setup, teardown, func_x(&i->v));
+		yut_case(l, clazz, caze, test, setup, teardown, func_x(&i->v));
 	}
+	yut_call(l, test, final); // ---- Finalize
 	return 0;
 }
 

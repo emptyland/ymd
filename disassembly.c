@@ -74,7 +74,7 @@ static const char *getf(const struct func *fn, uint_t inst,
 }
 
 const char *method(const struct func *fn, uint_t inst) {
-	int i = asm_param(inst);
+	int i = asm_method(inst);
 	return fn->u.core->kz[i]->land;
 }
 
@@ -87,8 +87,8 @@ int dis_inst(FILE *fp, const struct func *fn, uint_t inst) {
 		rv = fprintf(fp, "panic");
 		break;
 	case I_SELFCALL:
-		rv = fprintf(fp, "call [%s]:%d", method(fn, inst),
-		             asm_flag(inst));
+		rv = fprintf(fp, "call [%s]:%d, %d", method(fn, inst),
+		             asm_argc(inst), asm_aret(inst));
 		break;
 	case I_STORE:
 		rv = fprintf(fp, "store %s", address(fn, inst, BUF));
@@ -166,7 +166,7 @@ int dis_inst(FILE *fp, const struct func *fn, uint_t inst) {
 		rv = fprintf(fp, "shift [%s]", kz_shift_op[asm_param(inst)]);
 		break;
 	case I_CALL:
-		rv = fprintf(fp, "call %d", asm_param(inst));
+		rv = fprintf(fp, "call %d, ret:%d", asm_argc(inst), asm_aret(inst));
 		break;
 	case I_NEWMAP:
 		rv = fprintf(fp, "newmap %d", asm_param(inst));

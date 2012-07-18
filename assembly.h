@@ -3,7 +3,7 @@
 
 // Instructions:
 #define I_PANIC   0
-#define I_SELFCALL 5 // selfcall "string"
+#define I_SELFCALL 5 // selfcall a, n, "string"
 #define I_STORE   10 // store local|off
 #define I_RET     15 // ret n
 #define I_JNE     20 // jne label
@@ -27,7 +27,7 @@
 #define I_XORB    110
 #define I_INVB    115
 #define I_SHIFT   120 // shift l|r, a|l
-#define I_CALL    125 // call n
+#define I_CALL    125 // call a, n
 #define I_NEWMAP  130 // newmap n
 #define I_NEWSKL  135 // newskl
 #define I_NEWDYA  140 // newdya
@@ -82,6 +82,15 @@ static inline uint_t asm_build(
 	return ((uint_t)op) << 24 | ((uint_t)flag) << 16 | ((uint_t)param);
 }
 
+static inline uint_t asm_call(
+	uchar_t op,
+	uchar_t aret, // adjust return
+	uchar_t argc,
+	ushort_t method) {
+	return asm_build(op, argc,
+	                 ((aret & 0x0fU) << 12) | (method & 0x0fffU));
+}
+
 #define emitAfP(a, f, p) asm_build(I_##a, F_##f, p)
 #define emitAf(a, f)     asm_build(I_##a, F_##f, 0)
 #define emitAP(a, p)     asm_build(I_##a, 0, p)
@@ -97,6 +106,18 @@ static inline uchar_t asm_flag(uint_t inst) {
 
 static inline ushort_t asm_param(uint_t inst) {
 	return (ushort_t)(inst & 0x0000ffffU);
+}
+
+static inline uchar_t asm_aret(uint_t inst) {
+	return (uchar_t)((asm_param(inst) & 0xf000U) >> 12);
+}
+
+static inline ushort_t asm_method(uint_t inst) {
+	return (ushort_t)(asm_param(inst) & 0x0fffU);
+}
+
+static inline uchar_t asm_argc(uint_t inst) {
+	return asm_flag(inst);
 }
 
 #endif // YMD_ASSEMBLY_H

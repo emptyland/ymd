@@ -443,15 +443,22 @@ retry:
 			ymd_pop(l, 1);
 			} break;
 		case I_CALL: {
-			struct func *called = func_of(vm, ymd_top(l, param));
-			ymd_call(l, called, param, 0);
+			int adjust = asm_aret(inst);
+			int argc = asm_argc(inst);
+			struct func *called = func_of(vm, ymd_top(l, argc));
+			ymd_adjust(l, adjust, ymd_call(l, called, argc, 0));
 			} break;
+		// flag  : argc
+		// param : method name
 		case I_SELFCALL: {
 			struct variable method;
 			struct func *called;
-			vset_kstr(&method, fn->u.core->kz[param]);
-			called = func_of(vm, ymd_get(vm, ymd_top(l, flag), &method));
-			ymd_call(l, called, flag, 1);
+			int adjust = asm_aret(inst);
+			int argc = asm_argc(inst);
+			int imethod = asm_method(inst);
+			vset_kstr(&method, fn->u.core->kz[imethod]);
+			called = func_of(vm, ymd_get(vm, ymd_top(l, argc), &method));
+			ymd_adjust(l, adjust, ymd_call(l, called, argc, 1));
 			} break;
 		case I_NEWMAP: {
 			struct hmap *map = hmap_new(vm, param);
@@ -557,6 +564,12 @@ ret:
 	if (fn->argv)
 		dyay_final(l->vm, fn->argv);
 	l->info = l->info->chain;
+	return rv;
+}
+
+int ymd_ncall(struct ymd_context *l, struct func *fn, int nret, int narg) {
+	int rv = ymd_call(l, fn, narg, 0);
+	ymd_adjust(l, nret, rv);
 	return rv;
 }
 
