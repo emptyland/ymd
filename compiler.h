@@ -24,11 +24,11 @@ struct chunk *ymc_compile(struct ymd_mach *vm, struct ymd_parser *p);
 
 // Compile from source code buffer
 struct func *ymd_compile(struct ymd_mach *vm, const char *name,
-                         const char *fnam, const char *code);
+                         const char *file, const char *code);
 
 // Compile from file stream
 struct func *ymd_compilef(struct ymd_mach *vm, const char *name,
-                          const char *fnam, FILE *fp);
+                          const char *file, FILE *fp);
 
 #endif // YMD_COMPILER_H
 

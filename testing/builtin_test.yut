@@ -83,5 +83,118 @@ BuiltinTest = @{
 		Assert:EQ(0, val[1])
 		Assert:EQ("b", val[2])
 		Assert:EQ(1, val[3])
+	},
+
+	test03append : func (self) {
+		var val = []
+		append(val, 0, 1, 2, 3)
+		Assert:EQ(4, len(val))
+		Assert:EQ(0, val[0])
+		Assert:EQ(1, val[1])
+		Assert:EQ(2, val[2])
+		Assert:EQ(3, val[3])
+
+		append(val, 0)
+		Assert:EQ(5, len(val))
+		Assert:EQ(0, val[4])
+	},
+
+	test04range : func (self) {
+		var iter = range(0, 0)
+		Assert:Nil(iter())
+		Assert:Nil(iter()) // Again
+
+		iter = range(0, 1)
+		Assert:EQ(0, iter())
+		Assert:Nil(iter())
+
+		iter = range(100, 102)
+		Assert:EQ(100, iter())
+		Assert:EQ(101, iter())
+		Assert:Nil(iter())
+
+		iter = range(1, 0)
+		Assert:EQ(1, iter())
+		Assert:Nil(iter())
+
+		// Reserved range iterator:
+		iter = range(4, 0, -2)
+		Assert:EQ(4, iter())
+		Assert:EQ(2, iter())
+		Assert:Nil(iter())
+
+		iter = range(0, 6, 2)
+		Assert:EQ(0, iter())
+		Assert:EQ(2, iter())
+		Assert:EQ(4, iter())
+		Assert:Nil(iter())
+	},
+
+	test05range_container : func (self) {
+		var iter = range([])
+		var i
+		for i in range(0, rand(100, 200)) {
+			Assert:Nil(iter())
+		}
+
+		iter = range([0, "1", false, func () {}, [], {}, @{}])
+		Assert:EQ(0, iter())
+		Assert:EQ("1", iter())
+		Assert:EQ(false, iter())
+		Assert:EQ("function", typeof iter())
+		Assert:EQ([], iter())
+		Assert:EQ({}, iter())
+		Assert:EQ(@{}, iter())
+		Assert:Nil(iter())
+
+		iter = range({a:0, b:1, c:2})
+		Assert:EQ(0, iter())
+		Assert:EQ(1, iter())
+		Assert:EQ(2, iter())
+		Assert:Nil(iter())
+
+		iter = range(@{a:0, b:1, c:2})
+		Assert:EQ(0, iter())
+		Assert:EQ(1, iter())
+		Assert:EQ(2, iter())
+		Assert:Nil(iter())
+	},
+
+	test06rank : func (self) {
+		var iter = rank([])
+		Assert:Nil(iter())
+		Assert:Nil(iter())
+
+		iter = rank([0, 1, 2])
+		Assert:EQ([0, 0], iter())
+		Assert:EQ([1, 1], iter())
+		Assert:EQ([2, 2], iter())
+		Assert:Nil(iter())
+
+		iter = rank({a:0, b:1, c:2})
+		Assert:EQ(["a", 0], iter())
+		Assert:EQ(["b", 1], iter())
+		Assert:EQ(["c", 2], iter())
+		Assert:Nil(iter())
+
+		iter = rank(@{a:0, b:1, c:2})
+		Assert:EQ(["a", 0], iter())
+		Assert:EQ(["b", 1], iter())
+		Assert:EQ(["c", 2], iter())
+		Assert:Nil(iter())
+	},
+
+	test07import : func (self) {
+		var lib = import "testing/imported1.yut"
+		Assert:EQ("imported1", lib)
+		lib = import "testing/imported2.yut"
+		Assert:EQ("imported2", lib)
+		print(__reached__)
+
+		lib = import "testing/imported1.yut"
+		Assert:Nil(lib)
+		lib = import "testing/imported2.yut"
+		Assert:Nil(lib)
+		print(__reached__)
 	}
 }

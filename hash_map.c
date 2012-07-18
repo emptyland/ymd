@@ -153,32 +153,43 @@ struct hmap *hmap_new(struct ymd_mach *vm, int count) {
 	return x;
 }
 
-int hmap_equals(const struct hmap *map, const struct hmap *lhs) {
-	int i;
-	if (map == lhs)
-		return 1;
-	i = (1 << map->shift);
-	if (i != (1 << lhs->shift))
-		return 0;
+static int hmap_count(const struct hmap *map) {
+	int rv = 0, i = (1 << map->shift);
 	while (i--) {
-		if (map->item[i].flag != KVI_FREE) {
-			const struct kvi *it = map->item + i;
-			if (!equals(&it->v, hfind(lhs, &it->k)))
-				return 0;
-		}
+		if (map->item[i].flag != KVI_FREE)
+			++rv;
 	}
-	return 1;
+	return rv;
 }
 
-int hmap_compare(const struct hmap *map, const struct hmap *lhs) {
+int hmap_equals(const struct hmap *map, const struct hmap *rhs) {
+	int i, rhs_count, count = 0;
+	if (map == rhs)
+		return 1;
+	i = (1 << map->shift);
+	if (i != (1 << rhs->shift))
+		return 0;
+	rhs_count = hmap_count(rhs);
+	while (i--) {
+		if (map->item[i].flag != KVI_FREE) {
+			const struct kvi *it = map->item + i;
+			if (!equals(&it->v, hfind(rhs, &it->k)))
+				return 0;
+			++count;
+		}
+	}
+	return count == rhs_count;
+}
+
+int hmap_compare(const struct hmap *map, const struct hmap *rhs) {
 	int i, rv = 0;
-	if (map == lhs)
+	if (map == rhs)
 		return 0;
 	i = (1 << map->shift);
 	while (i--) {
 		if (map->item[i].flag != KVI_FREE) {
 			const struct kvi *it = map->item + i;
-			rv += compare(&it->v, hfind(lhs, &it->k));
+			rv += compare(&it->v, hfind(rhs, &it->k));
 		}
 	}
 	return rv;

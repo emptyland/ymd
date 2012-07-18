@@ -58,6 +58,7 @@ struct chunk {
 	int kinst; // Number of instructions
 	struct kstr **kz; // Local constant strings
 	struct kstr **lz; // Local variable mapping
+	struct kstr *file; // File name in complied or null
 	unsigned short kkz;
 	unsigned short klz;
 	unsigned short kargs; // Prototype number of arguments

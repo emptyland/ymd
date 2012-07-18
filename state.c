@@ -9,7 +9,6 @@
 #define MAX_MSG_LEN 1024
 
 static void vm_backtrace(struct ymd_context *l, int max);
-static int vm_nearline(struct ymd_context *l);
 
 static void *default_zalloc(struct ymd_mach *m, size_t size) {
 	void *chunk = calloc(size, 1);
@@ -38,9 +37,15 @@ static void default_free(struct ymd_mach *m, void *chunk) {
 
 static void default_die(struct ymd_mach *vm, const char *msg) {
 	struct ymd_context *l = ioslate(vm);
+	struct call_info *i = vm_nearcall(l);
 	if (!msg || !*msg)
 		msg = "Unknown!";
-	fprintf(stderr, "== VM Panic!\n%%:%d %s\n", vm_nearline(l), msg);
+	if (i)
+		fprintf(stderr, "== VM Panic!\n%s:%d %s\n",
+				i->run->u.core->file->land,
+				i->run->u.core->line[i->pc - 1], msg);
+	else
+		fprintf(stderr, "== VM Panic!\n%%%% %s\n", msg);
 	fprintf(stderr, "-- Back trace:\n");
 	vm_backtrace(l, 6);
 	longjmp(l->jpt, 1);
@@ -67,7 +72,8 @@ struct ymd_mach *ymd_init() {
 	vm->kpool = hmap_new(vm, -1);
 	vm->gc.root = vm->global;
 	// Load symbols
-
+	// `reached` variable: for all of loaded chunks
+	vset_hmap(ymd_putg(vm, "__reached__"), hmap_new(vm, -1));
 	return vm;
 }
 
@@ -100,16 +106,25 @@ static void vm_backtrace(struct ymd_context *l, int max) {
 		fprintf(stderr, " > ... more calls ...\n");
 }
 
-static int vm_nearline(struct ymd_context *l) {
+struct call_info *vm_nearcall(struct ymd_context *l) {
 	struct call_info *i = l->info;
 	if (!i->run)
-		return -1;
+		return NULL;
 	while (i && i->run->is_c) {
 		i = i->chain;
 	}
-	if (!i)
-		return -1;
-	return i->run->u.core->line[i->pc - 1];
+	return i;
+}
+
+int vm_reached(struct ymd_mach *vm, const char *name) {
+	struct hmap *lib = hmap_of(vm, ymd_getg(vm, "__reached__"));
+	struct variable *count = ymd_mem(vm, lib, name);
+	if (is_nil(count)) {
+		vset_int(ymd_def(vm, lib, name), 0);
+		return 0;
+	}
+	++count->value.i;
+	return count->value.i;
 }
 
 //------------------------------------------------------------------------

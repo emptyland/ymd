@@ -52,6 +52,7 @@ static void parse_block(struct ymd_parser *p);
 //------------------------------------------------------------------------------
 static inline struct chunk *ymk_chunk(struct ymd_parser *p) {
 	struct chunk *x = vm_zalloc(p->vm, sizeof(*x));
+	x->file = ymd_kstr(p->vm, p->lex.file, -1);
 	return x;
 }
 

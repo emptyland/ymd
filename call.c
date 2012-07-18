@@ -50,8 +50,9 @@ static inline struct variable *vm_getg(struct ymd_mach *vm, int i) {
 static inline void vm_putg(struct ymd_mach *vm, int i, const struct variable *v) {
 	struct variable k;
 	struct func *fn = ymd_called(ioslate(vm));
-	if (is_nil(v))
-		vm_die(vm, "Value can not be `nil` in k-v pair");
+	//if (is_nil(v))
+	//	vm_die(vm, "Value can not be `nil` in k-v pair");
+	// Global variable can be nil
 	*hmap_put(vm, vm->global, do_keyz(fn, i, &k)) = *v;
 }
 

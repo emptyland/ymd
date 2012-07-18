@@ -1,5 +1,5 @@
 LiteralTest = @{
-	test00Number : func (self) {
+	test00number : func (self) {
 		Assert:EQ(0, 0)
 		Assert:EQ(1, 1)
 		Assert:NE(1, 0)
@@ -21,7 +21,7 @@ LiteralTest = @{
 		Assert:EQ(2, 0x2)
 	},
 
-	test01Bool : func (self) {
+	test01bool : func (self) {
 		Assert:True(true)
 		Assert:False(false)
 
@@ -43,7 +43,7 @@ LiteralTest = @{
 		Assert:False(false)
 	},
 
-	test02Nil : func (self) {
+	test02nil : func (self) {
 		Assert:Nil(nil)
 		Assert:NotNil(0)
 		Assert:False(nil)
@@ -62,7 +62,7 @@ LiteralTest = @{
 		Assert:NE(nil, [])
 	},
 
-	test03String : func (self) {
+	test03string : func (self) {
 		Assert:NotNil("")
 		Assert:True("")
 		Assert:EQ("", "")
@@ -81,14 +81,14 @@ LiteralTest = @{
 		Assert:EQ("\a\b\f\n\r\t\v\0\\\"\x01\uABcd", str_esc)
 	},
 
-	test04Func : func (self) {
+	test04func : func (self) {
 		Assert:NotNil(func () {})
 		Assert:True(func () {})
 		
 		// TODO:
 	},
 
-	test05Array : func (self) {
+	test05array : func (self) {
 		Assert:NotNil([])
 		Assert:True([])
 		Assert:EQ([], [])
@@ -102,5 +102,25 @@ LiteralTest = @{
 		Assert:EQ(true, arr[2])
 		Assert:EQ("", arr[3])
 		Assert:EQ([], arr[4])
+	},
+
+	test06hash_map : func (self) {
+		Assert:NotNil({})
+		Assert:True({})
+		Assert:EQ({}, {})
+		Assert:EQ({a:0}, {a:0})
+		Assert:NE({}, {a:0})
+		Assert:NE({a:0}, {})
+		Assert:EQ(0, ({a:0}).a)
+	},
+
+	test07skip_list : func (self) {
+		Assert:NotNil(@{})
+		Assert:True(@{})
+		Assert:EQ(@{}, @{})
+		Assert:EQ(@{a:0}, @{a:0})
+		Assert:NE(@{}, @{a:0})
+		Assert:NE(@{a:0}, @{})
+		Assert:EQ(0, (@{a:0}).a)
 	}
 }

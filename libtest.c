@@ -44,10 +44,11 @@ static void yut_fail2(L, const char *op,
 	struct fmtx fx0 = FMTX_INIT, fx1 = FMTX_INIT;
 	tostring(&fx0, arg0);
 	tostring(&fx1, arg1);
-	ymd_printf(yYELLOW"Line:%d Assert fail: "yEND
+	ymd_printf(yYELLOW"%s:%d Assert fail: "yEND
 	           "("yPURPLE"%s"yEND") %s ("yPURPLE"%s"yEND")\n"
 			   "Expected : <"yPURPLE"%s"yEND">\n"
 			   "Actual   : <"yPURPLE"%s"yEND">\n",
+			   fn->u.core->file->land,
 			   fn->u.core->line[up->pc - 1],
 			   fmtx_buf(&fx0),
 			   op,
@@ -64,11 +65,12 @@ static void yut_fail1(L, const char *expected,
 	struct call_info *up = l->info->chain;
 	struct func *fn = up->run;
 	struct fmtx fx = FMTX_INIT;
-	ymd_printf(yYELLOW"[ INFO ] Line:%d Assert fail, expected"yEND
+	ymd_printf(yYELLOW"[ INFO ] %s:%d Assert fail, expected"yEND
 	           yPURPLE"<%s>"yEND
 	           yYELLOW", unexpected"yEND
 	           yPURPLE"<%s>"yEND
 	           ";\n",
+			   fn->u.core->file->land,
 	           fn->u.core->line[up->pc - 1],
 	           expected,
 	           tostring(&fx, arg0));

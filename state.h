@@ -69,6 +69,23 @@ struct ymd_context {
 };
 
 //-----------------------------------------------------------------------------
+// For debug and testing:
+// ----------------------------------------------------------------------------
+struct call_info *vm_nearcall(struct ymd_context *l);
+
+static inline const char *vm_file(const struct call_info *i) {
+	assert(i != NULL);
+	return i->run->u.core->file->land;
+}
+
+static inline int vm_line(const struct call_info *i) {
+	assert(i != NULL);
+	return i->run->u.core->line[i->pc - 1];
+}
+
+int vm_reached(struct ymd_mach *vm, const char *name);
+
+//-----------------------------------------------------------------------------
 // Call and run:
 // ----------------------------------------------------------------------------
 int ymd_call(struct ymd_context *l, struct func *fn, int argc, int method);

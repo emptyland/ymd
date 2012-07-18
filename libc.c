@@ -25,7 +25,9 @@ static const char *T_STREAM = "stream";
 
 #define PRINT_SPLIT " "
 
-static int libx_print(struct ymd_context *l) {
+#define L struct ymd_context *l
+
+static int libx_print(L) {
 	int i;
 	struct fmtx fx = FMTX_INIT;
 	struct dyay *argv = ymd_argv(l);
@@ -40,7 +42,7 @@ static int libx_print(struct ymd_context *l) {
 	return 0;
 }
 
-static void do_insert(struct ymd_context *l, struct dyay *self) {
+static void do_insert(L, struct dyay *self) {
 	struct variable *elem;
 	switch (ymd_argv_chk(l, 2)->count) {
 	case 2:
@@ -64,7 +66,7 @@ static void do_insert(struct ymd_context *l, struct dyay *self) {
 	}
 }
 
-static void checked_put(struct ymd_context *l,
+static void checked_put(L,
                         struct variable *arg0,
                         const struct variable *k,
 						const struct variable *v) {
@@ -89,7 +91,7 @@ static void checked_put(struct ymd_context *l,
 // insert to map:
 //     insert(map, key, value)
 //
-static int libx_insert(struct ymd_context *l) {
+static int libx_insert(L) {
 	struct variable *arg0 = ymd_argv_get(l, 0);
 	switch (arg0->type) {
 	case T_DYAY:
@@ -102,7 +104,7 @@ static int libx_insert(struct ymd_context *l) {
 	return 0;
 }
 
-static int libx_append(struct ymd_context *l) {
+static int libx_append(L) {
 	int i;
 	struct variable *arg0 = ymd_argv_get(l, 0);
 	switch (arg0->type) {
@@ -136,7 +138,7 @@ static int libx_append(struct ymd_context *l) {
 // array    : number of elements; 
 // hashmap  : number of k-v pairs;
 // skiplist : number of k-v pairs;
-static int libx_len(struct ymd_context *l) {
+static int libx_len(L) {
 	const struct variable *arg0 = ymd_argv_get(l, 0);
 	switch (arg0->type) {
 	case T_NIL:
@@ -182,7 +184,7 @@ static int libx_len(struct ymd_context *l) {
 // hashmap  -> "{name:John, content:{1,2,3}}"
 // skiplist -> "@{name:John, content:{1,2,3}}"
 // managed  -> "(stream)[24@0x08067FF]"
-static int libx_str(struct ymd_context *l) {
+static int libx_str(L) {
 	const struct variable *arg0 = ymd_argv_get(l, 0);
 	struct fmtx fx = FMTX_INIT;
 	const char *z = tostring(&fx, arg0);
@@ -195,22 +197,22 @@ static int libx_str(struct ymd_context *l) {
 //------------------------------------------------------------------------------
 // Foreach closures
 //------------------------------------------------------------------------------
-static int libx_end(struct ymd_context *l) {
+static int libx_end(L) {
 	vset_nil(ymd_push(l));
 	return 1;
 }
 
-static int step_iter(struct ymd_context *l) {
+static int step_iter(L) {
 	struct variable *i = ymd_bval(l, 0),
 					*m = ymd_bval(l, 1),
 					*s = ymd_bval(l, 2),
 					rv;
 	rv.type = T_NIL;
 	rv.value.i = 0;
-	if (s->value.i > 0 && i->value.i <= m->value.i) {
+	if (s->value.i > 0 && i->value.i < m->value.i) {
 		rv.type = T_INT;
 		rv.value.i = i->value.i;
-	} else if (s->value.i < 0 && i->value.i >= m->value.i) {
+	} else if (s->value.i < 0 && i->value.i > m->value.i) {
 		rv.type = T_INT;
 		rv.value.i = i->value.i;
 	}
@@ -219,11 +221,11 @@ static int step_iter(struct ymd_context *l) {
 	return 1;
 }
 
-static struct func *new_step_iter(struct ymd_context *l,
+static struct func *new_step_iter(L,
                                   ymd_int_t i, ymd_int_t m, ymd_int_t s) {
 	struct func *iter;
 	(void)l;
-	if ((s == 0) || (i > m && s > 0) || (i < m && s < 0))
+	if ((s == 0) || (i > m && s > 0) || (i < m && s < 0) || (i == m))
 		return func_new_c(l->vm, libx_end, "end");
 	iter = func_new_c(l->vm, step_iter, "__step_iter__");
 	iter->n_bind = 3;
@@ -242,7 +244,7 @@ static struct func *new_step_iter(struct ymd_context *l,
 // bind[1]: struct variable *m; end of pointer
 // bind[2]: int idx; index counter
 // bind[3]: iterator flag
-static int dyay_iter(struct ymd_context *l) {
+static int dyay_iter(L) {
 	struct variable *i = ymd_bval(l, 0)->value.ext,
 	                *m = ymd_bval(l, 1)->value.ext;
 	if (i >= m) {
@@ -284,7 +286,7 @@ static inline struct kvi *move2valid(struct kvi *i, struct kvi *m) {
 // bind[0]: struct kvi *i; current pointer
 // bind[1]: struct kvi *m; end of pointer
 // bind[2]: iterator flag
-static int hmap_iter(struct ymd_context *l) {
+static int hmap_iter(L) {
 	struct kvi *i = ymd_bval(l, 0)->value.ext,
 			   *m = ymd_bval(l, 1)->value.ext;
 	if (i >= m) {
@@ -315,7 +317,7 @@ static int hmap_iter(struct ymd_context *l) {
 // Skip list iterator
 // bind[0]: struct sknd *i; current pointer
 // bind[1]: iterator flag
-static int skls_iter(struct ymd_context *l) {
+static int skls_iter(L) {
 	struct sknd *i = ymd_bval(l, 0)->value.ext;
 	if (!i) {
 		vset_nil(ymd_push(l));
@@ -343,7 +345,7 @@ static int skls_iter(struct ymd_context *l) {
 }
 
 static struct func *new_contain_iter(
-	struct ymd_context *l,
+	L,
 	const struct variable *obj,
 	int flag) {
 	struct func *iter;
@@ -384,10 +386,13 @@ static struct func *new_contain_iter(
 	return iter;
 }
 
-// range(1,100) = {1,2,3,...100}
-// range(1,100,2) = {1,3,5,...100}
-// range({9,8,7}) = {9,8,7}
-static int libx_range(struct ymd_context *l) {
+// range(begin, end, [step])
+// range(container)
+// Example:
+// range(1,100) = 1,2,3,...99
+// range(1,100,2) = 1,3,5,...99
+// range([9,8,7]) = 9,8,7
+static int libx_range(L) {
 	struct func *iter;
 	const struct dyay *argv = ymd_argv_chk(l, 1);
 	switch (argv->count) {
@@ -412,19 +417,19 @@ static int libx_range(struct ymd_context *l) {
 	return 1;
 }
 
-static int libx_rank(struct ymd_context *l) {
+static int libx_rank(L) {
 	struct func *iter = new_contain_iter(l, ymd_argv_get(l, 0), ITER_KV);
 	vset_func(ymd_push(l), iter);
 	return 1;
 }
 
-static int libx_ranki(struct ymd_context *l) {
+static int libx_ranki(L) {
 	struct func *iter = new_contain_iter(l, ymd_argv_get(l, 0), ITER_KEY);
 	vset_func(ymd_push(l), iter);
 	return 1;
 }
 
-static int libx_panic(struct ymd_context *l) {
+static int libx_panic(L) {
 	int i;
 	struct dyay *argv = ymd_argv(l);
 	struct fmtx fx = FMTX_INIT;
@@ -447,7 +452,7 @@ static int strbuf_final(struct fmtx *sb) {
 	return 0;
 }
 
-static int libx_strbuf(struct ymd_context *l) {
+static int libx_strbuf(L) {
 	struct mand *x = mand_new(l->vm, sizeof(struct fmtx),
 	                          (ymd_final_t)strbuf_final);
 	x->tt = T_STRBUF;
@@ -456,7 +461,7 @@ static int libx_strbuf(struct ymd_context *l) {
 	return 1;
 }
 
-static int libx_strfin(struct ymd_context *l) {
+static int libx_strfin(L) {
 	struct fmtx *self = mand_land(l->vm, ymd_argv_get(l, 0),
 	                              T_STRBUF);
 	struct kstr *rv;
@@ -471,7 +476,7 @@ done:
 	return 1;
 }
 
-static int libx_strcat(struct ymd_context *l) {
+static int libx_strcat(L) {
 	int i;
 	struct dyay *argv = ymd_argv_chk(l, 2);
 	struct fmtx *self = mand_land(l->vm, argv->elem, T_STRBUF);
@@ -514,7 +519,7 @@ static struct kstr *ansic_file_readline(struct ymd_mach *vm,
 	return ymd_kstr(vm, line, -1);
 }
 
-static int ansic_file_read(struct ymd_context *l) {
+static int ansic_file_read(L) {
 	struct kstr *rv = NULL;
 	struct variable *arg1 = NULL;
 	struct ansic_file *self = mand_land(l->vm, ymd_argv_get(l, 0),
@@ -549,7 +554,7 @@ done:
 	return 1;
 }
 
-static int ansic_file_write(struct ymd_context *l) {
+static int ansic_file_write(L) {
 	struct ansic_file *self = mand_land(l->vm, ymd_argv_get(l, 0),
 	                                    T_STREAM);
 	struct kstr *bin = NULL;
@@ -570,7 +575,7 @@ static int ansic_file_final(struct ansic_file *self) {
 	return 0;
 }
 
-static int libx_open(struct ymd_context *l) {
+static int libx_open(L) {
 	const char *mod = "r";
 	struct mand *x = mand_new(l->vm, sizeof(struct ansic_file),
 	                          (ymd_final_t)ansic_file_final);
@@ -588,17 +593,17 @@ static int libx_open(struct ymd_context *l) {
 	return 1;
 }
 
-static int libx_read(struct ymd_context *l) {
+static int libx_read(L) {
 	struct yio_stream *s = mand_land(l->vm, ymd_argv_get(l, 0), T_STREAM);
 	return s->read(l);
 }
 
-static int libx_write(struct ymd_context *l) {
+static int libx_write(L) {
 	struct yio_stream *s = mand_land(l->vm, ymd_argv_get(l, 0), T_STREAM);
 	return s->write(l);
 }
 
-static int libx_close(struct ymd_context *l) {
+static int libx_close(L) {
 	struct mand *pm = mand_of(l->vm, ymd_argv_get(l, 0));
 	struct yio_stream *s = mand_land(l->vm, ymd_argv_get(l, 0), T_STREAM);
 	assert(pm->final);
@@ -618,7 +623,7 @@ static int posix_regex_final(struct posix_regex *self) {
 // regex = pattern("^[0-9]+$")
 // result = match(regex, "0000")
 // print(result)
-static int libx_pattern(struct ymd_context *l) {
+static int libx_pattern(L) {
 	int err = 0, cflag = REG_EXTENDED;
 	struct kstr *arg0 = kstr_of(l->vm, ymd_argv_get(l, 0));
 	struct mand *x = mand_new(l->vm, sizeof(*x),
@@ -650,7 +655,7 @@ static int libx_pattern(struct ymd_context *l) {
 	return 1;
 }
 
-static int libx_match(struct ymd_context *l) {
+static int libx_match(L) {
 	struct posix_regex *self = mand_land(l->vm, ymd_argv_get(l, 0),
 	                                     T_REGEX);
 	struct kstr *arg1 = kstr_of(l->vm, ymd_argv_get(l, 1));
@@ -701,30 +706,36 @@ static const char *file2blknam(const char *name, char *buf, int len) {
 	return buf;
 }
 
-static int libx_import(struct ymd_context *l) {
+static int libx_import(L) {
 	int i;
-	char blknam[MAX_BLOCK_NAME_LEN];
+	FILE *fp;
 	struct func *block;
+	char blknam[MAX_BLOCK_NAME_LEN];
 	struct kstr *name = kstr_of(l->vm, ymd_argv_get(l, 0));
-	FILE *fp = fopen(name->land, "r");
+	if (vm_reached(l->vm, name->land)) {
+		vset_nil(ymd_push(l));
+		return 1;
+	}
+	fp = fopen(name->land, "r");
 	if (!fp)
 		vm_die(l->vm, "Can not open import file: %s", name->land);
 	block = ymd_compilef(l->vm,
 		file2blknam(name->land, blknam, sizeof(blknam)), name->land, fp);
 	fclose(fp);
 	if (!block)
-		vm_die(l->vm, "Import fatal, syntax error in file: `%s`", name->land);
+		vm_die(l->vm, "Import fatal, syntax error in file: `%s`",
+		       name->land);
 	vset_func(ymd_push(l), block);
 	for (i = 1; i < ymd_argv(l)->count; ++i)
 		*ymd_push(l) = *ymd_argv_get(l, i);
 	return ymd_call(l, block, ymd_argv(l)->count - 1, 0);
 }
 
-static int libx_eval(struct ymd_context *l) {
+static int libx_eval(L) {
 	int i;
 	struct func *chunk;
 	struct kstr *script = kstr_of(l->vm, ymd_argv_get(l, 0));
-	chunk = ymd_compile(l->vm, "__blk_eval__", NULL, script->land);
+	chunk = ymd_compile(l->vm, "__blk_eval__", "[chunk]", script->land);
 	if (!chunk) {
 		vset_nil(ymd_push(l));
 		return 1;
@@ -735,10 +746,10 @@ static int libx_eval(struct ymd_context *l) {
 	return ymd_call(l, chunk, ymd_argv(l)->count - 1, 0);
 }
 
-static int libx_compile(struct ymd_context *l) {
+static int libx_compile(L) {
 	struct func *chunk;
 	struct kstr *script = kstr_of(l->vm, ymd_argv_get(l, 0));
-	chunk = ymd_compile(l->vm, "__blk_compile__", NULL, script->land);
+	chunk = ymd_compile(l->vm, "__blk_compile__", "[chunk]", script->land);
 	if (!chunk) {
 		vset_nil(ymd_push(l));
 		return 1;
@@ -747,7 +758,7 @@ static int libx_compile(struct ymd_context *l) {
 	return 1;
 }
 
-static int libx_env(struct ymd_context *l) {
+static int libx_env(L) {
 	struct kstr *which = kstr_of(l->vm, ymd_argv_get(l, 0));
 	if (strcmp(which->land, "*global") == 0)
 		vset_hmap(ymd_push(l), l->vm->global);
@@ -760,7 +771,7 @@ static int libx_env(struct ymd_context *l) {
 	return 1;
 }
 
-static int libx_atoi(struct ymd_context *l) {
+static int libx_atoi(L) {
 	struct kstr *arg0 = kstr_of(l->vm, ymd_argv_get(l, 0));
 	int ok = 1;
 	ymd_int_t i = dtoll(arg0->land, &ok);
@@ -771,9 +782,51 @@ static int libx_atoi(struct ymd_context *l) {
 	return 1;
 }
 
-static int libx_exit(struct ymd_context *l) {
+static int libx_exit(L) {
 	(void)l;
 	longjmp(l->jpt, 2);
+	return 0;
+}
+
+// rand()
+//     random range no limited
+// rand(num)
+//     random range to [0, num) num > 0 or (num, 0] num < 0
+// rand(min, max)
+//     random range [min, max)
+static int libx_rand(L) {
+	ymd_int_t rv = 0;
+	struct dyay *argv = ymd_argv(l);
+	int argc = !argv ? 0 : argv->count;
+	switch (argc) {
+	case 0:
+		rv = rand();
+		break;
+	case 1: {
+		ymd_int_t limit = int_of(l->vm, ymd_argv_get(l, 0));
+		if (limit > 0)
+			rv = rand() % limit;
+		else
+			rv = -(rand() % (-limit));
+		} break;
+	case 2:
+	default: {
+		ymd_int_t arg0 = int_of(l->vm, ymd_argv_get(l, 0)),
+				  arg1 = int_of(l->vm, ymd_argv_get(l, 1));
+		ymd_int_t min, max;
+		if (arg0 < arg1)
+			min = arg0, max = arg1;
+		else if (arg0 > arg1)
+			min = arg1, max = arg0;
+		else
+			rv = arg0;
+		if (arg0 != arg1)
+			// FIXME: use better random system.
+			rv = min + (rand() % (max - min));
+		} break;
+	}
+	vset_int(ymd_push(l), rv);
+	return 1;
 }
 
 LIBC_BEGIN(Builtin)
@@ -801,6 +854,7 @@ LIBC_BEGIN(Builtin)
 	LIBC_ENTRY(compile)
 	LIBC_ENTRY(env)
 	LIBC_ENTRY(exit)
+	LIBC_ENTRY(rand)
 LIBC_END
 
 

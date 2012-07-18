@@ -95,26 +95,36 @@ void skls_final(struct ymd_mach *vm, struct skls *list) {
 	}
 }
 
-int skls_equals(const struct skls *list, const struct skls *lhs) {
+static int skls_count(const struct skls *list) {
+	int rv = 0;
 	const struct sknd *i = list->head;
-	if (list == lhs)
+	while ((i = i->fwd[0]) != NULL)
+		++rv;
+	return rv;
+}
+
+int skls_equals(const struct skls *list, const struct skls *rhs) {
+	const struct sknd *i = list->head;
+	int count = 0, rhs_count = skls_count(rhs);
+	if (list == rhs)
 		return 1;
 	assert(i != NULL);
 	while ((i = i->fwd[0]) != NULL) {
-		if (!equals(&i->v, skfind(lhs, &i->k)))
+		if (!equals(&i->v, skfind(rhs, &i->k)))
 			return 0;
+		++count;
 	}
-	return 1;
+	return (count == rhs_count);
 }
 
-int skls_compare(const struct skls *list, const struct skls *lhs) {
+int skls_compare(const struct skls *list, const struct skls *rhs) {
 	const struct sknd *i = list->head;
 	int rv = 0;
-	if (list == lhs)
+	if (list == rhs)
 		return 0;
 	assert(i != NULL);
 	while ((i = i->fwd[0]) != NULL)
-		rv += compare(&i->v, skfind(lhs, &i->k));
+		rv += compare(&i->v, skfind(rhs, &i->k));
 	return rv;
 }
 
