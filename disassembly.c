@@ -87,7 +87,7 @@ int dis_inst(FILE *fp, const struct func *fn, uint_t inst) {
 		rv = fprintf(fp, "panic");
 		break;
 	case I_SELFCALL:
-		rv = fprintf(fp, "call [%s]:%d, %d", method(fn, inst),
+		rv = fprintf(fp, "call [%s]:%d, ret:%d", method(fn, inst),
 		             asm_argc(inst), asm_aret(inst));
 		break;
 	case I_STORE:

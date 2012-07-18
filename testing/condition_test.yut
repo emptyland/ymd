@@ -1,0 +1,97 @@
+ConditionTest = @{
+	test00if_stmt: func (self) {
+		// Only nil and false is FALSE
+		if nil {
+			Assert:Fail("Noreached: nil")		
+		}
+		if false {
+			Assert:Fail("Noreached: false")
+		}
+		Assert:Nil(not_exist_var)
+		if (not_exist_var) {
+			Assert:Fail("Noreached: undefine var")
+		}
+	},
+	
+	test01if_else_stmt : func (self) {
+		// Other value is TRUE
+		if 0 {} else { Assert:Fail("Else noreached: 0") }
+		if true {} else { Assert:Fail("Else noreached: true") }
+		if "" {} else { Assert:Fail("Else noreached: string") }
+		if func () {} {} else { Assert:Fail("Else noreached: function") }
+		if [] {} else { Assert:Fail("Else noreached: array") }
+		if {} {} else { Assert:Fail("Else noreached: hashmap") }
+		if @{} {} else { Assert:Fail("Else noreached: skiplist") }
+	},
+
+	test02compare_operator : func (self) {
+		var i
+		Assert:True(i == nil)
+		Assert:True(not i)
+		i = 0
+		Assert:True(i)
+		Assert:False(not i)
+		Assert:True(i ==  0)
+		Assert:True(i !=  1)
+		Assert:True(i != -1)
+		Assert:True(i >=  0)
+		Assert:True(i <=  0)
+		Assert:True(i >  -1)
+		Assert:True(i <   1)
+		i = "a"
+		Assert:True(i)
+		Assert:False(not i)
+		Assert:True(i == "a")
+		Assert:True(i != "b")
+		i = []
+		Assert:True(i)
+		Assert:False(not i)
+		Assert:True(i == [])
+		Assert:True(i != [0])
+	},
+
+	test03or_and_operator : func (self) {
+		if 0 or Assert:Fail("or op fail: 0 or fail") {
+			// Expected way
+		} else {
+			Assert:Fail("if or op fail: 0 or fail")
+		}
+		if true or Assert:Fail("or op fail: true or fail") {
+			// Expected way
+		} else {
+			Assert:Fail("if or op fail: true or fail")
+		}
+		if nil and Assert:Fail("and op fail: nil and fail") {
+			Assert:Fail("if and op fail: nil and fail")
+		} else {
+			// Expected way
+		}
+		if false and Assert:Fail("and op fail: false and fail") {
+			Assert:Fail("if and op fail: false and fail")
+		} else {
+			// Expected way
+		}
+	},
+
+	test04or_and_switching : func (self) {
+		// `or` operator return one of TRUE value
+		Assert:EQ(0, 0 or nil)
+		Assert:EQ(0, nil or 0)
+
+		// `or` operator return last FALSE value 
+		Assert:EQ(nil, false or nil)
+		Assert:EQ(false, nil or false)
+
+		// `and` operator return one of FALSE value
+		Assert:EQ(nil, 0 and nil)
+		Assert:EQ(nil, nil and 0)
+
+		// `and` operator return first FALSE value
+		Assert:EQ(false, false and nil)
+		Assert:EQ(nil, nil and false)
+
+		// cond ? expr1 : expr2
+		Assert:EQ(1, nil and 0 or 1)
+		Assert:EQ(0, true and 0 or 1)
+	}
+}

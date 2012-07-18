@@ -35,7 +35,7 @@ static void yut_raise(L) {
 	longjmp(cookie->jpt, 1);
 }
 
-// [ INFO ] Line:%d <%s> Assert fail.
+// [  XXX ] Line:%d <%s> Assert fail.
 static void yut_fail2(L, const char *op,
                       const struct variable *arg0,
                       const struct variable *arg1) {
@@ -65,7 +65,7 @@ static void yut_fail1(L, const char *expected,
 	struct call_info *up = l->info->chain;
 	struct func *fn = up->run;
 	struct fmtx fx = FMTX_INIT;
-	ymd_printf(yYELLOW"[ INFO ] %s:%d Assert fail, expected"yEND
+	ymd_printf(yYELLOW"[  XXX ] %s:%d Assert fail, expected"yEND
 	           yPURPLE"<%s>"yEND
 	           yYELLOW", unexpected"yEND
 	           yPURPLE"<%s>"yEND
@@ -76,6 +76,18 @@ static void yut_fail1(L, const char *expected,
 	           tostring(&fx, arg0));
 	fmtx_final(&fx);
 	yut_raise(l);
+}
+
+static int libx_Fail(L) {
+	const struct kstr *arg0 = kstr_of(l->vm, ymd_argv_get(l, 1));
+	struct call_info *up = l->info->chain;
+	struct func *fn = up->run;
+	ymd_printf(yYELLOW"[  XXX ] %s:%d Fail: %s\n"yEND,
+	           fn->u.core->file->land,
+			   fn->u.core->line[up->pc - 1],
+	           arg0->land);
+	yut_raise(l);
+	return 0;
 }
 
 static int libx_True(L) {
@@ -204,6 +216,7 @@ static int yut_test(struct ymd_mach *vm, const char *clazz,
 }
 
 LIBC_BEGIN(YutAssertMethod)
+	LIBC_ENTRY(Fail)
 	LIBC_ENTRY(True)
 	LIBC_ENTRY(False)
 	LIBC_ENTRY(Nil)

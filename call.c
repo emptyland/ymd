@@ -520,7 +520,8 @@ static void vm_copy_args(struct ymd_context *l, struct func *fn, int argc) {
 		vset_nil(argv);
 		i = k;
 		while (i--) // Copy to local variable
-			*vm_local(l, fn, k - i - 1) = *ymd_top(l, i);
+			//*vm_local(l, fn, k - i - 1) = *ymd_top(l, i);
+			l->info->loc[k - i - 1] = *ymd_top(l, i);
 	}
 	if (argc > 0) {
 		// Lazy creating
