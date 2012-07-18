@@ -1,0 +1,49 @@
+import "testing/im_external.ymd"
+
+func external.bar () {
+	return "bar"
+}
+
+func external.baz () {
+	return "baz"
+}
+
+ImportTest = @{
+	k_flag: "test.flag",
+
+	test00import_external : func (self) {
+		Assert:NotNil(external)
+		Assert:EQ("hashmap", typeof external)
+
+		external:set(self.k_flag)
+		Assert:EQ(self.k_flag, external:get())
+
+		Assert:EQ("function", typeof external.foo)
+		Assert:EQ("foo", external:foo())
+	},
+
+	test01import_partial : func (self) {
+		Assert:EQ("function", typeof external.bar)
+		Assert:EQ("bar", external:bar())
+
+		Assert:EQ("function", typeof external.baz)
+		Assert:EQ("baz", external:baz())
+	},
+
+	test02import_data : func (self) {
+		var data = import("testing/im_data.ymd")
+		Assert:EQ("imported data", data.name)
+		Assert:EQ(0x0fff, data.id)
+		Assert:EQ("allow", data.token[0])
+		Assert:EQ("1st", data.token[1])
+		Assert:EQ("2nd", data.token[2])
+		Assert:EQ("nested.inject.value", data.nested.inject.value)
+		Assert:EQ(65535, data.nested.number)
+	},
+
+	test03import_reached : func (self) {
+		var ok = import("testing/im_external.ymd")
+		Assert:Nil(ok)
+		print(__reached__)
+	}
+}

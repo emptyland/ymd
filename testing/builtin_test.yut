@@ -185,15 +185,15 @@ BuiltinTest = @{
 	},
 
 	test07import : func (self) {
-		var lib = import "testing/imported1.yut"
+		var lib = import "testing/imported1.ymd"
 		Assert:EQ("imported1", lib)
-		lib = import "testing/imported2.yut"
+		lib = import "testing/imported2.ymd"
 		Assert:EQ("imported2", lib)
 		print(__reached__)
 
-		lib = import "testing/imported1.yut"
+		lib = import "testing/imported1.ymd"
 		Assert:Nil(lib)
-		lib = import "testing/imported2.yut"
+		lib = import "testing/imported2.ymd"
 		Assert:Nil(lib)
 		print(__reached__)
 	}

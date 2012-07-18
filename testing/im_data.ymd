@@ -1,0 +1,11 @@
+return {
+	name: "imported data",
+	id: 0x0fff,
+	token: ["allow", "1st", "2nd"],
+	nested: {
+		inject: {
+			value: "nested.inject.value"
+		},
+		number: 65535
+	}
+}

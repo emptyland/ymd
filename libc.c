@@ -165,11 +165,10 @@ static int libx_len(L) {
 		vset_int(ymd_push(l), n);
 		} break;
 	default:
-		vset_nil(ymd_push(l));
 		vm_die(l->vm, "This type: `%s` is not be support, "
 		       "need a container or string type",
 		       typeof_kz(arg0->type));
-		return 1;
+		return 0;
 	}
 	return 1;
 }
@@ -712,10 +711,8 @@ static int libx_import(L) {
 	struct func *block;
 	char blknam[MAX_BLOCK_NAME_LEN];
 	struct kstr *name = kstr_of(l->vm, ymd_argv_get(l, 0));
-	if (vm_reached(l->vm, name->land)) {
-		vset_nil(ymd_push(l));
-		return 1;
-	}
+	if (vm_reached(l->vm, name->land))
+		return 0;
 	fp = fopen(name->land, "r");
 	if (!fp)
 		vm_die(l->vm, "Can not open import file: %s", name->land);
@@ -736,10 +733,8 @@ static int libx_eval(L) {
 	struct func *chunk;
 	struct kstr *script = kstr_of(l->vm, ymd_argv_get(l, 0));
 	chunk = ymd_compile(l->vm, "__blk_eval__", "[chunk]", script->land);
-	if (!chunk) {
-		vset_nil(ymd_push(l));
-		return 1;
-	}
+	if (!chunk)
+		return 0;
 	vset_func(ymd_push(l), chunk);
 	for (i = 1; i < ymd_argv(l)->count; ++i)
 		*ymd_push(l) = *ymd_argv_get(l, i);
@@ -750,10 +745,8 @@ static int libx_compile(L) {
 	struct func *chunk;
 	struct kstr *script = kstr_of(l->vm, ymd_argv_get(l, 0));
 	chunk = ymd_compile(l->vm, "__blk_compile__", "[chunk]", script->land);
-	if (!chunk) {
-		vset_nil(ymd_push(l));
-		return 1;
-	}
+	if (!chunk)
+		return 0;
 	vset_func(ymd_push(l), chunk);
 	return 1;
 }

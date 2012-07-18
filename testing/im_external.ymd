@@ -1,0 +1,13 @@
+external = {}
+
+func external.set (val) {
+	self.val = val
+}
+
+func external.get () {
+	return self.val
+}
+
+func external.foo () {
+	return "foo"
+}
