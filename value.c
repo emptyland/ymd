@@ -188,16 +188,13 @@ struct kstr *kstr_new(struct ymd_mach *vm, const char *z, int count) {
 		memset(x->land, 0, count + 1);
 	else
 		memcpy(x->land, z, count);
-	if (z)
-		x->hash = kz_hash(x->land, x->len);
 	return x;
 }
 
 int kstr_equals(const struct kstr *kz, const struct kstr *rhs) {
 	if (kz == rhs)
 		return 1;
-	if (kz->len == rhs->len &&
-		kz->hash == rhs->hash)
+	if (kz->len == rhs->len)
 		return memcmp(kz->land, rhs->land, kz->len) == 0;
 	return 0;
 }

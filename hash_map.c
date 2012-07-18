@@ -85,9 +85,15 @@ static size_t hash_skls(const struct skls *list) {
 	return h;
 }
 
-static size_t hash_mand(const struct mand *pm) {
+static inline size_t hash_mand(const struct mand *pm) {
 	size_t h = hash_ext((void *)pm->final);
 	return h ^ kz_hash((const char *)pm->land, pm->len);
+}
+
+// Lazy hash:
+static inline size_t hash_kstr(const struct kstr *kz) {
+	struct kstr *mz = (struct kstr *)kz; // FIXME: Maybe unsafe
+	return kz->hash ? kz->hash : (mz->hash = kz_hash(kz->land, kz->len));
 }
 
 static size_t hash(const struct variable *v) {
@@ -99,7 +105,7 @@ static size_t hash(const struct variable *v) {
 	case T_BOOL:
 		return hash_bool(v->value.i);
 	case T_KSTR:
-		return kstr_k(v)->hash;
+		return hash_kstr(kstr_k(v));
 	//case T_FUNC:
 	//	return hash_func(func_k(v));
 	case T_EXT:
@@ -340,16 +346,16 @@ struct kvi *kz_index(struct ymd_mach *vm, struct hmap *map, const char *z, int n
 	kz->marked = 0; // FIXME: Real mark it!
 	kz->type = T_KSTR;
 	kz->len = lzn;
-	kz->hash = kz_hash(z, kz->len);
 	memcpy(kz->land, z, kz->len);
-	fake.type = T_KSTR;
-	fake.value.ref = gcx(kz);
+	kz->hash = kz_hash(kz->land, kz->len);
+	vset_kstr(&fake, kz);
 	// Find position
 	x = hindex(vm, map, &fake);
 	if (!equals(&x->k, &fake)) {
-		x->k.type = T_KSTR;
 		// NOTE: Here is kpool, DO NOT use ymd_kstr.
-		x->k.value.ref = gcx(kstr_new(vm, z, kz->len));
+		struct kstr *dummy = kstr_new(vm, z, kz->len);
+		dummy->hash = kz->hash;
+		vset_kstr(&x->k, dummy);
 	}
 	if (kz->len > MAX_CHUNK_LEN) vm_free(vm, kz);
 	return x;
