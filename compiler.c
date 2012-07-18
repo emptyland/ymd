@@ -110,11 +110,11 @@ static inline ushort_t ymk_hold(struct ymd_parser *p) {
 
 static void ymk_emit_int(
 	struct ymd_parser *p, ymd_int_t imm) {
-	ushort_t partal[MAX_VARINT16_LEN];
-	int i, k = varint16_encode(imm, partal) - 1;
+	ushort_t partial[MAX_VARINT16_LEN];
+	int i, k = varint16_encode(imm, partial) - 1;
 	for (i = 0; i < k; ++i)
-		ymk_emitOfP(p, I_PUSH, F_PARTAL, partal[i]);
-	ymk_emitOfP(p, I_PUSH, F_INT, partal[k]);
+		ymk_emitOfP(p, I_PUSH, F_PARTAL, partial[i]);
+	ymk_emitOfP(p, I_PUSH, F_INT, partial[k]);
 }
 
 static void ymk_emit_kz(
@@ -691,7 +691,7 @@ struct lval_desc {
 	int vt; // value type
 };
 
-static void ymk_lval_partal(struct ymd_parser *p,
+static void ymk_lval_partial(struct ymd_parser *p,
                             const struct lval_desc *desc) {
 	(void)p;
 	switch (desc->vt) {
@@ -741,13 +741,13 @@ static void parse_lval(struct ymd_parser *p, struct lval_desc *desc) {
 	for (;;) {
 		switch (ymc_peek(p)) {
 		case '.':
-			ymk_lval_partal(p, desc);
+			ymk_lval_partial(p, desc);
 			ymc_next(p);
 			desc->last = ymk_symbol(p);
 			desc->vt = VDOT;
 			break;
 		case '[':
-			ymk_lval_partal(p, desc);
+			ymk_lval_partial(p, desc);
 			ymc_next(p);
 			parse_expr(p, 0);
 			ymc_match(p, ']');
@@ -755,7 +755,7 @@ static void parse_lval(struct ymd_parser *p, struct lval_desc *desc) {
 			desc->vt = VINDEX;
 			break;
 		case ':':
-			ymk_lval_partal(p, desc);
+			ymk_lval_partial(p, desc);
 			ymc_next(p);
 			desc->last = ymk_symbol(p);
 			parse_callargs(p, 0, desc->last);
@@ -763,7 +763,7 @@ static void parse_lval(struct ymd_parser *p, struct lval_desc *desc) {
 			desc->vt = VCALL;
 			break;
 		case '(': case STRING: /*case '{':*/
-			ymk_lval_partal(p, desc);
+			ymk_lval_partial(p, desc);
 			parse_callargs(p, 0, NULL);
 			desc->last = NULL;
 			desc->vt = VCALL;

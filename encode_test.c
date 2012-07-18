@@ -82,24 +82,24 @@ static int test_encode() {
 	return 0;
 }
 #define ASSERT_EN(n, len) \
-	i = varint16_encode(n, partal); \
+	i = varint16_encode(n, partial); \
 	ASSERT_EQ(int, i, len)
 #define ASSERT_PARTAL1(arg0) \
-	ASSERT_EQ(uint, partal[0], arg0)
+	ASSERT_EQ(uint, partial[0], arg0)
 #define ASSERT_PARTAL2(arg0, arg1) \
-	ASSERT_EQ(uint, partal[0], arg0); \
-	ASSERT_EQ(uint, partal[1], arg1)
+	ASSERT_EQ(uint, partial[0], arg0); \
+	ASSERT_EQ(uint, partial[1], arg1)
 #define ASSERT_PARTAL3(arg0, arg1, arg2) \
-	ASSERT_EQ(uint, partal[0], arg0); \
-	ASSERT_EQ(uint, partal[1], arg1); \
-	ASSERT_EQ(uint, partal[2], arg2)
+	ASSERT_EQ(uint, partial[0], arg0); \
+	ASSERT_EQ(uint, partial[1], arg1); \
+	ASSERT_EQ(uint, partial[2], arg2)
 #define ASSERT_PARTAL4(arg0, arg1, arg2, arg3) \
-	ASSERT_EQ(uint, partal[0], arg0); \
-	ASSERT_EQ(uint, partal[1], arg1); \
-	ASSERT_EQ(uint, partal[2], arg2); \
-	ASSERT_EQ(uint, partal[3], arg3)
+	ASSERT_EQ(uint, partial[0], arg0); \
+	ASSERT_EQ(uint, partial[1], arg1); \
+	ASSERT_EQ(uint, partial[2], arg2); \
+	ASSERT_EQ(uint, partial[3], arg3)
 static int test_varint16() {
-	unsigned short partal[MAX_VARINT16_LEN];
+	unsigned short partial[MAX_VARINT16_LEN];
 	int i;
 
 	ASSERT_EN(1, 1);

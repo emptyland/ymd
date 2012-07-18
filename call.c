@@ -234,16 +234,16 @@ retry:
 				var.value.i = zigzag_decode(param);
 				break;
 			case F_PARTAL: {
-				ushort_t partal[MAX_VARINT16_LEN];
+				ushort_t partial[MAX_VARINT16_LEN];
 				int i = 0;
 				while (asm_flag(inst) != F_INT) {
 					inst = core->inst[info->pc];
 					assert(asm_op(inst) == I_PUSH);
-					partal[i++] = asm_param(inst);
+					partial[i++] = asm_param(inst);
 					++info->pc;
 				}
 				var.type = T_INT;
-				var.value.i = varint16_decode(partal, i);
+				var.value.i = varint16_decode(partial, i);
 				--info->pc;
 				} break;
 			case F_ZSTR:

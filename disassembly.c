@@ -16,7 +16,7 @@ static const char *address(const struct func *fn, uint_t inst,
 		snprintf(buf, n, "[imm]:%u", asm_param(inst));
 		break;
 	case F_PARTAL:
-		snprintf(buf, n, "[partal]:%04x", asm_param(inst));
+		snprintf(buf, n, "[partial]:%04x", asm_param(inst));
 		break;
 	case F_ZSTR:
 		snprintf(buf, n, "[str]:%d:\"%s\"", fn->u.core->kz[asm_param(inst)]->len,

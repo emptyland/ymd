@@ -4,27 +4,27 @@
 
 int varint16_encode(long long d, unsigned short rv[]) {
 	unsigned long long coded = zigzag_encode(d);
-	unsigned long long partal = 0;
+	unsigned long long partial = 0;
 	int i = 0;
-	partal = coded & 0xffff000000000000ULL;
-	if (partal) goto bits_48;
-	partal = coded & 0x0000ffff00000000ULL;
-	if (partal) goto bits_32;
-	partal = coded & 0x00000000ffff0000ULL;
-	if (partal) goto bits_16;
-	partal = coded & 0x000000000000ffffULL;
+	partial = coded & 0xffff000000000000ULL;
+	if (partial) goto bits_48;
+	partial = coded & 0x0000ffff00000000ULL;
+	if (partial) goto bits_32;
+	partial = coded & 0x00000000ffff0000ULL;
+	if (partial) goto bits_16;
+	partial = coded & 0x000000000000ffffULL;
 	goto bits_00;
 bits_48:
-	rv[i++] = (unsigned short)(partal >> 48);
-	partal = coded & 0x0000ffff00000000ULL;
+	rv[i++] = (unsigned short)(partial >> 48);
+	partial = coded & 0x0000ffff00000000ULL;
 bits_32:
-	rv[i++] = (unsigned short)(partal >> 32);
-	partal = coded & 0x00000000ffff0000ULL;
+	rv[i++] = (unsigned short)(partial >> 32);
+	partial = coded & 0x00000000ffff0000ULL;
 bits_16:
-	rv[i++] = (unsigned short)(partal >> 16);
-	partal = coded & 0x000000000000ffffULL;
+	rv[i++] = (unsigned short)(partial >> 16);
+	partial = coded & 0x000000000000ffffULL;
 bits_00:
-	rv[i++] = (unsigned short)partal;
+	rv[i++] = (unsigned short)partial;
 	return i;
 }
 
