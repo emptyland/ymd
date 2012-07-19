@@ -51,7 +51,7 @@ static void parse_block(struct ymd_parser *p);
 // Code generating
 //------------------------------------------------------------------------------
 static inline struct chunk *ymk_chunk(struct ymd_parser *p) {
-	struct chunk *x = vm_zalloc(p->vm, sizeof(*x));
+	struct chunk *x = mm_zalloc(p->vm, 1, sizeof(*x));
 	x->file = ymd_kstr(p->vm, p->lex.file, -1);
 	return x;
 }
@@ -1067,7 +1067,7 @@ static void ymc_final(struct ymd_parser *p) {
 			i = i->chain;
 			if (!last->ref) {
 				blk_final(p->vm, last);
-				vm_free(p->vm, last);
+				mm_free(p->vm, last, 1, sizeof(*last));
 			}
 		}
 		p->blk = NULL;

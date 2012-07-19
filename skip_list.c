@@ -28,7 +28,7 @@ unsigned short randlv() {
 }
 
 static struct sknd *mknode(struct ymd_mach *vm, unsigned short lv) {
-	struct sknd *x = vm_zalloc(vm, sizeof(struct sknd) +
+	struct sknd *x = mm_zalloc(vm, 1, sizeof(struct sknd) +
 	                           (lv - 1) * sizeof(struct sknd*));
 	x->n = lv;
 	return x;
@@ -91,7 +91,8 @@ void skls_final(struct ymd_mach *vm, struct skls *list) {
 	while (i) {
 		p = i;
 		i = i->fwd[0];
-		vm_free(vm, p);
+		mm_free(vm, p, 1, sizeof(struct sknd) +
+		        (p->n - 1) * sizeof(struct sknd *));
 	}
 }
 

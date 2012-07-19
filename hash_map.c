@@ -154,7 +154,7 @@ struct hmap *hmap_new(struct ymd_mach *vm, int count) {
 	x = gc_new(vm, sizeof(*x), T_HMAP);
 	assert(shift > 0);
 	x->shift = shift;
-	x->item = vm_zalloc(vm, sizeof(struct kvi) * (1 << x->shift));
+	x->item = mm_zalloc(vm, 1 << x->shift, sizeof(struct kvi));
 	x->free = x->item + (1 << x->shift) - 1;
 	return x;
 }
@@ -202,7 +202,7 @@ int hmap_compare(const struct hmap *map, const struct hmap *rhs) {
 }
 
 void hmap_final(struct ymd_mach *vm, struct hmap *map) {
-	vm_free(vm, map->item);
+	mm_free(vm, map->item, 1 << map->shift, sizeof(*map->item));
 }
 
 static struct kvi *alloc_free(struct hmap *map) {
@@ -240,7 +240,7 @@ struct kvi *get_head(struct ymd_mach *vm, struct hmap *map,
 static void resize(struct ymd_mach *vm, struct hmap *map, int shift) {
 	struct kvi *bak;
 	const struct kvi *last, *i;
-	int total_count;
+	int total_count, old_count = 1 << map->shift;
 	assert(shift > map->shift);
 	// Backup old data
 	bak = map->item;
@@ -249,7 +249,7 @@ static void resize(struct ymd_mach *vm, struct hmap *map, int shift) {
 	// Allocate new slots
 	map->shift = shift;
 	total_count = (1 << map->shift);
-	map->item = vm_zalloc(vm, sizeof(*map->item) * total_count);
+	map->item = mm_zalloc(vm, total_count, sizeof(*map->item));
 	map->free = map->item + total_count - 1; // To last node!!
 	// Rehash
 	for (i = bak; i < last; ++i) {
@@ -260,7 +260,7 @@ static void resize(struct ymd_mach *vm, struct hmap *map, int shift) {
 			*pv = i->v;
 		}
 	}
-	vm_free(vm, bak);
+	mm_free(vm, bak, old_count, sizeof(*map->item));
 }
 
 struct kvi *get_any(struct ymd_mach *vm, struct hmap *map,

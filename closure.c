@@ -22,7 +22,8 @@ static int kz_find(struct kstr **kz, int count, const char *z, int n) {
 //-----------------------------------------------------------------------------
 // Chunk functions:
 //-----------------------------------------------------------------------------
-int blk_emit(struct ymd_mach *vm, struct chunk *core, ymd_inst_t inst, int line) {
+int blk_emit(struct ymd_mach *vm, struct chunk *core, ymd_inst_t inst,
+             int line) {
 	assert(asm_op(inst) % 5 == 0);
 	core->inst = mm_need(vm, core->inst, core->kinst, INST_ALIGN,
 	                     sizeof(inst));
@@ -46,13 +47,13 @@ int blk_kz(struct ymd_mach *vm, struct chunk *core, const char *z, int n) {
 
 void blk_final(struct ymd_mach *vm, struct chunk *core) {
 	if (core->inst)
-		vm_free(vm, core->inst);
+		mm_free(vm, core->inst, core->kinst, sizeof(*core->inst));
 	if (core->line)
-		vm_free(vm, core->line);
+		mm_free(vm, core->line, core->kinst, sizeof(*core->line));
 	if (core->kz)
-		vm_free(vm, core->kz);
+		mm_free(vm, core->kz, core->kkz, sizeof(*core->kz));
 	if (core->lz)
-		vm_free(vm, core->lz);
+		mm_free(vm, core->lz, core->klz, sizeof(*core->lz));
 }
 
 // Only find
@@ -75,7 +76,10 @@ int blk_add_lz(struct ymd_mach *vm, struct chunk *core, const char *z) {
 void blk_shrink(struct ymd_mach *vm, struct chunk *core) {
 	if (core->inst)
 		core->inst = mm_shrink(vm, core->inst, core->kinst, INST_ALIGN,
-		                       sizeof(core->inst));
+		                       sizeof(*core->inst));
+	if (core->line)
+		core->line = mm_shrink(vm, core->line, core->kinst, INST_ALIGN,
+		                       sizeof(*core->line));
 	if (core->kz)
 		core->kz = mm_shrink(vm, core->kz, core->kkz, KSTR_ALIGN,
 		                     sizeof(*core->kz));
@@ -123,7 +127,7 @@ struct func *func_new(struct ymd_mach *vm, struct chunk *blk,
 
 void func_final(struct ymd_mach *vm, struct func *fn) {
 	if (fn->bind)
-		vm_free(vm, fn->bind);
+		mm_free(vm, fn->bind, fn->n_bind, sizeof(*fn->bind));
 	if (fn->is_c)
 		return;
 	if (fn->u.core->ref > 1) { // drop it!
@@ -131,7 +135,7 @@ void func_final(struct ymd_mach *vm, struct func *fn) {
 		return;
 	}
 	blk_final(vm, fn->u.core);
-	mm_drop(vm, fn->u.core);
+	mm_drop(vm, fn->u.core, sizeof(*fn->u.core));
 }
 
 int func_bind(struct ymd_mach *vm, struct func *fn, int i,
@@ -139,7 +143,7 @@ int func_bind(struct ymd_mach *vm, struct func *fn, int i,
 	assert(i >= 0);
 	assert(i < fn->n_bind);
 	if (!fn->bind) // Lazy allocating
-		fn->bind = vm_zalloc(vm, sizeof(*fn->bind) * fn->n_bind);
+		fn->bind = mm_zalloc(vm, fn->n_bind, sizeof(*fn->bind));
 	fn->bind[i] = *var;
 	return i;
 }

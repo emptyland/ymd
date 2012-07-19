@@ -146,6 +146,9 @@ static inline struct name *name##_x(struct variable *var) { \
 static inline const struct name *name##_k(const struct variable *var) { \
 	assert(var->value.ref->type == tt); \
 	return (const struct name *)var->value.ref; \
+} \
+static inline struct name *name##_f(void *o) { \
+	return (struct name *)o; \
 }
 DECL_TREF(DEFINE_REFCAST)
 #undef DEFINE_REFCAST

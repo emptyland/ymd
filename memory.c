@@ -10,14 +10,19 @@ static inline int track(struct gc_struct *gc, struct gc_node *x) {
 	return ++gc->n_alloced;
 }
 
-void *gc_new(struct ymd_mach *vm, size_t size,
-               unsigned char type) {
+static int gc_record(struct ymd_mach *vm, size_t inc, int neg) {
+	struct gc_struct *gc = &vm->gc;
+	if (neg) gc->used -= inc; else gc->used += inc;
+	return 0;
+}
+
+void *gc_new(struct ymd_mach *vm, size_t size, unsigned char type) {
 	struct gc_struct *gc = &vm->gc;
 	struct gc_node *x = vm_zalloc(vm, size);
 	track(gc, x);
-	gc->used += size;
 	assert(type < (1 << 4));
 	x->type = type;
+	gc_record(vm, size, 0);
 	return x;
 }
 
@@ -30,32 +35,74 @@ int gc_init(struct ymd_mach *vm, int k) {
 	return 0;
 }
 
+static void gc_del(struct ymd_mach *vm, void *p) {
+	struct gc_node *o = p;
+	size_t chunk = 0;
+	switch (o->type) {
+	case T_KSTR:
+		chunk = sizeof(struct kstr);
+		chunk += kstr_f(o)->len;
+		break;
+	case T_FUNC:
+		func_final(vm, func_f(o));
+		chunk = sizeof(struct func);
+		break;
+	case T_DYAY:
+		dyay_final(vm, dyay_f(o));
+		chunk = sizeof(struct dyay);
+		break;
+	case T_HMAP:
+		hmap_final(vm, hmap_f(o));
+		chunk = sizeof(struct hmap);
+		break;
+	case T_SKLS:
+		skls_final(vm, skls_f(o));
+		chunk = sizeof(struct skls);
+		break;
+	case T_MAND:
+		mand_final(vm, mand_f(o));
+		chunk = sizeof(struct mand);
+		chunk += mand_f(o)->len;
+		break;
+	default:
+		assert(0);
+		return;
+	}
+	mm_free(vm, o, 1, chunk);
+}
+
 void gc_final(struct ymd_mach *vm) {
 	struct gc_struct *gc = &vm->gc;
 	struct gc_node *i = gc->alloced, *p = i;
 	while (i) {
-		switch (i->type) {
-		case T_FUNC:
-			func_final(vm, (struct func *)i);
-			break;
-		case T_DYAY:
-			dyay_final(vm, (struct dyay *)i);
-			break;
-		case T_HMAP:
-			hmap_final(vm, (struct hmap *)i);
-			break;
-		case T_SKLS:
-			skls_final(vm, (struct skls *)i);
-			break;
-		case T_MAND:
-			mand_final(vm, (struct mand *)i);
-			break;
-		}
 		p = i;
 		i = i->next;
-		vm_free(vm, p);
+		gc_del(vm, p);
 		--gc->n_alloced;
 	}
+}
+
+void *mm_zalloc(struct ymd_mach *vm, int n, size_t chunk) {
+	assert(n > 0);
+	assert(chunk > 0);
+	gc_record(vm, n * chunk, 0);
+	return vm_zalloc(vm, n * chunk);
+}
+
+void *mm_realloc(struct ymd_mach *vm, void *raw, int old, int n,
+                 size_t chunk) {
+	assert(n > 0);
+	assert(chunk > 0);
+	assert(n > old);
+	gc_record(vm, (n - old) * chunk, 0);
+	return vm_realloc(vm, raw, n * chunk);
+}
+
+void mm_free(struct ymd_mach *vm, void *raw, int n, size_t chunk) {
+	assert(n > 0);
+	assert(chunk > 0);
+	gc_record(vm, n * chunk, 1);
+	vm_free(vm, raw);
 }
 
 void *mm_need(struct ymd_mach *vm, void *raw, int n, int align,
@@ -63,9 +110,9 @@ void *mm_need(struct ymd_mach *vm, void *raw, int n, int align,
 	char *rv;
 	if (n % align)
 		return raw;
-	//assert(raw != NULL);
 	rv = vm_realloc(vm, raw, chunk * (n + align));
 	memset(rv + chunk * n, 0, chunk * align);
+	gc_record(vm, chunk * align, 0);
 	return rv;
 }
 
@@ -79,11 +126,13 @@ void *mm_shrink(struct ymd_mach *vm, void *raw, int n, int align,
 	bak = vm_zalloc(vm, chunk * n);
 	memcpy(bak, raw, chunk * n);
 	vm_free(vm, raw);
+	gc_record(vm, chunk * (align - (n % align)), 1);
 	return bak;
 }
 
-void mm_drop(struct ymd_mach *vm, void *p) {
+void mm_drop(struct ymd_mach *vm, void *p, size_t size) {
 	int *ref = p;
 	--(*ref);
-	if (*ref == 0) vm_free(vm, p);
+	if (*ref == 0)
+		mm_free(vm, p, 1, size);
 }

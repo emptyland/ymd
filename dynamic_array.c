@@ -14,14 +14,14 @@ struct dyay *dyay_new(struct ymd_mach *vm, int count) {
 	x->count = count;
 	x->max = count == 0 ? 0 : count + MAX_ADD;
 	if (x->max > 0)
-		x->elem = vm_zalloc(vm, sizeof(*x->elem) * x->max);
+		x->elem = mm_zalloc(vm, x->max, sizeof(*x->elem));
 	return x;
 }
 
 void dyay_final(struct ymd_mach *vm, struct dyay *arr) {
 	if (arr->elem) {
 		assert(arr->max > 0);
-		vm_free(vm, arr->elem);
+		mm_free(vm, arr->elem, arr->max, sizeof(*arr->elem));
 		arr->elem = NULL;
 		arr->count = 0;
 		arr->max = 0;
@@ -67,12 +67,10 @@ struct variable *dyay_get(struct dyay *arr, ymd_int_t i) {
 }
 
 static inline void resize(struct ymd_mach *vm, struct dyay *arr) {
+	int old = arr->max;
 	arr->max = arr->count * 3 / 2 + MAX_ADD;
-	if (arr->elem)
-		arr->elem = vm_realloc(vm, arr->elem,
-		                       sizeof(*arr->elem) * arr->max);
-	else
-		arr->elem = vm_zalloc(vm, sizeof(*arr->elem) * arr->max);
+	arr->elem = mm_realloc(vm, arr->elem, old, arr->max,
+	                       sizeof(*arr->elem));
 }
 
 struct variable *dyay_add(struct ymd_mach *vm, struct dyay *arr) {

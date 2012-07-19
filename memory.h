@@ -32,6 +32,11 @@ int gc_init(struct ymd_mach *vm, int k);
 void gc_final(struct ymd_mach *vm);
 
 // Memory managemant functions:
+void *mm_zalloc(struct ymd_mach *vm, int n, size_t chunk);
+void *mm_realloc(struct ymd_mach *vm, void *raw, int old, int n,
+                 size_t chunk);
+void mm_free(struct ymd_mach *vm, void *raw, int n, size_t chunk);
+
 void *mm_need(struct ymd_mach *vm, void *raw, int n, int align,
               size_t chunk);
 void *mm_shrink(struct ymd_mach *vm, void *raw, int n, int align,
@@ -42,6 +47,6 @@ static inline void *mm_grab(void *p) {
 	int *ref = p; ++(*ref); return p;
 }
 
-void mm_drop(struct ymd_mach *vm, void *p);
+void mm_drop(struct ymd_mach *vm, void *p, size_t size);
 
 #endif // YMD_MEMORY_H

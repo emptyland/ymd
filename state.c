@@ -59,7 +59,7 @@ struct ymd_context *ioslate(struct ymd_mach *vm) {
 }
 
 struct ymd_mach *ymd_init() {
-	struct ymd_mach *vm = calloc(sizeof(*vm), 1);
+	struct ymd_mach *vm = calloc(1, sizeof(*vm));
 	if (!vm)
 		return NULL;
 	// Basic memory functions:
@@ -68,7 +68,7 @@ struct ymd_mach *ymd_init() {
 	vm->free    = default_free;
 	vm->die     = default_die;
 	// Init gc:
-	gc_init(vm, 1024);
+	gc_init(vm, 4 * 1024);
 	// Init global map:
 	vm->global = hmap_new(vm, -1);
 	vm->kpool = hmap_new(vm, -1);
@@ -84,8 +84,11 @@ struct ymd_mach *ymd_init() {
 void ymd_final(struct ymd_mach *vm) {
 	vm_final_context(vm);
 	if (vm->fn)
-		vm_free(vm, vm->fn);
+		mm_free(vm, vm->fn, (1 + vm->n_fn / FUNC_ALIGN) * FUNC_ALIGN,
+				sizeof(*vm->fn));
 	gc_final(vm);
+	assert(vm->gc.used == 0); // Must free all memory!
+	free(vm);
 }
 
 static int vm_init_context(struct ymd_mach *vm) {
