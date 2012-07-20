@@ -247,10 +247,10 @@ static void resize(struct ymd_mach *vm, struct hmap *map, int shift) {
 	total_count = map->shift == 0 ? 0 : (1 << map->shift);
 	last = bak + total_count;
 	// Allocate new slots
-	map->shift = shift;
-	total_count = (1 << map->shift);
+	total_count = (1 << shift);
 	map->item = mm_zalloc(vm, total_count, sizeof(*map->item));
 	map->free = map->item + total_count - 1; // To last node!!
+	map->shift = shift;
 	// Rehash
 	for (i = bak; i < last; ++i) {
 		if (i->flag != KVI_FREE) {

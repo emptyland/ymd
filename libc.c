@@ -277,7 +277,7 @@ static int dyay_iter(L) {
 
 // Move hash map's slot to next valid one:
 static inline struct kvi *move2valid(struct kvi *i, struct kvi *m) {
-	while (i->flag == 0 && i < m) ++i;
+	while (i < m && i->flag == 0) ++i;
 	return i;
 }
 

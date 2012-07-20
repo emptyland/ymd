@@ -22,9 +22,9 @@ void dyay_final(struct ymd_mach *vm, struct dyay *arr) {
 	if (arr->elem) {
 		assert(arr->max > 0);
 		mm_free(vm, arr->elem, arr->max, sizeof(*arr->elem));
-		arr->elem = NULL;
+		arr->elem  = NULL;
 		arr->count = 0;
-		arr->max = 0;
+		arr->max   = 0;
 	}
 }
 

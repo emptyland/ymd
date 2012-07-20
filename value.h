@@ -13,6 +13,7 @@
 #define T_INT     1
 #define T_BOOL    2
 #define T_EXT     3 // Naked pointer
+#define T_REF     4 /* Flag the follow type are gc type: */
 #define T_KSTR    4 // Constant string
 #define T_FUNC    5 // Closure
 #define T_DYAY    6 // Dynamic array
@@ -182,6 +183,10 @@ static inline void vset_bool(struct variable *v, ymd_int_t i) {
 static inline void vset_ext(struct variable *v, void *p) {
 	v->type = T_EXT;
 	v->value.ext = p;
+}
+static inline void vset_ref(struct variable *v, struct gc_node *p) {
+	v->type = p->type;
+	v->value.ref = p;
 }
 #define DEFINE_SETTER(name, tt) \
 static inline void vset_##name(struct variable *v, struct name *o) { \

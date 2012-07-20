@@ -11,23 +11,33 @@ struct ymd_mach;
 	unsigned char type;     \
 	unsigned short marked
 
+#define GC_BLACK_BIT0 1U
+#define GC_GRAY_BIT0  (1U << 4)
+
+enum gc_state {
+	GC_PAUSE,
+	GC_IDLE,
+	GC_MARK,
+	GC_SWEEP,
+};
+
 struct gc_node {
 	GC_HEAD;
 };
 
 struct gc_struct {
-	struct hmap *root;
 	struct gc_node *alloced;
-	struct gc_node *weak;
 	int n_alloced;
 	size_t threshold; // > threshold then full gc
 	size_t used; // used bytes
+	int pause;
 };
 
 #define gcx(obj) ((struct gc_node *)(obj))
 
 // GC functions:
 void *gc_new(struct ymd_mach *vm, size_t size, unsigned char type);
+int gc_active(struct ymd_mach *vm, int act);
 int gc_init(struct ymd_mach *vm, int k);
 void gc_final(struct ymd_mach *vm);
 

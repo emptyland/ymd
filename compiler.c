@@ -1102,7 +1102,9 @@ struct func *ymd_compile(struct ymd_mach *vm,
 	struct ymd_parser p;
 	memset(&p, 0, sizeof(p));
 	lex_init(&p.lex, fnam, code);
+	//gc_active(vm, GC_PAUSE);
 	blk = ymc_compile(vm, &p);
+	//gc_active(vm, GC_IDLE);
 	if (!blk)
 		return NULL;
 	return func_new(vm, blk, name);

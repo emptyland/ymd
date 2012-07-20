@@ -4,35 +4,228 @@
 #include <assert.h>
 #include <stdio.h>
 
+static inline int is_ref(struct variable *v) {
+	return v->type >= T_REF;
+}
+
+static inline int marked(struct variable *var, unsigned flag) {
+	return (is_ref(var) ? (var->value.ref->marked & flag) != 0 : 1);
+}
+
 static inline int track(struct gc_struct *gc, struct gc_node *x) {
 	x->next = gc->alloced;
 	gc->alloced = x;
 	return ++gc->n_alloced;
 }
 
-static int gc_record(struct ymd_mach *vm, size_t inc, int neg) {
-	struct gc_struct *gc = &vm->gc;
-	if (neg) gc->used -= inc; else gc->used += inc;
+// GC Running:
+static int gc_mark_var(struct variable *var);
+static int gc_mark_hmap(struct hmap *o);
+static int gc_mark_func(struct func *o);
+static int gc_mark_dyay(struct dyay *o);
+static int gc_mark_skls(struct skls *o);
+static void gc_del(struct ymd_mach *vm, void *p);
+
+static int gc_mark_var(struct variable *var) {
+	struct gc_node *o = var->value.ref;
+	switch (var->type) {
+	case T_KSTR:
+	case T_MAND:
+		o->marked |= GC_BLACK_BIT0;
+		break;
+	case T_FUNC:
+		return gc_mark_func(func_f(o));
+	case T_DYAY:
+		return gc_mark_dyay(dyay_f(o));
+	case T_HMAP:
+		return gc_mark_hmap(hmap_f(o));
+	case T_SKLS:
+		return gc_mark_skls(skls_f(o));
+	}
 	return 0;
+}
+
+static int gc_mark_func(struct func *o) {
+	int i;
+	struct chunk *core;
+	o->marked |= GC_BLACK_BIT0;
+	o->proto->marked |= GC_BLACK_BIT0;
+	if (o->argv && (o->argv->marked & GC_BLACK_BIT0) == 0) {
+		gc_mark_dyay(o->argv);
+	}
+	if (o->bind)
+		for (i = 0; i < o->n_bind; ++i)
+			if (!marked(o->bind, GC_BLACK_BIT0))
+				gc_mark_var(o->bind + i);
+	if (o->is_c)
+		return 0;
+	core = o->u.core;
+	core->file->marked |= GC_BLACK_BIT0;
+	for (i = 0; i < core->klz; ++i)
+		core->lz[i]->marked |= GC_BLACK_BIT0;
+	for (i = 0; i < core->kkz; ++i)
+		core->kz[i]->marked |= GC_BLACK_BIT0;
+	return 0;
+}
+
+static int gc_mark_dyay(struct dyay *o) {
+	int i;
+	o->marked |= GC_BLACK_BIT0; // Mark self first
+	for (i = 0; i < o->count; ++i) {
+		if (!marked(o->elem + i, GC_BLACK_BIT0))
+			gc_mark_var(o->elem + i);
+	}
+	return 0;
+}
+
+static int gc_mark_hmap(struct hmap *o) {
+	struct kvi *initial = o->item,
+			   *i = NULL,
+			   *k = initial + (1 << o->shift);
+	o->marked |= GC_BLACK_BIT0; // Mark self first
+	for (i = initial; i != k; ++i) {
+		if (!i->flag) continue;
+		if (!marked(&i->k, GC_BLACK_BIT0))
+			gc_mark_var(&i->k);
+		if (!marked(&i->v, GC_BLACK_BIT0))
+			gc_mark_var(&i->v);
+	}
+	return 0;
+}
+
+static int gc_mark_skls(struct skls *o) {
+	struct sknd *i;
+	o->marked |= GC_BLACK_BIT0; // Mark self first
+	for (i = o->head->fwd[0]; i != NULL; i = i->fwd[0]) {
+		if (!marked(&i->k, GC_BLACK_BIT0))
+			gc_mark_var(&i->k);
+		if (!marked(&i->v, GC_BLACK_BIT0))
+			gc_mark_var(&i->v);
+	}
+	return 0;
+}
+
+static int gc_mark(struct ymd_mach *vm) {
+	struct ymd_context *l = ioslate(vm);
+	// Mark all reached variable from global
+	gc_mark_hmap(vm->global);
+	// Mark all contant string
+	gc_mark_hmap(vm->kpool);
+	if (vm->n_fn > 0) { // Mark all literal function
+		int i;
+		for (i = 0; i < vm->n_fn; ++i)
+			if ((vm->fn[i]->marked & GC_BLACK_BIT0) == 0)
+				gc_mark_func(vm->fn[i]);
+	}
+	if (l->info) { // Mark all local variable
+		int n = func_nlocal(l->info->run);
+		struct variable *i, *k = l->info->loc + n;
+		for (i = l->loc; i != k; ++i)
+			if (!marked(i, GC_BLACK_BIT0))
+				gc_mark_var(i);
+
+	}
+	if (l->info) { // Mark all function in stack
+		struct call_info *i = l->info;
+		while (i) {
+			if ((i->run->marked & GC_BLACK_BIT0) == 0)
+				gc_mark_func(i->run);
+			i = i->chain;
+		}
+	}
+	if (l->stk != l->top) { // Mark all stack variable
+		struct variable *i, *k = l->top;
+		for (i = l->stk; i != k; ++i)
+			if (!marked(i, GC_BLACK_BIT0))
+				gc_mark_var(i);
+	}
+	
+	return 0;
+}
+
+static size_t gc_sweep(struct ymd_mach *vm) {
+	struct gc_struct *gc = &vm->gc;
+	size_t old = gc->used;
+	struct gc_node dummy, *i = gc->alloced, *p = &dummy;
+	memset(&dummy, 0, sizeof(dummy));
+	dummy.next = i;
+	while (i) {
+		if ((i->marked & (GC_BLACK_BIT0 | GC_GRAY_BIT0)) == 0) {
+			p->next = i->next;
+			gc_del(vm, i);
+			i = p->next;
+		} else {
+			i->marked &= ~GC_BLACK_BIT0;
+			p = i;
+			i = i->next;
+		}
+	}
+	gc->alloced = dummy.next;
+	return old - gc->used;
+}
+
+static size_t gc_record(struct ymd_mach *vm, size_t inc, int neg) {
+	size_t rv = 0;
+	struct gc_struct *gc = &vm->gc;
+	if (neg)
+		gc->used -= inc;
+	else
+		gc->used += inc;
+	if (neg)
+		return 0;
+	if (gc->used > gc->threshold) {
+		if (!gc->pause)
+			gc_mark(vm);
+		if (!gc->pause) {
+			rv = gc_sweep(vm);
+			if (rv > 0) printf("Full gc: %zd\n", rv);
+		}
+	}
+	return rv;
 }
 
 void *gc_new(struct ymd_mach *vm, size_t size, unsigned char type) {
 	struct gc_struct *gc = &vm->gc;
 	struct gc_node *x = vm_zalloc(vm, size);
-	track(gc, x);
 	assert(type < (1 << 4));
 	x->type = type;
+	x->marked = GC_GRAY_BIT0;
 	gc_record(vm, size, 0);
+	track(gc, x);
 	return x;
 }
 
 int gc_init(struct ymd_mach *vm, int k) {
 	struct gc_struct *gc = &vm->gc;
-	gc->alloced = NULL;
-	gc->weak = NULL;
+	gc->alloced   = NULL;
 	gc->n_alloced = 0;
 	gc->threshold = k;
+	gc->pause     = 0;
 	return 0;
+}
+
+int gc_active(struct ymd_mach *vm, int act) {
+	struct gc_struct *gc = &vm->gc;
+	int old = gc->pause;
+	switch (act) {
+	case GC_PAUSE:
+		++gc->pause;
+		break;
+	case GC_IDLE:
+		--gc->pause;
+		break;
+	case GC_MARK:
+		// TODO:
+		break;
+	case GC_SWEEP:
+		// TODO:
+		break;
+	default:
+		assert(0);
+		break;
+	}
+	assert(gc->pause >= 0);
+	return old;
 }
 
 static void gc_del(struct ymd_mach *vm, void *p) {
@@ -69,6 +262,7 @@ static void gc_del(struct ymd_mach *vm, void *p) {
 		return;
 	}
 	mm_free(vm, o, 1, chunk);
+	--(vm->gc.n_alloced);
 }
 
 void gc_final(struct ymd_mach *vm) {
@@ -78,7 +272,6 @@ void gc_final(struct ymd_mach *vm) {
 		p = i;
 		i = i->next;
 		gc_del(vm, p);
-		--gc->n_alloced;
 	}
 }
 

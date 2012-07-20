@@ -46,9 +46,10 @@ void vm_die(struct ymd_mach *vm, const char *fmt, ...);
 #define UNUSED(useless) ((void)useless)
 
 #define MAX_KPOOL_LEN 40
-#define MAX_LOCAL 1024
-#define MAX_STACK 128
-#define FUNC_ALIGN 128
+#define MAX_LOCAL     1024
+#define MAX_STACK     128
+#define FUNC_ALIGN    128
+#define GC_THESHOLD   40 * 1024
 
 struct call_info {
 	struct call_info *chain;

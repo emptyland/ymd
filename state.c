@@ -68,11 +68,10 @@ struct ymd_mach *ymd_init() {
 	vm->free    = default_free;
 	vm->die     = default_die;
 	// Init gc:
-	gc_init(vm, 4 * 1024);
+	gc_init(vm, GC_THESHOLD);
 	// Init global map:
 	vm->global = hmap_new(vm, -1);
 	vm->kpool = hmap_new(vm, -1);
-	vm->gc.root = vm->global;
 	// Load symbols
 	// `reached` variable: for all of loaded chunks
 	vset_hmap(ymd_putg(vm, "__reached__"), hmap_new(vm, -1));
