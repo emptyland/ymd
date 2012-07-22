@@ -10,6 +10,7 @@
 
 struct cmd_opt {
 	FILE *input;
+	FILE *gc_logf;
 	const char *name;
 	int external;
 	int debug;
@@ -18,6 +19,7 @@ struct cmd_opt {
 };
 
 static struct cmd_opt opt = {
+	NULL,
 	NULL,
 	NULL,
 	0,
@@ -43,6 +45,8 @@ int main(int argc, char *argv[]) {
 			break;
 		} else if (strcmp(argv[i], "--test") == 0) {
 			opt.test = 1;
+		} else if (strcmp(argv[i], "--gc-state") == 0) {
+			opt.gc_logf = fopen("gc.log", "w");
 		} else {
 			opt.external = 1;
 			opt.name = argv[i];
@@ -52,6 +56,8 @@ int main(int argc, char *argv[]) {
 		}
 	}
 	vm = ymd_init();
+	if (opt.gc_logf)
+		ymd_log4gc(vm, opt.gc_logf);
 	if (!opt.input)
 		die("Null file!");
 	fn = ymd_compilef(vm, "__main__", opt.name, opt.input);
@@ -74,6 +80,8 @@ int main(int argc, char *argv[]) {
 		i = ymd_main(vm, fn, argc - opt.argv_off, argv + opt.argv_off);
 	if (opt.external)
 		fclose(opt.input);
+	if (opt.gc_logf)
+		fclose(opt.gc_logf);
 	ymd_final(vm);
 	return i;
 }

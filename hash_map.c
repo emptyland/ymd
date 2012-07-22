@@ -214,7 +214,7 @@ static struct kvi *alloc_free(struct hmap *map) {
 	return NULL;
 }
 
-struct kvi *get_head(struct ymd_mach *vm, struct hmap *map,
+struct kvi *index_if_head(struct ymd_mach *vm, struct hmap *map,
                      const struct variable *key,
                      struct kvi *slot, size_t h) {
 	struct kvi *pos = slot;
@@ -263,7 +263,7 @@ static void resize(struct ymd_mach *vm, struct hmap *map, int shift) {
 	mm_free(vm, bak, old_count, sizeof(*map->item));
 }
 
-struct kvi *get_any(struct ymd_mach *vm, struct hmap *map,
+struct kvi *index_if_node(struct ymd_mach *vm, struct hmap *map,
                     const struct variable *key,
                     struct kvi *slot, size_t h) {
 	struct kvi *fnd = alloc_free(map), *prev;
@@ -304,9 +304,9 @@ static struct kvi *hindex(struct ymd_mach *vm, struct hmap *map,
 		slot->hash = h;
 		return slot;
 	case KVI_SLOT:
-		return get_head(vm, map, key, slot, h);
+		return index_if_head(vm, map, key, slot, h);
 	case KVI_NODE:
-		return get_any(vm, map, key, slot, h);
+		return index_if_node(vm, map, key, slot, h);
 	default:
 		assert(0);
 		break;
@@ -326,75 +326,5 @@ struct variable *hmap_put(struct ymd_mach *vm, struct hmap *map,
 struct variable *hmap_get(struct hmap *map, const struct variable *key) {
 	assert(!is_nil(key));
 	return hfind(map, key);
-}
-
-// Used by kpool(Constant String Pool)
-struct kvi *kz_index(struct ymd_mach *vm, struct hmap *map, const char *z, int n) {
-	// Make a fake key.
-	struct variable fake;
-	struct kvi *x;
-	struct kstr *kz;
-	char chunk[sizeof(struct kstr) + MAX_CHUNK_LEN];
-	int lzn = n >= 0 ? n : (int)strlen(z);
-	if (lzn > MAX_CHUNK_LEN) {
-		kz = vm_zalloc(vm, sizeof(struct kstr) + lzn);
-	} else {
-		memset(chunk, 0, sizeof(struct kstr) + lzn);
-		kz = (struct kstr *)chunk;
-	}
-	kz->next = NULL;
-	kz->marked = 0; // FIXME: Real mark it!
-	kz->type = T_KSTR;
-	kz->len = lzn;
-	memcpy(kz->land, z, kz->len);
-	kz->hash = kz_hash(kz->land, kz->len);
-	vset_kstr(&fake, kz);
-	// Find position
-	x = hindex(vm, map, &fake);
-	if (!equals(&x->k, &fake)) {
-		// NOTE: Here is kpool, DO NOT use vm_kstr.
-		struct kstr *dummy = kstr_new(vm, z, kz->len);
-		dummy->hash = kz->hash;
-		vset_kstr(&x->k, dummy);
-	}
-	if (kz->len > MAX_CHUNK_LEN) vm_free(vm, kz);
-	return x;
-}
-
-int kz_sweep(struct ymd_mach *vm, struct hmap *map, unsigned flags) {
-	struct kvi *i, *k = map->item + (1 << map->shift);
-	int rv = 0;
-	(void)vm;
-	for (i = map->item; i != k; ++i) {
-		if (i->flag == KVI_FREE)
-			continue;
-		if (is_ref(&i->k) && i->k.value.ref->marked & flags)
-			continue;
-		switch (i->flag) {
-		case KVI_NODE: {
-			struct kvi *x = position(map, i->hash);
-			while (x->next != i) {
-				assert(x->next != NULL);
-				x = x->next;
-			}
-			x->next = i->next;
-			memset(i, 0, sizeof(*i));
-			++rv;
-			} break;
-		case KVI_SLOT: {
-			struct kvi *x = i->next;
-			if (x) {
-				memcpy(i, x, sizeof(*i));
-				memset(x, 0, sizeof(*x));
-			} else
-				memset(i, 0, sizeof(*i));
-			++rv;
-			} break;
-		default:
-			assert(0);
-			break;
-		}
-	}
-	return rv;
 }
 

@@ -156,8 +156,8 @@ size_t kz_hash(const char *z, int i) {
 	return n;
 }
 
-static int kz_compare(const unsigned char *z1, int n1,
-                      const unsigned char *z2, int n2) {
+int kz_compare(const unsigned char *z1, int n1,
+               const unsigned char *z2, int n2) {
 	int i, n;
 	if (z1 == z2)
 		return 0;
@@ -176,34 +176,6 @@ static int kz_compare(const unsigned char *z1, int n1,
 	else if(n1 > n2)
 		return 1;
 	return 0;
-}
-
-struct kstr *kstr_new(struct ymd_mach *vm, const char *z, int count) {
-	struct kstr *x = NULL;
-	if (count < 0)
-		count = strlen(z);
-	x = gc_new(vm, sizeof(*x) + count, T_KSTR);
-	x->len = count;
-	if (!z)
-		memset(x->land, 0, count + 1);
-	else
-		memcpy(x->land, z, count);
-	return x;
-}
-
-int kstr_equals(const struct kstr *kz, const struct kstr *rhs) {
-	if (kz == rhs)
-		return 1;
-	if (kz->len == rhs->len)
-		return memcmp(kz->land, rhs->land, kz->len) == 0;
-	return 0;
-}
-
-int kstr_compare(const struct kstr *kz, const struct kstr *rhs) {
-	return kz_compare((const unsigned char *)kz->land,
-	                  kz->len,
-					  (const unsigned char *)rhs->land,
-					  rhs->len);
 }
 
 //-------------------------------------------------------------------------

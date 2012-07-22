@@ -5,6 +5,14 @@
 #include <assert.h>
 #include <stdio.h>
 
+// GC Running:
+static int gc_mark_var(struct variable *var);
+static int gc_mark_hmap(struct hmap *o);
+static int gc_mark_func(struct func *o);
+static int gc_mark_dyay(struct dyay *o);
+static int gc_mark_skls(struct skls *o);
+static void gc_adjust(struct ymd_mach *vm, size_t prev);
+
 static inline int marked(struct variable *var, unsigned flag) {
 	return (is_ref(var) ? (var->value.ref->marked & flag) != 0 : 1);
 }
@@ -14,15 +22,6 @@ static inline int track(struct gc_struct *gc, struct gc_node *x) {
 	gc->alloced = x;
 	return ++gc->n_alloced;
 }
-
-// GC Running:
-static int gc_mark_var(struct variable *var);
-static int gc_mark_hmap(struct hmap *o);
-static int gc_mark_func(struct func *o);
-static int gc_mark_dyay(struct dyay *o);
-static int gc_mark_skls(struct skls *o);
-static void gc_del(struct ymd_mach *vm, void *p);
-static void gc_adjust(struct ymd_mach *vm, size_t prev);
 
 static int gc_mark_var(struct variable *var) {
 	struct gc_node *o = var->value.ref;
@@ -110,8 +109,6 @@ static int gc_mark(struct ymd_mach *vm) {
 	struct ymd_context *l = ioslate(vm);
 	// Mark all reached variable from global
 	gc_mark_hmap(vm->global);
-	// Mark all contant string
-	//gc_mark_hmap(vm->kpool);
 	if (vm->n_fn > 0) { // Mark all literal function
 		int i;
 		for (i = 0; i < vm->n_fn; ++i)
@@ -142,35 +139,53 @@ static int gc_mark(struct ymd_mach *vm) {
 	}
 	return 0;
 }
-#if 0
-static void gc_hook(struct gc_node *i) {
-	struct variable dummy;
-	struct fmtx fx = FMTX_INIT;
-	switch (i->type) {
-	case T_FUNC:
-		printf("del func:%s\n", func_f(i)->proto->land);
-		break;
-	case T_DYAY:
-		vset_dyay(&dummy, dyay_f(i));
-		printf("del dyay:%s\n", tostring(&fx, &dummy));
-		fmtx_final(&fx);
-		break;
-	}
+
+static void gc_hook(struct ymd_mach *vm, struct gc_node *i) {
+	(void)vm;
+	(void)i;
 }
-#endif
-static void gc_hook(struct gc_node *i) { (void)i; }
+
+static int gc_kpool_sweep(struct ymd_mach *vm) {
+	int rv = 0;
+	struct kpool *kt = &vm->kpool;
+	struct gc_node **i, **k = kt->slot + (1 << kt->shift);
+	for (i = kt->slot; i != k; ++i) {
+		if (*i) {
+			struct gc_node dummy;
+			struct gc_node *x = *i, *p = &dummy;
+			memset(&dummy, 0, sizeof(dummy));
+			dummy.next = x;
+			while (x) {
+				if ((x->marked & (GC_BLACK_BIT0 | GC_GRAY_BIT0)) == 0) {
+					p->next = x->next;
+					gc_hook(vm, x);
+					gc_del(vm, x);
+					kt->used--;
+					x = p->next;
+					rv++;
+				} else {
+					x->marked &= ~GC_BLACK_BIT0;
+					p = x;
+					x = x->next;
+				}
+			}
+			*i = dummy.next;
+		}
+	}
+	return rv;
+}
 
 static size_t gc_sweep(struct ymd_mach *vm) {
 	struct gc_struct *gc = &vm->gc;
 	size_t old = gc->used;
 	struct gc_node dummy, *i = gc->alloced, *p = &dummy;
-	kz_sweep(vm, vm->kpool, GC_BLACK_BIT0 | GC_GRAY_BIT0);
+	gc_kpool_sweep(vm);
 	memset(&dummy, 0, sizeof(dummy));
 	dummy.next = i;
 	while (i) {
 		if ((i->marked & (GC_BLACK_BIT0 | GC_GRAY_BIT0)) == 0) {
 			p->next = i->next;
-			gc_hook(i);
+			gc_hook(vm, i);
 			gc_del(vm, i);
 			i = p->next;
 		} else {
@@ -218,6 +233,7 @@ int gc_init(struct ymd_mach *vm, int k) {
 	gc->n_alloced = 0;
 	gc->threshold = k;
 	gc->pause     = 0;
+	gc->logf      = NULL;
 	return 0;
 }
 
@@ -245,7 +261,7 @@ int gc_active(struct ymd_mach *vm, int act) {
 	return old;
 }
 
-static void gc_del(struct ymd_mach *vm, void *p) {
+void gc_del(struct ymd_mach *vm, void *p) {
 	struct gc_node *o = p;
 	size_t chunk = 0;
 	switch (o->type) {
@@ -294,14 +310,15 @@ void gc_final(struct ymd_mach *vm) {
 
 static void gc_adjust(struct ymd_mach *vm, size_t prev) {
 	struct gc_struct *gc = &vm->gc;
-	float rate = (float)prev / (float)gc->threshold;
+	float rate = (float)prev / (float)gc->used;
 	if (rate < 0.1f) // collected < 1% 
-		gc->threshold <<= 1; // threshold * 2
-	else if (rate >= 0.6f) // collected > 1%
+		gc->threshold <<= 1;
+	else if (rate >= 0.6f) // collected > 6%
 		gc->threshold >>= 1;
-	//if (prev > 0)
-	//	printf("Full GC: %zd, Threshold: %zd, Tick:%lld\n",
-	//	       prev, gc->threshold, vm->tick - gc->last);
+	if (prev > 0 && gc->logf)
+		fprintf(gc->logf, "Full GC: %zd\t%zd\t%zd\t%02f\t%lld\n",
+		        prev, gc->used + prev, gc->threshold, rate,
+				vm->tick - gc->last);
 	gc->last = vm->tick;
 }
 

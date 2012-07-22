@@ -61,6 +61,7 @@ int test_memory_managment() {
 	for (i = 0; i < n; ++i)
 		ASSERT_EQ(int, buf[i], i);
 #undef MM_PARAMS
+	mm_free(tvm, buf, n, sizeof(int));
 	return 0;
 }
 

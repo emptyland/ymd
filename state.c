@@ -200,21 +200,6 @@ struct variable *vm_putg(struct ymd_mach *vm, const char *field) {
 //-----------------------------------------------------------------------------
 // Function table:
 // ----------------------------------------------------------------------------
-struct kstr *vm_kstr(struct ymd_mach *vm, const char *z, int n) {
-	struct kstr *rv;
-	struct kvi *x;
-	size_t lzn = n < 0 ? strlen(z) : n;
-	if (lzn > MAX_KPOOL_LEN) {
-		rv = kstr_new(vm, z, lzn);
-		rv->marked = 0;
-		return rv;
-	}
-	x = kz_index(vm, vm->kpool, z, n);
-	x->v.type = T_INT;
-	x->v.value.i++; // Value field is used counter
-	return kstr_x(&x->k);
-}
-
 struct kstr *vm_format(struct ymd_mach *vm, const char *fmt, ...) {
 	va_list ap;
 	int rv;
@@ -240,8 +225,8 @@ struct ymd_mach *ymd_init() {
 	// Init gc:
 	gc_init(vm, GC_THESHOLD);
 	// Init global map:
+	kpool_init(vm);
 	vm->global = hmap_new(vm, -1);
-	vm->kpool = hmap_new(vm, -1);
 	// Load symbols
 	// `reached` variable: for all of loaded chunks
 	vset_hmap(vm_putg(vm, "__reached__"), hmap_new(vm, -1));
@@ -255,6 +240,7 @@ void ymd_final(struct ymd_mach *vm) {
 	if (vm->fn)
 		mm_free(vm, vm->fn, (1 + vm->n_fn / FUNC_ALIGN) * FUNC_ALIGN,
 				sizeof(*vm->fn));
+	kpool_final(vm);
 	gc_final(vm);
 	assert(vm->gc.used == 0); // Must free all memory!
 	free(vm);

@@ -12,10 +12,10 @@ static int test_skls_creation_1() {
 	k1.value.i = 1024;
 	rv = skls_put(tvm, ls, &k1);
 	rv->type = T_KSTR;
-	rv->value.ref = gcx(kstr_new(tvm, "1024", -1));
+	rv->value.ref = gcx(kstr_fetch(tvm, "1024", -1));
 
 	k2.type = T_KSTR;
-	k2.value.ref = gcx(kstr_new(tvm, "1024", -1));
+	k2.value.ref = gcx(kstr_fetch(tvm, "1024", -1));
 	rv = skls_put(tvm, ls, &k2);
 	rv->type = T_INT;
 	rv->value.i = 1024;
@@ -42,7 +42,7 @@ static int test_skls_creation_2() {
 		while (i--) {
 			const struct yut_kstr *kz = RAND_STR();
 			k.type = T_KSTR;
-			k.value.ref = gcx(kstr_new(tvm, kz->land, kz->len));
+			k.value.ref = gcx(kstr_fetch(tvm, kz->land, kz->len));
 			v = skls_put(tvm, ls, &k);
 			v->type = T_INT;
 			v->value.i = i;
@@ -118,7 +118,7 @@ static int test_skls_search() {
 	while (i--) {
 		snprintf(buf, sizeof(buf), "%d", i);
 		k.type = T_KSTR;
-		k.value.ref = gcx(kstr_new(tvm, buf, -1));
+		k.value.ref = gcx(kstr_fetch(tvm, buf, -1));
 		rv = skls_put(tvm, list, &k);
 		rv->type = T_INT;
 		rv->value.i = i;
@@ -130,7 +130,7 @@ static int test_skls_search() {
 			unsigned int index = RAND_RANGE(uint, 0, BENCHMARK_COUNT);
 			snprintf(buf, sizeof(buf), "%u", index);
 			k.type = T_KSTR;
-			k.value.ref = gcx(kstr_new(tvm, buf, -1));
+			k.value.ref = gcx(kstr_fetch(tvm, buf, -1));
 			rv = skls_get(list, &k);
 			ASSERT_EQ(uint, rv->type, T_INT);
 			ASSERT_EQ(large, rv->value.i, index);
@@ -140,7 +140,16 @@ static int test_skls_search() {
 	return 0;
 }
 
-TEST_BEGIN
+static int skls_setup() {
+	gc_active(tvm, GC_PAUSE);
+	return 0;
+}
+
+static void skls_teardown() {
+	gc_active(tvm, GC_IDLE);
+}
+
+TEST_BEGIN_WITH(skls_setup, skls_teardown)
 	TEST_ENTRY(skls_creation_1, normal)
 	TEST_ENTRY(skls_creation_2, benchmark)
 	TEST_ENTRY(skls_sequence, benchmark)

@@ -24,8 +24,8 @@ static int test_dyay_creation_1() {
 
 	arr = dyay_new(tvm, 13);
 	ASSERT_NOTNULL(arr);
-	ASSERT_EQ(uint, arr->count, 13);
-	ASSERT_EQ(uint, arr->max, 13 + 16);
+	ASSERT_EQ(uint, arr->count, 0);
+	ASSERT_EQ(uint, arr->max, 13);
 	return 0;
 }
 
@@ -114,11 +114,13 @@ static int test_dyay_comparation() {
 
 static int test_dyay_setup() {
 	arr = dyay_new(tvm, 0);
+	gc_active(tvm, GC_PAUSE);
 	return 0;
 }
 
 static void test_dyay_teardown() {
 	arr = NULL;
+	gc_active(tvm, GC_IDLE);
 }
 
 TEST_BEGIN_WITH(test_dyay_setup, test_dyay_teardown)

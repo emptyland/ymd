@@ -733,8 +733,6 @@ static int libx_env(L) {
 	struct kstr *which = kstr_of(l->vm, ymd_argv_get(l, 0));
 	if (strcmp(which->land, "*global") == 0)
 		vset_hmap(ymd_push(l), l->vm->global);
-	else if (strcmp(which->land, "*kpool") == 0)
-		vset_hmap(ymd_push(l), l->vm->kpool);
 	else if (strcmp(which->land, "*current") == 0)
 		vset_func(ymd_push(l), l->info->chain->run);
 	else

@@ -220,8 +220,20 @@ int mand_equals(const struct mand *pm, const struct mand *rhs);
 int mand_compare(const struct mand *pm, const struct mand *rhs);
 
 // Constant string: `kstr`
-struct kstr *kstr_new(struct ymd_mach *vm, const char *z, int n);
+struct kstr *kstr_fetch(struct ymd_mach *vm, const char *z, int count);
+
 size_t kz_hash(const char *z, int n);
+
+int kz_compare(const unsigned char *z1, int n1,
+               const unsigned char *z2, int n2);
+
+static inline size_t kstr_hash(struct kstr *kz) {
+	kz->hash = kz->hash ? kz->hash : kz_hash(kz->land, kz->len);
+	return kz->hash;
+}
+
+void kpool_init(struct ymd_mach *vm);
+void kpool_final(struct ymd_mach *vm);
 
 // Hash map: `hmap` functions:
 struct hmap *hmap_new(struct ymd_mach *vm, int count);
@@ -229,9 +241,6 @@ void hmap_final(struct ymd_mach *vm, struct hmap *map);
 struct variable *hmap_put(struct ymd_mach *vm, struct hmap *map,
                           const struct variable *key);
 struct variable *hmap_get(struct hmap *map, const struct variable *key);
-struct kvi *kz_index(struct ymd_mach *vm, struct hmap *map, const char *z,
-                     int n);
-int kz_sweep(struct ymd_mach *vm, struct hmap *map, unsigned flags);
 
 // Skip list: `skls` functions:
 struct skls *skls_new(struct ymd_mach *vm);

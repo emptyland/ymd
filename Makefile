@@ -1,6 +1,6 @@
 include config.mk
 OBJS=state.o value.o memory.o dynamic_array.o hash_map.o skip_list.o closure.o \
-	 call.o libc.o libtest.o encode.o compiler.o lex.o tostring.o
+	 call.o libc.o libtest.o encode.o compiler.o lex.o tostring.o string.o
 OBJX=print.o disassembly.o
 OBJI=yut_rand.o yut.o main_test.o
 OBJT=$(OBJS) $(OBJI)
@@ -82,7 +82,7 @@ compiler_test.o: $(INCT) compiler_test.c compiler.h lex.h
 	$(CC) $(CFLAGS) compiler_test.c -c -o compiler_test.o
 
 lex_test: $(OBJT) $(OBJX) lex_test.o
-	$(CC) $(OBJT) lex_test.o -o lex_test 
+	$(CC) $(OBJT) $(OBJX) lex_test.o -o lex_test 
 
 lex_test.o: lex_test.c lex.h
 	$(CC) $(CFLAGS) lex_test.c -c -o lex_test.o
@@ -155,6 +155,9 @@ print.o: print.h print_posix.c
 
 tostring.o: $(INCS) tostring.c tostring.h
 	$(CC) $(CFLAGS) tostring.c -c -o tostring.o
+
+string.o: $(INCS) string.c
+	$(CC) $(CFLAGS) string.c -c -o string.o
 
 encode.o: $(INCS) encode.c encode.h
 	$(CC) $(CFLAGS) encode.c -c -o encode.o

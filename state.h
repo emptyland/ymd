@@ -10,9 +10,16 @@
 struct ymd_context;
 struct ymd_mach;
 
+// Constant string pool
+struct kpool {
+	struct gc_node **slot;
+	int used;
+	int shift;
+};
+
 struct ymd_mach {
 	struct hmap *global;
-	struct hmap *kpool;
+	struct kpool kpool;
 	struct gc_struct gc;
 	struct func **fn;
 	unsigned short n_fn;
@@ -32,6 +39,10 @@ void ymd_final(struct ymd_mach *vm);
 
 struct ymd_context *ioslate(struct ymd_mach *vm);
 
+static inline void ymd_log4gc(struct ymd_mach *vm, FILE *logf) {
+	vm->gc.logf = logf;
+}
+
 // Mach functions:
 static inline void *vm_zalloc(struct ymd_mach *vm, size_t size) {
 	return vm->zalloc(vm, NULL, size);
@@ -50,7 +61,7 @@ void vm_die(struct ymd_mach *vm, const char *fmt, ...);
 #define MAX_LOCAL     512
 #define MAX_STACK     128
 #define FUNC_ALIGN    128
-#define GC_THESHOLD   20 * 1024
+#define GC_THESHOLD   10 * 1024
 
 struct call_info {
 	struct call_info *chain;
@@ -122,7 +133,10 @@ struct variable *vm_def(struct ymd_mach *vm, void *o, const char *field);
 struct variable *vm_mem(struct ymd_mach *vm, void *o, const char *field);
 
 // String tool
-struct kstr *vm_kstr(struct ymd_mach *vm, const char *z, int n);
+static inline struct kstr *vm_kstr(struct ymd_mach *vm, const char *z,
+                                   int n) {
+	return kstr_fetch(vm, z, n);
+}
 
 struct kstr *vm_strcat(struct ymd_mach *vm, const struct kstr *lhs, const struct kstr *rhs);
 
@@ -199,13 +213,6 @@ static inline void ymd_dyay(struct ymd_context *l, int k) {
 	struct dyay *o = dyay_new(l->vm, k);
 	o->marked = 0;
 	vset_dyay(ymd_push(l), o); 
-}
-
-static inline int ymd_ld_argv(struct ymd_context *l, struct func *fn) {
-	if (!fn->argv)
-		return 0;
-	vset_dyay(ymd_push(l), fn->argv);
-	return 1;
 }
 
 static inline void ymd_add(struct ymd_context *l) {
