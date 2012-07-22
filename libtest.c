@@ -12,21 +12,10 @@ struct yut_cookie {
 	jmp_buf jpt;
 };
 
-static struct hmap *yut_assert_new(struct ymd_mach *vm) {
-	struct hmap *o = hmap_new(vm, 0);
-	vset_hmap(ymd_putg(vm, "Assert"), o);
-	return o;
-}
-
-static struct mand *yut_cookie_new(struct ymd_mach *vm) {
-	struct mand *cookie = mand_new(vm, sizeof(struct yut_cookie), NULL);
-	return cookie;
-}
-
 static struct yut_cookie *yut_jpt(struct ymd_mach *vm,
                                   struct variable *self) {
 	struct hmap *o = hmap_of(vm, self);
-	struct mand *cookie = mand_of(vm, ymd_mem(vm, o, "__cookie__"));
+	struct mand *cookie = mand_of(vm, vm_mem(vm, o, "__cookie__"));
 	return (struct yut_cookie *)cookie->land;
 }
 
@@ -147,7 +136,7 @@ DEFINE_BIN_ASSERT(GE, compare, < 0 )
 
 static struct func *yut_method(struct ymd_mach *vm, void *o,
                                const char *field) {
-	struct variable *found = ymd_mem(vm, o, field);
+	struct variable *found = vm_mem(vm, o, field);
 	if (is_nil(found) || found->type != T_FUNC)
 		return NULL;
 	return func_x(found);
@@ -200,7 +189,7 @@ static int yut_test(struct ymd_mach *vm, const char *clazz,
 	teardown = yut_method(vm, test->value.ref, "teardown");
 	init     = yut_method(vm, test->value.ref, "init");
 	final    = yut_method(vm, test->value.ref, "final");
-	if (setjmp(yut_jpt(vm, ymd_getg(vm, "Assert"))->jpt)) {
+	if (setjmp(yut_jpt(vm, vm_getg(vm, "Assert"))->jpt)) {
 		yut_fault(); // Print failed message
 		return -1; // Test Fail
 	}
@@ -230,11 +219,24 @@ LIBC_BEGIN(YutAssertMethod)
 LIBC_END
 
 int ymd_load_ut(struct ymd_mach *vm) {
-	struct hmap *o = yut_assert_new(vm);
-	vset_mand(ymd_def(vm, o, "__cookie__"), yut_cookie_new(vm));
-	vset_int(ymd_def(vm, o, "file"), -1);
-	vset_int(ymd_def(vm, o, "line"), -1);
-	return ymd_load_mem(vm, "Assert", o, lbxYutAssertMethod);
+	struct ymd_context *l = ioslate(vm);
+	int rv;
+	ymd_hmap(l, 0);
+	ymd_kstr(l, "__cookie__", -1);
+	ymd_mand(l, NULL, sizeof(struct yut_cookie), NULL);
+	ymd_putf(l);
+	ymd_kstr(l, "file", -1);
+	ymd_int(l, -1);
+	ymd_putf(l);
+	ymd_kstr(l, "line", -1);
+	ymd_int(l, -1);
+	ymd_putf(l);
+	rv = ymd_load_mem(l, "Assert", lbxYutAssertMethod);
+	if (rv >= 0)
+		ymd_putg(l, "Assert");
+	else
+		ymd_pop(l, 1);
+	return rv;
 }
 
 int ymd_test(struct ymd_mach *vm, struct func *fn, int argc, char *argv[]) {

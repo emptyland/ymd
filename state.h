@@ -8,6 +8,9 @@
 #include <assert.h>
 
 struct ymd_context;
+struct ymd_mach;
+
+typedef void *(*ymd_alloc_t)(struct ymd_mach *, void *, size_t);
 
 struct ymd_mach {
 	struct hmap *global;
@@ -46,10 +49,10 @@ void vm_die(struct ymd_mach *vm, const char *fmt, ...);
 #define UNUSED(useless) ((void)useless)
 
 #define MAX_KPOOL_LEN 40
-#define MAX_LOCAL     1024
+#define MAX_LOCAL     512
 #define MAX_STACK     128
 #define FUNC_ALIGN    128
-#define GC_THESHOLD   40 * 1024
+#define GC_THESHOLD   20 * 1024
 
 struct call_info {
 	struct call_info *chain;
@@ -103,30 +106,31 @@ struct func *ymd_spawnf(struct ymd_mach *vm, struct chunk *blk,
 // Misc:
 // ----------------------------------------------------------------------------
 // Get/Put a container: hashmap/skiplist/array
-struct variable *ymd_put(struct ymd_mach *vm,
-                         struct variable *var,
-                         const struct variable *key);
+struct variable *vm_put(struct ymd_mach *vm, struct variable *var,
+                        const struct variable *key);
 
-struct variable *ymd_get(struct ymd_mach *vm,
-                         struct variable *var,
-                         const struct variable *key);
+struct variable *vm_get(struct ymd_mach *vm, struct variable *var,
+                        const struct variable *key);
 
 // Get/Put global variable
-struct variable *ymd_putg(struct ymd_mach *vm, const char *field);
+struct variable *vm_putg(struct ymd_mach *vm, const char *field);
 
-struct variable *ymd_getg(struct ymd_mach *vm, const char *field);
+struct variable *vm_getg(struct ymd_mach *vm, const char *field);
+
 
 // Define/Get object's member
-struct variable *ymd_def(struct ymd_mach *vm, void *o, const char *field);
+struct variable *vm_def(struct ymd_mach *vm, void *o, const char *field);
 
-struct variable *ymd_mem(struct ymd_mach *vm, void *o, const char *field);
+struct variable *vm_mem(struct ymd_mach *vm, void *o, const char *field);
 
-struct kstr *ymd_kstr(struct ymd_mach *vm, const char *z, int n);
+// String tool
+struct kstr *vm_kstr(struct ymd_mach *vm, const char *z, int n);
 
-struct kstr *ymd_strcat(struct ymd_mach *vm, const struct kstr *lhs, const struct kstr *rhs);
+struct kstr *vm_strcat(struct ymd_mach *vm, const struct kstr *lhs, const struct kstr *rhs);
 
-struct kstr *ymd_format(struct ymd_mach *vm, const char *fmt, ...);
+struct kstr *vm_format(struct ymd_mach *vm, const char *fmt, ...);
 
+// Runtime
 static inline struct func *ymd_called(struct ymd_context *l) {
 	assert(l->info);
 	assert(l->info->run);
@@ -188,6 +192,109 @@ static inline void ymd_adjust(struct ymd_context *l, int adjust, int ret) {
 		while (i--)
 			vset_nil(ymd_push(l));
 	}
+}
+
+//-----------------------------------------------------------------------------
+// Fake stack functions:
+// ----------------------------------------------------------------------------
+static inline void ymd_dyay(struct ymd_context *l, int k) {
+	struct dyay *o = dyay_new(l->vm, k);
+	o->marked = 0;
+	vset_dyay(ymd_push(l), o); 
+}
+
+static inline int ymd_ld_argv(struct ymd_context *l, struct func *fn) {
+	if (!fn->argv)
+		return 0;
+	vset_dyay(ymd_push(l), fn->argv);
+	return 1;
+}
+
+static inline void ymd_add(struct ymd_context *l) {
+	struct dyay *o = dyay_of(l->vm, ymd_top(l, 1));
+	*dyay_add(l->vm, o) = *ymd_top(l, 0);
+	ymd_pop(l, 1);
+}
+
+static inline void ymd_hmap(struct ymd_context *l, int k) {
+	struct hmap *o = hmap_new(l->vm, k);
+	o->marked = 0;
+	vset_hmap(ymd_push(l), o);
+}
+
+static inline void ymd_skls(struct ymd_context *l) {
+	struct skls *o = skls_new(l->vm);
+	o->marked = 0;
+	vset_skls(ymd_push(l), o);
+}
+
+static inline void *ymd_mand(struct ymd_context *l, const char *tt,
+                             size_t size, ymd_final_t final) {
+	struct mand *o = mand_new(l->vm, size, final);
+	o->marked = 0;
+	o->tt = tt;
+	vset_mand(ymd_push(l), o);
+	return o->land;
+}
+
+static inline void ymd_kstr(struct ymd_context *l, const char *z,
+                            int len) {
+	struct kstr *o = vm_kstr(l->vm, z, len);
+	o->marked = 0;
+	vset_kstr(ymd_push(l), o);
+}
+
+static inline void ymd_int(struct ymd_context *l, ymd_int_t i) {
+	vset_int(ymd_push(l), i);
+}
+
+static inline void ymd_ext(struct ymd_context *l, void *p) {
+	vset_ext(ymd_push(l), p);
+}
+
+static inline void ymd_bool(struct ymd_context *l, int b) {
+	vset_bool(ymd_push(l), b);
+}
+
+static inline void ymd_nafn(struct ymd_context *l, ymd_nafn_t fn,
+                            const char *name, int nbind) {
+	struct func *o = func_new_c(l->vm, fn, name);
+	o->marked = 0;
+	o->n_bind = nbind;
+	vset_func(ymd_push(l), o);
+}
+
+static inline void ymd_getf(struct ymd_context *l) {
+	struct variable *v = vm_get(l->vm, ymd_top(l, 1), ymd_top(l, 0));
+	*ymd_top(l, 0) = *v;
+}
+
+static inline void ymd_putf(struct ymd_context *l) {
+	struct variable *v = vm_put(l->vm, ymd_top(l, 2), ymd_top(l, 1));
+	*v = *ymd_top(l, 0);
+	ymd_pop(l, 2);
+}
+
+static inline void ymd_getg(struct ymd_context *l, const char *field) {
+	*ymd_push(l) = *vm_getg(l->vm, field);
+}
+
+static inline void ymd_putg(struct ymd_context *l, const char *field) {
+	*vm_putg(l->vm, field) = *ymd_top(l, 0);
+	ymd_pop(l, 1);
+}
+
+static inline void ymd_bind(struct ymd_context *l, int i) {
+	struct func *o = func_of(l->vm, ymd_top(l, 1));
+	*func_bval(l->vm, o, i) = *ymd_top(l, 0);
+	ymd_pop(l, 1);
+}
+
+static inline void ymd_insert(struct ymd_context *l) {
+	struct dyay *o = dyay_of(l->vm, ymd_top(l, 2));
+	ymd_int_t i = int_of(l->vm, ymd_top(l, 1));
+	*dyay_insert(l->vm, o, i) = *ymd_top(l, 0);
+	ymd_pop(l, 2);
 }
 
 #endif // YMD_STATE_H

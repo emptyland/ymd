@@ -6,13 +6,13 @@
 
 #define MAX_ADD 16
 
-struct dyay *dyay_new(struct ymd_mach *vm, int count) {
+struct dyay *dyay_new(struct ymd_mach *vm, int max) {
 	struct dyay *x = NULL;
-	if (count <= 0)
-		count = 0;
+	if (max <= 0)
+		max = 0;
 	x = gc_new(vm, sizeof(*x), T_DYAY);
-	x->count = count;
-	x->max = count == 0 ? 0 : count + MAX_ADD;
+	x->count = 0;
+	x->max = max;
 	if (x->max > 0)
 		x->elem = mm_zalloc(vm, x->max, sizeof(*x->elem));
 	return x;

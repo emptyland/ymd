@@ -39,7 +39,7 @@ int blk_kz(struct ymd_mach *vm, struct chunk *core, const char *z, int n) {
 	if (i >= core->kkz) {
 		core->kz = mm_need(vm, core->kz, core->kkz, KSTR_ALIGN,
 		                   sizeof(*core->kz));
-		core->kz[core->kkz++] = ymd_kstr(vm, z, n);
+		core->kz[core->kkz++] = vm_kstr(vm, z, n);
 		return core->kkz - 1;
 	}
 	return i;
@@ -69,7 +69,7 @@ int blk_add_lz(struct ymd_mach *vm, struct chunk *core, const char *z) {
 		return -1;
 	core->lz = mm_need(vm, core->lz, core->klz, LVAR_ALIGN,
 	                   sizeof(*core->lz));
-	core->lz[core->klz++] = ymd_kstr(vm, z, -1);
+	core->lz[core->klz++] = vm_kstr(vm, z, -1);
 	return core->klz - 1;
 }
 
@@ -95,10 +95,10 @@ static void func_init(struct ymd_mach *vm, struct func *fn,
                       const char *name) {
 	assert(fn->proto == NULL);
 	if (fn->is_c) {
-		fn->proto = ymd_format(vm, "func %s(...) {[native:%p]}",
+		fn->proto = vm_format(vm, "func %s(...) {[native:%p]}",
 							   !name ? "" : name, fn->u.nafn);
 	} else {
-		fn->proto = ymd_format(vm, "func %s[*%d] (*%d) {...}",
+		fn->proto = vm_format(vm, "func %s[*%d] (*%d) {...}",
 							   !name ? "" : name, fn->n_bind,
 							   fn->u.core->kargs);
 	}

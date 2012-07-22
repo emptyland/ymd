@@ -73,16 +73,16 @@ static int test_kstr_comparation_2() {
 }
 
 static int test_kstr_kpool() {
-	struct kstr *kz = ymd_kstr(tvm, "a", -1);
+	struct kstr *kz = vm_kstr(tvm, "a", -1);
 	ASSERT_STREQ(kz->land, "a");
-	ASSERT_STREQ(ymd_kstr(tvm, "a", -1)->land, "a");
-	ASSERT_TRUE(kz == ymd_kstr(tvm, "a", -1));
+	ASSERT_STREQ(vm_kstr(tvm, "a", -1)->land, "a");
+	ASSERT_TRUE(kz == vm_kstr(tvm, "a", -1));
 
-	kz = ymd_kstr(tvm, "aa", -1);
+	kz = vm_kstr(tvm, "aa", -1);
 	ASSERT_STREQ(kz->land, "aa");
-	ASSERT_STREQ(ymd_kstr(tvm, "aa", -1)->land, "aa");
-	ASSERT_TRUE(kz == ymd_kstr(tvm, "aa", -1));
-	ASSERT_FALSE(kz == ymd_kstr(tvm, "a", -1));
+	ASSERT_STREQ(vm_kstr(tvm, "aa", -1)->land, "aa");
+	ASSERT_TRUE(kz == vm_kstr(tvm, "aa", -1));
+	ASSERT_FALSE(kz == vm_kstr(tvm, "a", -1));
 	return 0;
 }
 

@@ -52,7 +52,7 @@ static void parse_block(struct ymd_parser *p);
 //------------------------------------------------------------------------------
 static inline struct chunk *ymk_chunk(struct ymd_parser *p) {
 	struct chunk *x = mm_zalloc(p->vm, 1, sizeof(*x));
-	x->file = ymd_kstr(p->vm, p->lex.file, -1);
+	x->file = vm_kstr(p->vm, p->lex.file, -1);
 	return x;
 }
 
@@ -1096,15 +1096,13 @@ struct chunk *ymc_compile(struct ymd_mach *vm, struct ymd_parser *p) {
 
 struct func *ymd_compile(struct ymd_mach *vm,
                          const char *name,
-                         const char *fnam,
+                         const char *file,
                          const char *code) {
 	struct chunk *blk;
 	struct ymd_parser p;
 	memset(&p, 0, sizeof(p));
-	lex_init(&p.lex, fnam, code);
-	//gc_active(vm, GC_PAUSE);
+	lex_init(&p.lex, file, code);
 	blk = ymc_compile(vm, &p);
-	//gc_active(vm, GC_IDLE);
 	if (!blk)
 		return NULL;
 	return func_new(vm, blk, name);
@@ -1112,7 +1110,7 @@ struct func *ymd_compile(struct ymd_mach *vm,
 
 struct func *ymd_compilef(struct ymd_mach *vm,
                           const char *name,
-                          const char *fnam,
+                          const char *file,
                           FILE *fp) {
 	long len;
 	int rv;
@@ -1125,7 +1123,7 @@ struct func *ymd_compilef(struct ymd_mach *vm,
 	rv = fread(code, 1, len, fp);
 	if (rv <= 0)
 		goto fail;
-	fn = ymd_compile(vm, name, fnam, code);
+	fn = ymd_compile(vm, name, file, code);
 fail:
 	if (code) vm_free(vm, code);
 	return fn;

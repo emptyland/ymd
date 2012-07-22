@@ -352,7 +352,7 @@ struct kvi *kz_index(struct ymd_mach *vm, struct hmap *map, const char *z, int n
 	// Find position
 	x = hindex(vm, map, &fake);
 	if (!equals(&x->k, &fake)) {
-		// NOTE: Here is kpool, DO NOT use ymd_kstr.
+		// NOTE: Here is kpool, DO NOT use vm_kstr.
 		struct kstr *dummy = kstr_new(vm, z, kz->len);
 		dummy->hash = kz->hash;
 		vset_kstr(&x->k, dummy);

@@ -1,6 +1,7 @@
 #include "memory.h"
 #include "value.h"
 #include "state.h"
+#include "tostring.h"
 #include <assert.h>
 #include <stdio.h>
 
@@ -25,6 +26,7 @@ static int gc_mark_func(struct func *o);
 static int gc_mark_dyay(struct dyay *o);
 static int gc_mark_skls(struct skls *o);
 static void gc_del(struct ymd_mach *vm, void *p);
+static void gc_adjust(struct ymd_mach *vm, size_t prev);
 
 static int gc_mark_var(struct variable *var) {
 	struct gc_node *o = var->value.ref;
@@ -53,10 +55,13 @@ static int gc_mark_func(struct func *o) {
 	if (o->argv && (o->argv->marked & GC_BLACK_BIT0) == 0) {
 		gc_mark_dyay(o->argv);
 	}
-	if (o->bind)
-		for (i = 0; i < o->n_bind; ++i)
-			if (!marked(o->bind, GC_BLACK_BIT0))
+	if (o->bind) {
+		for (i = 0; i < o->n_bind; ++i) {
+			if (!marked(o->bind + i, GC_BLACK_BIT0)) {
 				gc_mark_var(o->bind + i);
+			}
+		}
+	}
 	if (o->is_c)
 		return 0;
 	core = o->u.core;
@@ -139,9 +144,25 @@ static int gc_mark(struct ymd_mach *vm) {
 			if (!marked(i, GC_BLACK_BIT0))
 				gc_mark_var(i);
 	}
-	
 	return 0;
 }
+#if 0
+static void gc_hook(struct gc_node *i) {
+	struct variable dummy;
+	struct fmtx fx = FMTX_INIT;
+	switch (i->type) {
+	case T_FUNC:
+		printf("del func:%s\n", func_f(i)->proto->land);
+		break;
+	case T_DYAY:
+		vset_dyay(&dummy, dyay_f(i));
+		printf("del dyay:%s\n", tostring(&fx, &dummy));
+		fmtx_final(&fx);
+		break;
+	}
+}
+#endif
+static void gc_hook(struct gc_node *i) { (void)i; }
 
 static size_t gc_sweep(struct ymd_mach *vm) {
 	struct gc_struct *gc = &vm->gc;
@@ -152,6 +173,7 @@ static size_t gc_sweep(struct ymd_mach *vm) {
 	while (i) {
 		if ((i->marked & (GC_BLACK_BIT0 | GC_GRAY_BIT0)) == 0) {
 			p->next = i->next;
+			gc_hook(i);
 			gc_del(vm, i);
 			i = p->next;
 		} else {
@@ -207,6 +229,7 @@ int gc_init(struct ymd_mach *vm, int k) {
 int gc_active(struct ymd_mach *vm, int act) {
 	struct gc_struct *gc = &vm->gc;
 	int old = gc->pause;
+	size_t rv;
 	switch (act) {
 	case GC_PAUSE:
 		++gc->pause;
@@ -215,10 +238,11 @@ int gc_active(struct ymd_mach *vm, int act) {
 		--gc->pause;
 		break;
 	case GC_MARK:
-		// TODO:
+		if (!gc->pause) gc_mark(vm);
 		break;
 	case GC_SWEEP:
-		// TODO:
+		if (!gc->pause) rv = gc_sweep(vm);
+		if (rv > 0) printf("Full gc: %zd\n", rv);
 		break;
 	default:
 		assert(0);

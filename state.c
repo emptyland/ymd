@@ -58,38 +58,6 @@ struct ymd_context *ioslate(struct ymd_mach *vm) {
 	return vm->curr;
 }
 
-struct ymd_mach *ymd_init() {
-	struct ymd_mach *vm = calloc(1, sizeof(*vm));
-	if (!vm)
-		return NULL;
-	// Basic memory functions:
-	vm->zalloc  = default_zalloc;
-	vm->realloc = default_realloc;
-	vm->free    = default_free;
-	vm->die     = default_die;
-	// Init gc:
-	gc_init(vm, GC_THESHOLD);
-	// Init global map:
-	vm->global = hmap_new(vm, -1);
-	vm->kpool = hmap_new(vm, -1);
-	// Load symbols
-	// `reached` variable: for all of loaded chunks
-	vset_hmap(ymd_putg(vm, "__reached__"), hmap_new(vm, -1));
-	// Init context
-	vm_init_context(vm);
-	return vm;
-}
-
-void ymd_final(struct ymd_mach *vm) {
-	vm_final_context(vm);
-	if (vm->fn)
-		mm_free(vm, vm->fn, (1 + vm->n_fn / FUNC_ALIGN) * FUNC_ALIGN,
-				sizeof(*vm->fn));
-	gc_final(vm);
-	assert(vm->gc.used == 0); // Must free all memory!
-	free(vm);
-}
-
 static int vm_init_context(struct ymd_mach *vm) {
 	vm->curr = vm_zalloc(vm, sizeof(*vm->curr));
 	vm->curr->vm = vm;
@@ -124,10 +92,10 @@ struct call_info *vm_nearcall(struct ymd_context *l) {
 }
 
 int vm_reached(struct ymd_mach *vm, const char *name) {
-	struct hmap *lib = hmap_of(vm, ymd_getg(vm, "__reached__"));
-	struct variable *count = ymd_mem(vm, lib, name);
+	struct hmap *lib = hmap_of(vm, vm_getg(vm, "__reached__"));
+	struct variable *count = vm_mem(vm, lib, name);
 	if (is_nil(count)) {
-		vset_int(ymd_def(vm, lib, name), 0);
+		vset_int(vm_def(vm, lib, name), 0);
 		return 0;
 	}
 	++count->value.i;
@@ -137,9 +105,9 @@ int vm_reached(struct ymd_mach *vm, const char *name) {
 //------------------------------------------------------------------------
 // Generic mapping functions:
 // -----------------------------------------------------------------------
-struct variable *ymd_put(struct ymd_mach *vm,
-                         struct variable *var,
-                         const struct variable *key) {
+struct variable *vm_put(struct ymd_mach *vm,
+                        struct variable *var,
+                        const struct variable *key) {
 	if (is_nil(key))
 		vm_die(vm, "No any key will be `nil`");
 	switch (var->type) {
@@ -156,17 +124,16 @@ struct variable *ymd_put(struct ymd_mach *vm,
 	return NULL;
 }
 
-static struct variable *ymd_at(struct ymd_mach *vm,
-                               struct dyay *arr,
-							   ymd_int_t i) {
+static struct variable *vm_at(struct ymd_mach *vm, struct dyay *arr,
+                              ymd_int_t i) {
 	if (i < 0 || i >= arr->count)
-		vm_die(vm, "Array out of range, index:%d, count:%d", i, arr->count);
+		vm_die(vm, "Array out of range, index:%d, count:%d", i,
+		       arr->count);
 	return dyay_get(arr, i);
 }
 
-struct variable *ymd_get(struct ymd_mach *vm,
-                         struct variable *var,
-                         const struct variable *key) {
+struct variable *vm_get(struct ymd_mach *vm, struct variable *var,
+                        const struct variable *key) {
 	if (is_nil(key))
 		vm_die(vm, "No any key will be `nil`");
 	switch (var->type) {
@@ -175,7 +142,7 @@ struct variable *ymd_get(struct ymd_mach *vm,
 	case T_HMAP:
 		return hmap_get(hmap_x(var), key);
 	case T_DYAY:
-		return ymd_at(vm, dyay_x(var), int_of(vm, key));
+		return vm_at(vm, dyay_x(var), int_of(vm, key));
 	default:
 		vm_die(vm, "Variable can not be index");
 		break;
@@ -184,24 +151,24 @@ struct variable *ymd_get(struct ymd_mach *vm,
 	return NULL;
 }
 
-struct kstr *ymd_strcat(struct ymd_mach *vm, const struct kstr *lhs, const struct kstr *rhs) {
+struct kstr *vm_strcat(struct ymd_mach *vm, const struct kstr *lhs, const struct kstr *rhs) {
 	char *tmp = vm_zalloc(vm, lhs->len + rhs->len);
 	struct kstr *x;
 	memcpy(tmp, lhs->land, lhs->len);
 	memcpy(tmp + lhs->len, rhs->land, rhs->len);
-	x = ymd_kstr(vm, tmp, lhs->len + rhs->len);
+	x = vm_kstr(vm, tmp, lhs->len + rhs->len);
 	vm_free(vm, tmp);
 	return x;
 }
 
-struct variable *ymd_def(struct ymd_mach *vm, void *o, const char *field) {
+struct variable *vm_def(struct ymd_mach *vm, void *o, const char *field) {
 	struct variable k;
 	switch (gcx(o)->type) {
 	case T_HMAP:
-		vset_kstr(&k, ymd_kstr(vm, field, -1));
+		vset_kstr(&k, vm_kstr(vm, field, -1));
 		return hmap_put(vm, o, &k);
 	case T_SKLS:
-		vset_kstr(&k, ymd_kstr(vm, field, -1));
+		vset_kstr(&k, vm_kstr(vm, field, -1));
 		return skls_put(vm, o, &k);
 	default:
 		assert(0);
@@ -210,14 +177,14 @@ struct variable *ymd_def(struct ymd_mach *vm, void *o, const char *field) {
 	return NULL;
 }
 
-struct variable *ymd_mem(struct ymd_mach *vm, void *o, const char *field) {
+struct variable *vm_mem(struct ymd_mach *vm, void *o, const char *field) {
 	struct variable k;
 	switch (gcx(o)->type) {
 	case T_HMAP:
-		vset_kstr(&k, ymd_kstr(vm, field, -1));
+		vset_kstr(&k, vm_kstr(vm, field, -1));
 		return hmap_get(o, &k);
 	case T_SKLS:
-		vset_kstr(&k, ymd_kstr(vm, field, -1));
+		vset_kstr(&k, vm_kstr(vm, field, -1));
 		return skls_get(o, &k);
 	default:
 		assert(0);
@@ -226,30 +193,79 @@ struct variable *ymd_mem(struct ymd_mach *vm, void *o, const char *field) {
 	return NULL;
 }
 
-struct variable *ymd_getg(struct ymd_mach *vm, const char *field) {
+struct variable *vm_getg(struct ymd_mach *vm, const char *field) {
 	struct variable k;
-	vset_kstr(&k, ymd_kstr(vm, field, -1));
+	vset_kstr(&k, vm_kstr(vm, field, -1));
 	return hmap_get(vm->global, &k);
 }
 
-struct variable *ymd_putg(struct ymd_mach *vm, const char *field) {
+struct variable *vm_putg(struct ymd_mach *vm, const char *field) {
 	struct variable k;
-	vset_kstr(&k, ymd_kstr(vm, field, -1));
+	vset_kstr(&k, vm_kstr(vm, field, -1));
 	return hmap_put(vm, vm->global, &k);
 }
 
 //-----------------------------------------------------------------------------
 // Function table:
 // ----------------------------------------------------------------------------
-struct kstr *ymd_kstr(struct ymd_mach *vm, const char *z, int n) {
+struct kstr *vm_kstr(struct ymd_mach *vm, const char *z, int n) {
+	struct kstr *rv;
 	struct kvi *x;
 	size_t lzn = n < 0 ? strlen(z) : n;
-	if (lzn > MAX_KPOOL_LEN)
-		return kstr_new(vm, z, lzn);
+	if (lzn > MAX_KPOOL_LEN) {
+		rv = kstr_new(vm, z, lzn);
+		rv->marked = 0;
+		return rv;
+	}
 	x = kz_index(vm, vm->kpool, z, n);
 	x->v.type = T_INT;
 	x->v.value.i++; // Value field is used counter
 	return kstr_x(&x->k);
+}
+
+struct kstr *vm_format(struct ymd_mach *vm, const char *fmt, ...) {
+	va_list ap;
+	int rv;
+	char buf[MAX_MSG_LEN];
+	va_start(ap, fmt);
+	rv = vsnprintf(buf, sizeof(buf), fmt, ap);
+	va_end(ap);
+	return vm_kstr(vm, buf, -1);
+}
+
+//-----------------------------------------------------------------------------
+// Mach:
+// ----------------------------------------------------------------------------
+struct ymd_mach *ymd_init() {
+	struct ymd_mach *vm = calloc(1, sizeof(*vm));
+	if (!vm)
+		return NULL;
+	// Basic memory functions:
+	vm->zalloc  = default_zalloc;
+	vm->realloc = default_realloc;
+	vm->free    = default_free;
+	vm->die     = default_die;
+	// Init gc:
+	gc_init(vm, GC_THESHOLD);
+	// Init global map:
+	vm->global = hmap_new(vm, -1);
+	vm->kpool = hmap_new(vm, -1);
+	// Load symbols
+	// `reached` variable: for all of loaded chunks
+	vset_hmap(vm_putg(vm, "__reached__"), hmap_new(vm, -1));
+	// Init context
+	vm_init_context(vm);
+	return vm;
+}
+
+void ymd_final(struct ymd_mach *vm) {
+	vm_final_context(vm);
+	if (vm->fn)
+		mm_free(vm, vm->fn, (1 + vm->n_fn / FUNC_ALIGN) * FUNC_ALIGN,
+				sizeof(*vm->fn));
+	gc_final(vm);
+	assert(vm->gc.used == 0); // Must free all memory!
+	free(vm);
 }
 
 struct func *ymd_spawnf(struct ymd_mach *vm,
@@ -263,19 +279,6 @@ struct func *ymd_spawnf(struct ymd_mach *vm,
 	return vm->fn[vm->n_fn - 1];
 }
 
-struct kstr *ymd_format(struct ymd_mach *vm, const char *fmt, ...) {
-	va_list ap;
-	int rv;
-	char buf[MAX_MSG_LEN];
-	va_start(ap, fmt);
-	rv = vsnprintf(buf, sizeof(buf), fmt, ap);
-	va_end(ap);
-	return ymd_kstr(vm, buf, -1);
-}
-
-//-----------------------------------------------------------------------------
-// Mach:
-// ----------------------------------------------------------------------------
 void vm_die(struct ymd_mach *vm, const char *fmt, ...) {
 	va_list ap;
 	int rv;

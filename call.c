@@ -41,18 +41,15 @@ static inline const struct variable *do_keyz(struct func *fn, int i,
 	return key;
 }
 
-static inline struct variable *vm_getg(struct ymd_mach *vm, int i) {
+static inline struct variable *vm_igetg(struct ymd_mach *vm, int i) {
 	struct variable k;
 	struct func *fn = ymd_called(ioslate(vm));
 	return hmap_get(vm->global, do_keyz(fn, i, &k));
 }
 
-static inline void vm_putg(struct ymd_mach *vm, int i, const struct variable *v) {
+static inline void vm_iputg(struct ymd_mach *vm, int i, const struct variable *v) {
 	struct variable k;
 	struct func *fn = ymd_called(ioslate(vm));
-	//if (is_nil(v))
-	//	vm_die(vm, "Value can not be `nil` in k-v pair");
-	// Global variable can be nil
 	*hmap_put(vm, vm->global, do_keyz(fn, i, &k)) = *v;
 }
 
@@ -107,11 +104,11 @@ static inline void do_put(struct ymd_mach *vm,
 	}
 }
 
-static inline void vm_put(struct ymd_mach *vm,
+static inline void vm_iput(struct ymd_mach *vm,
                           struct variable *var,
 						  const struct variable *k,
                           const struct variable *v) {
-	struct variable *rv = ymd_put(vm, var, k);
+	struct variable *rv = vm_put(vm, var, k);
 	if (is_nil(v))
 		vm_die(vm, "Value can not be `nil` in k-v pair");
 	*rv = *v;
@@ -157,7 +154,7 @@ retry:
 				*vm_local(l, fn, param) = *ymd_top(l, 0);
 				break;
 			case F_OFF:
-				vm_putg(vm, param, ymd_top(l, 0));
+				vm_iputg(vm, param, ymd_top(l, 0));
 				break;
 			}
 			ymd_pop(l, 1);
@@ -212,13 +209,13 @@ retry:
 				int i, k = param << 1;
 				struct variable *var = ymd_top(l, k);
 				for (i = 0; i < k; i += 2)
-					vm_put(vm, var, ymd_top(l, i + 1), ymd_top(l, i));
+					vm_iput(vm, var, ymd_top(l, i + 1), ymd_top(l, i));
 				ymd_pop(l, k + 1);
 				} break;
 			case F_FAST: {
 				struct variable key;
 				vset_kstr(&key, core->kz[param]);
-				vm_put(vm, ymd_top(l, 1), &key, ymd_top(l, 0));
+				vm_iput(vm, ymd_top(l, 1), &key, ymd_top(l, 0));
 				ymd_pop(l, 2);
 				} break;
 			default:
@@ -262,7 +259,7 @@ retry:
 				var.value.i = 0;
 				break;
 			case F_OFF:
-				var = *vm_getg(vm, param);
+				var = *vm_igetg(vm, param);
 				break;
 			}
 			*ymd_push(l) = var;
@@ -307,14 +304,14 @@ retry:
 			switch (flag) {
 			case F_STACK: {
 				struct variable *k = ymd_top(l, 0),
-								*v = ymd_get(vm, ymd_top(l, 1), k);
+								*v = vm_get(vm, ymd_top(l, 1), k);
 				ymd_pop(l, 2);
 				*ymd_push(l) = *v;
 				} break;
 			case F_FAST: {
 				struct variable k;
 				vset_kstr(&k, core->kz[param]);
-				*ymd_top(l, 0) = *ymd_get(vm, ymd_top(l, 0), &k);
+				*ymd_top(l, 0) = *vm_get(vm, ymd_top(l, 0), &k);
 				} break;
 			default:
 				assert(0);
@@ -356,7 +353,7 @@ retry:
 				rhs->value.i = rhs->value.i + int_of(vm, lhs);
 				break;
 			case T_KSTR:
-				rhs->value.ref = gcx(ymd_strcat(vm, kstr_of(vm, rhs),
+				rhs->value.ref = gcx(vm_strcat(vm, kstr_of(vm, rhs),
 				                                kstr_of(vm, lhs)));
 				break;
 			default:
@@ -457,7 +454,7 @@ retry:
 			int argc = asm_argc(inst);
 			int imethod = asm_method(inst);
 			vset_kstr(&method, fn->u.core->kz[imethod]);
-			called = func_of(vm, ymd_get(vm, ymd_top(l, argc), &method));
+			called = func_of(vm, vm_get(vm, ymd_top(l, argc), &method));
 			ymd_adjust(l, adjust, ymd_call(l, called, argc, 1));
 			} break;
 		case I_NEWMAP: {
@@ -466,6 +463,7 @@ retry:
 			for (i = 0; i < n; i += 2)
 				do_put(vm, gcx(map), ymd_top(l, i + 1), ymd_top(l, i));
 			ymd_pop(l, n);
+			map->marked = 0;
 			vset_hmap(ymd_push(l), map);
 			} break;
 		case I_NEWSKL: {
@@ -474,6 +472,7 @@ retry:
 			for (i = 0; i < n; i += 2)
 				do_put(vm, gcx(map), ymd_top(l, i + 1), ymd_top(l, i));
 			ymd_pop(l, n);
+			map->marked = 0;
 			vset_skls(ymd_push(l), map);
 			} break;
 		case I_NEWDYA: {
@@ -482,6 +481,7 @@ retry:
 			while (i--)
 				do_put(vm, gcx(map), NULL, ymd_top(l, i));
 			ymd_pop(l, param);
+			map->marked = 0;
 			vset_dyay(ymd_push(l), map);
 			} break;
 		case I_BIND: {
@@ -491,6 +491,7 @@ retry:
 			assert(copied->n_bind == param);
 			while (i--)
 				func_bind(vm, copied, param - i - 1, ymd_top(l, i));
+			copied->marked = 0;
 			opd->value.ref = gcx(copied); // Copy-on-wirte bind
 			ymd_pop(l, param);
 			} break;
@@ -525,7 +526,8 @@ static void vm_copy_args(struct ymd_context *l, struct func *fn, int argc) {
 	}
 	if (argc > 0) {
 		// Lazy creating
-		fn->argv = !fn->argv ? dyay_new(l->vm, 0) : fn->argv;
+		fn->argv = !fn->argv ? dyay_new(l->vm, argc) : fn->argv;
+		fn->argv->marked = 0;
 		i = argc;
 		while (i--) // Copy to array: argv
 			*dyay_add(l->vm, fn->argv) = *ymd_top(l, i);
@@ -579,7 +581,7 @@ int ymd_main(struct ymd_mach *vm, struct func *fn, int argc, char *argv[]) {
 	struct ymd_context *l = ioslate(vm);
 	vset_func(ymd_push(l), fn);
 	for (i = 0; i < argc; ++i)
-		vset_kstr(ymd_push(l), ymd_kstr(vm, argv[i], -1));
+		ymd_kstr(l, argv[i], -1);
 	if (setjmp(l->jpt)) {
 		// TODO:
 		return -1;
