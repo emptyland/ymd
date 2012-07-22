@@ -196,6 +196,10 @@ static inline void vset_##name(struct variable *v, struct name *o) { \
 DECL_TREF(DEFINE_SETTER)
 #undef DEFINE_SETTER
 
+static inline int is_ref(const struct variable *v) {
+	return v->type >= T_REF;
+}
+
 const char *typeof_kz(unsigned tt);
 struct kstr *typeof_kstr(struct ymd_mach *vm, unsigned tt);
 
@@ -227,6 +231,7 @@ struct variable *hmap_put(struct ymd_mach *vm, struct hmap *map,
 struct variable *hmap_get(struct hmap *map, const struct variable *key);
 struct kvi *kz_index(struct ymd_mach *vm, struct hmap *map, const char *z,
                      int n);
+int kz_sweep(struct ymd_mach *vm, struct hmap *map, unsigned flags);
 
 // Skip list: `skls` functions:
 struct skls *skls_new(struct ymd_mach *vm);

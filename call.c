@@ -144,6 +144,7 @@ retry:
 		uchar_t op = asm_op(inst);
 		uchar_t flag = asm_flag(inst);
 		ushort_t param = asm_param(inst);
+		l->vm->tick++;
 		switch (op) {
 		case I_PANIC:
 			vm_die(vm, "%s Panic!", fn->proto->land);

@@ -361,3 +361,40 @@ struct kvi *kz_index(struct ymd_mach *vm, struct hmap *map, const char *z, int n
 	return x;
 }
 
+int kz_sweep(struct ymd_mach *vm, struct hmap *map, unsigned flags) {
+	struct kvi *i, *k = map->item + (1 << map->shift);
+	int rv = 0;
+	(void)vm;
+	for (i = map->item; i != k; ++i) {
+		if (i->flag == KVI_FREE)
+			continue;
+		if (is_ref(&i->k) && i->k.value.ref->marked & flags)
+			continue;
+		switch (i->flag) {
+		case KVI_NODE: {
+			struct kvi *x = position(map, i->hash);
+			while (x->next != i) {
+				assert(x->next != NULL);
+				x = x->next;
+			}
+			x->next = i->next;
+			memset(i, 0, sizeof(*i));
+			++rv;
+			} break;
+		case KVI_SLOT: {
+			struct kvi *x = i->next;
+			if (x) {
+				memcpy(i, x, sizeof(*i));
+				memset(x, 0, sizeof(*x));
+			} else
+				memset(i, 0, sizeof(*i));
+			++rv;
+			} break;
+		default:
+			assert(0);
+			break;
+		}
+	}
+	return rv;
+}
+

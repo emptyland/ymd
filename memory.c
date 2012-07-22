@@ -5,10 +5,6 @@
 #include <assert.h>
 #include <stdio.h>
 
-static inline int is_ref(struct variable *v) {
-	return v->type >= T_REF;
-}
-
 static inline int marked(struct variable *var, unsigned flag) {
 	return (is_ref(var) ? (var->value.ref->marked & flag) != 0 : 1);
 }
@@ -115,7 +111,7 @@ static int gc_mark(struct ymd_mach *vm) {
 	// Mark all reached variable from global
 	gc_mark_hmap(vm->global);
 	// Mark all contant string
-	gc_mark_hmap(vm->kpool);
+	//gc_mark_hmap(vm->kpool);
 	if (vm->n_fn > 0) { // Mark all literal function
 		int i;
 		for (i = 0; i < vm->n_fn; ++i)
@@ -168,6 +164,7 @@ static size_t gc_sweep(struct ymd_mach *vm) {
 	struct gc_struct *gc = &vm->gc;
 	size_t old = gc->used;
 	struct gc_node dummy, *i = gc->alloced, *p = &dummy;
+	kz_sweep(vm, vm->kpool, GC_BLACK_BIT0 | GC_GRAY_BIT0);
 	memset(&dummy, 0, sizeof(dummy));
 	dummy.next = i;
 	while (i) {
@@ -198,10 +195,8 @@ static size_t gc_record(struct ymd_mach *vm, size_t inc, int neg) {
 	if (gc->used > gc->threshold) {
 		if (!gc->pause)
 			gc_mark(vm);
-		if (!gc->pause) {
-			rv = gc_sweep(vm);
-			if (rv > 0) printf("Full gc: %zd\n", rv);
-		}
+		if (!gc->pause)
+			gc_adjust(vm, gc_sweep(vm));
 	}
 	return rv;
 }
@@ -229,7 +224,6 @@ int gc_init(struct ymd_mach *vm, int k) {
 int gc_active(struct ymd_mach *vm, int act) {
 	struct gc_struct *gc = &vm->gc;
 	int old = gc->pause;
-	size_t rv;
 	switch (act) {
 	case GC_PAUSE:
 		++gc->pause;
@@ -241,8 +235,7 @@ int gc_active(struct ymd_mach *vm, int act) {
 		if (!gc->pause) gc_mark(vm);
 		break;
 	case GC_SWEEP:
-		if (!gc->pause) rv = gc_sweep(vm);
-		if (rv > 0) printf("Full gc: %zd\n", rv);
+		if (!gc->pause) gc_adjust(vm, gc_sweep(vm));
 		break;
 	default:
 		assert(0);
@@ -297,6 +290,19 @@ void gc_final(struct ymd_mach *vm) {
 		i = i->next;
 		gc_del(vm, p);
 	}
+}
+
+static void gc_adjust(struct ymd_mach *vm, size_t prev) {
+	struct gc_struct *gc = &vm->gc;
+	float rate = (float)prev / (float)gc->threshold;
+	if (rate < 0.1f) // collected < 1% 
+		gc->threshold <<= 1; // threshold * 2
+	else if (rate >= 0.6f) // collected > 1%
+		gc->threshold >>= 1;
+	//if (prev > 0)
+	//	printf("Full GC: %zd, Threshold: %zd, Tick:%lld\n",
+	//	       prev, gc->threshold, vm->tick - gc->last);
+	gc->last = vm->tick;
 }
 
 void *mm_zalloc(struct ymd_mach *vm, int n, size_t chunk) {

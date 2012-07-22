@@ -30,7 +30,8 @@ struct gc_struct {
 	int n_alloced;
 	size_t threshold; // > threshold then full gc
 	size_t used; // used bytes
-	int pause;
+	long long last; // last full gc tick number
+	int pause; // pause counter
 };
 
 #define gcx(obj) ((struct gc_node *)(obj))

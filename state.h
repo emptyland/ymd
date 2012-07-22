@@ -10,8 +10,6 @@
 struct ymd_context;
 struct ymd_mach;
 
-typedef void *(*ymd_alloc_t)(struct ymd_mach *, void *, size_t);
-
 struct ymd_mach {
 	struct hmap *global;
 	struct hmap *kpool;
@@ -19,11 +17,11 @@ struct ymd_mach {
 	struct func **fn;
 	unsigned short n_fn;
 	// Internal memory function:
-	void *(*zalloc)(struct ymd_mach *, size_t);
-	void *(*realloc)(struct ymd_mach *, void *, size_t);
+	void *(*zalloc)(struct ymd_mach *, void *, size_t);
 	void (*free)(struct ymd_mach *, void *);
 	void (*die)(struct ymd_mach *, const char *);
 	void *cookie;
+	ymd_int_t tick;
 	struct ymd_context *curr;
 	struct variable knil; // nil flag
 };
@@ -36,10 +34,10 @@ struct ymd_context *ioslate(struct ymd_mach *vm);
 
 // Mach functions:
 static inline void *vm_zalloc(struct ymd_mach *vm, size_t size) {
-	return vm->zalloc(vm, size);
+	return vm->zalloc(vm, NULL, size);
 }
 static inline void *vm_realloc(struct ymd_mach *vm, void *p, size_t size) {
-	return vm->realloc(vm, p, size);
+	return vm->zalloc(vm, p, size);
 }
 static inline void vm_free(struct ymd_mach *vm, void *p) {
 	vm->free(vm, p);

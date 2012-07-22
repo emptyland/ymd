@@ -12,20 +12,12 @@ static void vm_backtrace(struct ymd_context *l, int max);
 static int vm_init_context(struct ymd_mach *vm);
 static void vm_final_context(struct ymd_mach *vm);
 
-static void *default_zalloc(struct ymd_mach *m, size_t size) {
-	void *chunk = calloc(size, 1);
-	if (!chunk)
-		m->die(m, "System: Not enough memory");
-	assert(chunk != NULL);
-	return chunk;
-}
-
-static void *default_realloc(struct ymd_mach *m, void *p, size_t size) {
-	void *chunk = realloc(p, size);
+static void *default_zalloc(struct ymd_mach *m, void *p, size_t size) {
+	void *chunk = !p ? calloc(size, 1) : realloc(p, size);
 	if (!chunk) {
 		if (p)
 			free(p);
-		m->die(m, "Fatal: Realloc failed!");
+		m->die(m, "System: Not enough memory");
 	}
 	assert(chunk != NULL);
 	return chunk;
@@ -242,9 +234,9 @@ struct ymd_mach *ymd_init() {
 		return NULL;
 	// Basic memory functions:
 	vm->zalloc  = default_zalloc;
-	vm->realloc = default_realloc;
 	vm->free    = default_free;
 	vm->die     = default_die;
+	vm->tick    = 0;
 	// Init gc:
 	gc_init(vm, GC_THESHOLD);
 	// Init global map:
