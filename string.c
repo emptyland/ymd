@@ -86,6 +86,7 @@ void kpool_final(struct ymd_mach *vm) {
 		}
 	}
 	assert(kt->used == 0);
+	vm_free(vm, kt->slot);
 }
 
 static struct kstr *kstr_new(struct ymd_mach *vm, int raw, const char *z,

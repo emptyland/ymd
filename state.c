@@ -148,7 +148,7 @@ struct kstr *vm_strcat(struct ymd_mach *vm, const struct kstr *lhs, const struct
 	struct kstr *x;
 	memcpy(tmp, lhs->land, lhs->len);
 	memcpy(tmp + lhs->len, rhs->land, rhs->len);
-	x = vm_kstr(vm, tmp, lhs->len + rhs->len);
+	x = kstr_fetch(vm, tmp, lhs->len + rhs->len);
 	vm_free(vm, tmp);
 	return x;
 }
@@ -157,10 +157,10 @@ struct variable *vm_def(struct ymd_mach *vm, void *o, const char *field) {
 	struct variable k;
 	switch (gcx(o)->type) {
 	case T_HMAP:
-		vset_kstr(&k, vm_kstr(vm, field, -1));
+		vset_kstr(&k, kstr_fetch(vm, field, -1));
 		return hmap_put(vm, o, &k);
 	case T_SKLS:
-		vset_kstr(&k, vm_kstr(vm, field, -1));
+		vset_kstr(&k, kstr_fetch(vm, field, -1));
 		return skls_put(vm, o, &k);
 	default:
 		assert(0);
@@ -173,10 +173,10 @@ struct variable *vm_mem(struct ymd_mach *vm, void *o, const char *field) {
 	struct variable k;
 	switch (gcx(o)->type) {
 	case T_HMAP:
-		vset_kstr(&k, vm_kstr(vm, field, -1));
+		vset_kstr(&k, kstr_fetch(vm, field, -1));
 		return hmap_get(o, &k);
 	case T_SKLS:
-		vset_kstr(&k, vm_kstr(vm, field, -1));
+		vset_kstr(&k, kstr_fetch(vm, field, -1));
 		return skls_get(o, &k);
 	default:
 		assert(0);
@@ -187,13 +187,13 @@ struct variable *vm_mem(struct ymd_mach *vm, void *o, const char *field) {
 
 struct variable *vm_getg(struct ymd_mach *vm, const char *field) {
 	struct variable k;
-	vset_kstr(&k, vm_kstr(vm, field, -1));
+	vset_kstr(&k, kstr_fetch(vm, field, -1));
 	return hmap_get(vm->global, &k);
 }
 
 struct variable *vm_putg(struct ymd_mach *vm, const char *field) {
 	struct variable k;
-	vset_kstr(&k, vm_kstr(vm, field, -1));
+	vset_kstr(&k, kstr_fetch(vm, field, -1));
 	return hmap_put(vm, vm->global, &k);
 }
 
@@ -207,7 +207,7 @@ struct kstr *vm_format(struct ymd_mach *vm, const char *fmt, ...) {
 	va_start(ap, fmt);
 	rv = vsnprintf(buf, sizeof(buf), fmt, ap);
 	va_end(ap);
-	return vm_kstr(vm, buf, -1);
+	return kstr_fetch(vm, buf, -1);
 }
 
 //-----------------------------------------------------------------------------

@@ -29,7 +29,7 @@ const char *typeof_kz(unsigned tt) {
 
 struct kstr *typeof_kstr(struct ymd_mach *vm, unsigned tt) {
 	assert(tt < sizeof(typeof_name)/sizeof(typeof_name[0]));
-	return vm_kstr(vm, typeof_name[tt].name, typeof_name[tt].len);
+	return kstr_fetch(vm, typeof_name[tt].name, typeof_name[tt].len);
 }
 
 //-------------------------------------------------------------------------

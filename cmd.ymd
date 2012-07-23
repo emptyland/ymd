@@ -1,0 +1,5 @@
+var f = open("/dev/stdin", "r")
+for {
+	var buf = f:read("*line")
+	print(">>", eval(buf))
+}

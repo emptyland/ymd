@@ -133,11 +133,6 @@ struct variable *vm_def(struct ymd_mach *vm, void *o, const char *field);
 struct variable *vm_mem(struct ymd_mach *vm, void *o, const char *field);
 
 // String tool
-static inline struct kstr *vm_kstr(struct ymd_mach *vm, const char *z,
-                                   int n) {
-	return kstr_fetch(vm, z, n);
-}
-
 struct kstr *vm_strcat(struct ymd_mach *vm, const struct kstr *lhs, const struct kstr *rhs);
 
 struct kstr *vm_format(struct ymd_mach *vm, const char *fmt, ...);
@@ -244,7 +239,7 @@ static inline void *ymd_mand(struct ymd_context *l, const char *tt,
 
 static inline void ymd_kstr(struct ymd_context *l, const char *z,
                             int len) {
-	struct kstr *o = vm_kstr(l->vm, z, len);
+	struct kstr *o = kstr_fetch(l->vm, z, len);
 	o->marked = 0;
 	vset_kstr(ymd_push(l), o);
 }
@@ -278,6 +273,21 @@ static inline void ymd_putf(struct ymd_context *l) {
 	struct variable *v = vm_put(l->vm, ymd_top(l, 2), ymd_top(l, 1));
 	*v = *ymd_top(l, 0);
 	ymd_pop(l, 2);
+}
+
+static inline void ymd_mem(struct ymd_context *l, const char *field) {
+	struct variable *v;
+	if (!is_ref(ymd_top(l, 0)))
+		vm_die(l->vm, "object must be hashmap or skiplist");
+	v = vm_mem(l->vm, ymd_top(l, 0)->value.ref, field);
+	*ymd_push(l) = *v;
+}
+
+static inline void ymd_def(struct ymd_context *l, const char *field) {
+	if (!is_ref(ymd_top(l, 1)))
+		vm_die(l->vm, "object must be hashmap or skiplist");
+	*vm_def(l->vm, ymd_top(l, 1)->value.ref, field) = *ymd_top(l, 0);
+	ymd_pop(l, 1);
 }
 
 static inline void ymd_getg(struct ymd_context *l, const char *field) {

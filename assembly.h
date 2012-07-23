@@ -12,8 +12,8 @@
 #define I_SETF    35 // setf stack|fast
 #define I_PUSH    40 // push "string"|true|false|nil|number|local|off
 #define I_TEST    45 // test gt|ge|lt|le|eq|ne|match
-#define I_JNT     50 // jnt label //reserved 50
-#define I_JNN     55 // jnn label //reserved 55
+#define I_JNT     50 // jnt label
+#define I_JNN     55 // jnn label
 #define I_TYPEOF  60 // typeof
 #define I_INV     65
 #define I_MUL     70
@@ -43,7 +43,7 @@
 
 // push
 #define F_INT     0 // param: 16bit integer
-#define F_PARTAL  1 // param: Partal integer
+#define F_PARTIAL  1 // param: Partal integer
 #define F_ZSTR    2 // param: `kz` offset
 #define F_LOCAL   3 // param: `loc` offset
 #define F_BOOL    4 // param: 0 true other false

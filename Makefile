@@ -21,9 +21,9 @@ ymd_main.o: $(INCS) disassembly.h libc.h ymd_main.c
 #-------------------------------------------------------------------------------
 # Run all test
 test: yut_test memory_test value_test skip_list_test hash_map_test \
-      closure_test dynamic_array_test encode_test
+      closure_test dynamic_array_test encode_test lex_test
 	./memory_test && ./value_test && ./skip_list_test && ./hash_map_test && \
-	./closure_test && ./dynamic_array_test && ./encode_test
+	./closure_test && ./dynamic_array_test && ./encode_test && ./lex_test
 
 #-------------------------------------------------------------------------------
 # Unit test rules:

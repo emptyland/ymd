@@ -52,7 +52,7 @@ static void parse_block(struct ymd_parser *p);
 //------------------------------------------------------------------------------
 static inline struct chunk *ymk_chunk(struct ymd_parser *p) {
 	struct chunk *x = mm_zalloc(p->vm, 1, sizeof(*x));
-	x->file = vm_kstr(p->vm, p->lex.file, -1);
+	x->file = kstr_fetch(p->vm, p->lex.file, -1);
 	return x;
 }
 
@@ -113,7 +113,7 @@ static void ymk_emit_int(
 	ushort_t partial[MAX_VARINT16_LEN];
 	int i, k = varint16_encode(imm, partial) - 1;
 	for (i = 0; i < k; ++i)
-		ymk_emitOfP(p, I_PUSH, F_PARTAL, partial[i]);
+		ymk_emitOfP(p, I_PUSH, F_PARTIAL, partial[i]);
 	ymk_emitOfP(p, I_PUSH, F_INT, partial[k]);
 }
 

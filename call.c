@@ -231,7 +231,7 @@ retry:
 				var.type = T_INT;
 				var.value.i = zigzag_decode(param);
 				break;
-			case F_PARTAL: {
+			case F_PARTIAL: {
 				ushort_t partial[MAX_VARINT16_LEN];
 				int i = 0;
 				while (asm_flag(inst) != F_INT) {

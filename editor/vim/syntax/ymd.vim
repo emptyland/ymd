@@ -2,8 +2,8 @@
 syntax keyword ymdContant nil true false
 syntax keyword ymdKeyword typeof var and or not func with "@"
 
-syntax keyword ymdFunc panic open read write len strbuf strcat strfin
-syntax keyword ymdFunc end range rank ranki print str close insert
+syntax keyword ymdFunc panic open len strbuf __g__
+syntax keyword ymdFunc end range rank ranki print str insert
 syntax keyword ymdFunc append match pattern argv self import env atoi
 syntax keyword ymdFunc exit eval compile echo rand gc __reached__
 syntax keyword ymdTest Assert Fail True False Nil NotNil EQ NE LT LE GT GE
