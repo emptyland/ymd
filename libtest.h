@@ -5,12 +5,14 @@ struct func;
 struct ymd_mach;
 
 // Load unit test library
-int ymd_load_ut();
+int ymd_load_ut(struct ymd_mach *vm);
 
 // Run all test
 // Run chunk as a unit test
 // Example:
 // Test = @{}
+// func Test.init() { ... }      // optional
+// func Test.final() { ... }     // optional
 // func Test.setup () { ... }    // optional
 // func Test.teardown () { ... } // optional
 // func Test.test0 () { ... }

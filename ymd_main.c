@@ -64,6 +64,7 @@ int main(int argc, char *argv[]) {
 	if (!fn)
 		exit(1);
 	ymd_load_lib(vm, lbxBuiltin);
+	ymd_load_os(vm);
 	if (opt.test) ymd_load_ut(vm);
 	if (opt.debug) {
 		int i;

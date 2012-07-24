@@ -1,4 +1,7 @@
 BuiltinTest = @{
+	kTestFile1: "testing/test1.log",
+	kTestFile2: "testing/test2.log",
+
 	test00len : func (self) {
 		Assert:EQ(0, len(""))
 		Assert:EQ(1, len("0"))
@@ -219,7 +222,7 @@ BuiltinTest = @{
 	},
 
 	test09file : func (self) {
-		var f = open("testing/test1.log", "w")
+		var f = open(self.kTestFile1, "w")
 		var buf
 		Assert:NotNil(f);
 		f:write("Hello, File!\n")
@@ -227,7 +230,7 @@ BuiltinTest = @{
 		f:write("3rd Line!\n")
 		f:close()
 
-		f = open("testing/test1.log", "r")
+		f = open(self.kTestFile1, "r")
 		Assert:NotNil(f);
 		buf = f:read("*line")
 		Assert:EQ("Hello, File!\n", buf)
@@ -237,6 +240,7 @@ BuiltinTest = @{
 		Assert:EQ("3rd Line!\n", buf)
 		Assert:Nil(f:read())
 		f:close()
+		os.remove(self.kTestFile1)
 	},
 
 	test10regex : func (self) {
