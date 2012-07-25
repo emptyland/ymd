@@ -4,8 +4,6 @@
 #include "yut_rand.h"
 #include "yut.h"
 
-#define gc(p) ((struct gc_node *)(p))
-
 struct hmap *map;
 struct hmap *benchmark;
 
@@ -16,14 +14,14 @@ static int test_hmap_creation_1() {
 	k.value.i = 1024;
 	rv = hmap_put(tvm, map, &k);
 	rv->type = T_KSTR;
-	rv->value.ref = gc(kstr_fetch(tvm, "1024", -1));
+	rv->value.ref = gcx(kstr_fetch(tvm, "1024", -1));
 
 	rv = hmap_put(tvm, map, &k);
 	ASSERT_EQ(uint, rv->type, T_KSTR);
 	ASSERT_STREQ(kstr_of(tvm, rv)->land, "1024");
 
 	k.type = T_KSTR;
-	k.value.ref = gc(kstr_fetch(tvm, "1024", -1));
+	k.value.ref = gcx(kstr_fetch(tvm, "1024", -1));
 	rv = hmap_put(tvm, map, &k);
 	rv->type = T_INT;
 	rv->value.i = 1024;
@@ -43,7 +41,7 @@ static int test_hmap_creation_2() {
 		while (i--) {
 			const struct yut_kstr *kz = RAND_STR();
 			k.type = T_KSTR;
-			k.value.ref = gc(kstr_fetch(tvm, kz->land, kz->len));
+			k.value.ref = gcx(kstr_fetch(tvm, kz->land, kz->len));
 			rv = hmap_put(tvm, map, &k);
 			rv->type = T_INT;
 			rv->value.i = i;
@@ -52,14 +50,42 @@ static int test_hmap_creation_2() {
 	return 0;
 }
 
-static int test_hmap_search() {
+static int test_hmap_insertion_1 () {
+	int i = BENCHMARK_COUNT;
+	TIME_RECORD_BEGIN(insertion)
+	while (i--) {
+		struct variable k;
+		vset_int(&k, i);
+		vset_int(hmap_put(tvm, map, &k), i);
+	}
+	TIME_RECORD_END
+	return 0;
+}
+
+static int test_hmap_insertion_2 () {
+	int i = 10000;
+	TIME_RECORD_BEGIN(insertion2)
+	while (i--) {
+		int j = 16;
+		while (j--) {
+			struct hmap *x = hmap_new(tvm, 0);
+			struct variable k;
+			vset_int(&k, i);
+			vset_int(hmap_put(tvm, x, &k), i);
+		}
+	}
+	TIME_RECORD_END
+	return 0;
+}
+
+static int test_hmap_search_1 () {
 	struct variable k, *rv;
 	char buf[32];
 	int i = BENCHMARK_COUNT;
 	while (i--) {
 		snprintf(buf, sizeof(buf), "%d", i);
 		k.type = T_KSTR;
-		k.value.ref = gc(kstr_fetch(tvm, buf, -1));
+		k.value.ref = gcx(kstr_fetch(tvm, buf, -1));
 		rv = hmap_put(tvm, map, &k);
 		rv->type = T_INT;
 		rv->value.i = i;
@@ -71,13 +97,33 @@ static int test_hmap_search() {
 			unsigned int index = RAND_RANGE(uint, 0, BENCHMARK_COUNT);
 			snprintf(buf, sizeof(buf), "%u", index);
 			k.type = T_KSTR;
-			k.value.ref = gc(kstr_fetch(tvm, buf, -1));
+			k.value.ref = gcx(kstr_fetch(tvm, buf, -1));
 			rv = hmap_get(map, &k);
 			ASSERT_EQ(uint, rv->type, T_INT);
 			ASSERT_EQ(large, rv->value.i, index);
 		}
 		TIME_RECORD_END
 	RAND_END
+	return 0;
+}
+
+static int test_hmap_search_2 () {
+	int i = 16;
+	struct variable k;
+	while (i--) {
+		vset_int(&k, i);
+		vset_int(hmap_put(tvm, map, &k), i);
+	}
+	i = BENCHMARK_COUNT;
+	TIME_RECORD_BEGIN(searching2)
+	while (i--) {
+		int j = 16;
+		while (j--) {
+			vset_int(&k, j);
+			ASSERT_EQ(large, hmap_get(map, &k)->value.i, j);
+		}
+	}
+	TIME_RECORD_END
 	return 0;
 }
 
@@ -134,7 +180,10 @@ static void hmap_teardown() {
 TEST_BEGIN_WITH(hmap_setup, hmap_teardown)
 	TEST_ENTRY(hmap_creation_1, normal)
 	TEST_ENTRY(hmap_creation_2, benchmark)
-	TEST_ENTRY(hmap_search, benchmark)
+	TEST_ENTRY(hmap_insertion_1, benchmark)
+	TEST_ENTRY(hmap_insertion_2, benchmark)
+	TEST_ENTRY(hmap_search_1, benchmark)
+	TEST_ENTRY(hmap_search_2, benchmark)
 	TEST_ENTRY(hmap_comparation, benchmark)
 TEST_END
 

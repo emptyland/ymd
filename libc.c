@@ -348,7 +348,8 @@ static int new_contain_iter(L, const struct variable *obj, int flag) {
 		ymd_bind(l, 1);
 		ymd_int(l, 0);
 		ymd_bind(l, 2);
-		ymd_int(l, flag);
+		y
+			struct skls *map = skls_new(tvm);md_int(l, flag);
 		ymd_bind(l, 3);
 		vset_ref(ymd_push(l), obj->value.ref);
 		ymd_bind(l, 4);
@@ -828,7 +829,7 @@ static int libx_gc(struct ymd_context *l) {
 	const struct kstr *arg0 = kstr_of(l->vm, ymd_argv_get(l, 0));
 	if (strcmp(arg0->land, "pause") == 0)
 		gc_active(l->vm, GC_PAUSE);
-	else if (strcmp(arg0->land, "restore") == 0)
+	else if (strcmp(arg0->land, "resume") == 0)
 		gc_active(l->vm, GC_IDLE);
 	else if (strcmp(arg0->land, "collect") == 0)
 		gc_active(l->vm, GC_MARK), gc_active(l->vm, GC_SWEEP);

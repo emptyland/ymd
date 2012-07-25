@@ -110,7 +110,38 @@ static int test_skls_comparation() {
 	return 0;
 }
 
-static int test_skls_search() {
+static int test_skls_insertion_1 () {
+	struct skls *list = skls_new(tvm);
+	struct variable *rv;
+	int i = BENCHMARK_COUNT;
+	TIME_RECORD_BEGIN(insertion)
+	while (i--) {
+		struct variable k;
+		vset_int(&k, i);
+		rv = skls_put(tvm, list, &k);
+		vset_int(rv, i);
+	}
+	TIME_RECORD_END
+	return 0;
+}
+
+static int test_skls_insertion_2 () {
+	int i = BENCHMARK_COUNT;
+	TIME_RECORD_BEGIN(insertion2)
+	while (i--) {
+		int j = 16;
+		while (j--) {
+			struct skls *x = skls_new(tvm);
+			struct variable k;
+			vset_int(&k, i);
+			vset_int(skls_put(tvm, x, &k), i);
+		}
+	}
+	TIME_RECORD_END
+	return 0;
+}
+
+static int test_skls_search_1() {
 	struct skls *list = skls_new(tvm);
 	struct variable k, *rv;
 	char buf[32];
@@ -140,6 +171,26 @@ static int test_skls_search() {
 	return 0;
 }
 
+static int test_skls_search_2 () {
+	int i = 16;
+	struct variable k;
+	struct skls *map = skls_new(tvm);
+	while (i--) {
+		vset_int(&k, i);
+		vset_int(skls_put(tvm, map, &k), i);
+	}
+	i = BENCHMARK_COUNT;
+	TIME_RECORD_BEGIN(searching2)
+	while (i--) {
+		int j = 16;
+		while (j--) {
+			vset_int(&k, j);
+			ASSERT_EQ(large, skls_get(map, &k)->value.i, j);
+		}
+	}
+	TIME_RECORD_END
+	return 0;
+}
 static int skls_setup() {
 	gc_active(tvm, GC_PAUSE);
 	return 0;
@@ -152,8 +203,11 @@ static void skls_teardown() {
 TEST_BEGIN_WITH(skls_setup, skls_teardown)
 	TEST_ENTRY(skls_creation_1, normal)
 	TEST_ENTRY(skls_creation_2, benchmark)
+	TEST_ENTRY(skls_insertion_1, benchmark)
+	TEST_ENTRY(skls_insertion_2, benchmark)
 	TEST_ENTRY(skls_sequence, benchmark)
 	TEST_ENTRY(skls_comparation, normal)
-	TEST_ENTRY(skls_search, benchmark)
+	TEST_ENTRY(skls_search_1, benchmark)
+	TEST_ENTRY(skls_search_2, benchmark)
 TEST_END
 

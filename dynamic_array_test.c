@@ -82,6 +82,22 @@ static int test_dyay_addition_2() {
 	return 0;
 }
 
+static int test_dyay_addition_3 () {
+	int i = BENCHMARK_COUNT;
+
+
+	TIME_RECORD_BEGIN(addition3)
+	while (i--) {
+		int j = 16;
+		while (j--) {
+			struct dyay *x = dyay_new(tvm, 0);
+			vset_int(dyay_add(tvm, x), j);
+		}
+	}
+	TIME_RECORD_END
+	return 0;
+}
+
 static void add_int(struct dyay *dya, ymd_int_t i) {
 	struct variable *rv = dyay_add(tvm, dya);
 	rv->type = T_INT;
@@ -127,5 +143,6 @@ TEST_BEGIN_WITH(test_dyay_setup, test_dyay_teardown)
 	TEST_ENTRY(dyay_creation_1, normal)
 	TEST_ENTRY(dyay_addition_1, normal)
 	TEST_ENTRY(dyay_addition_2, benchmark)
+	TEST_ENTRY(dyay_addition_3, benchmark)
 	TEST_ENTRY(dyay_comparation, normal)
 TEST_END
