@@ -21,8 +21,6 @@ struct ymd_mach {
 	struct hmap *global;
 	struct kpool kpool;
 	struct gc_struct gc;
-	struct func **fn;
-	unsigned short n_fn;
 	// Internal memory function:
 	void *(*zalloc)(struct ymd_mach *, void *, size_t);
 	void (*free)(struct ymd_mach *, void *);
@@ -103,13 +101,7 @@ int ymd_call(struct ymd_context *l, struct func *fn, int argc, int method);
 
 int ymd_ncall(struct ymd_context *l, struct func *fn, int nret, int narg);
 
-int ymd_main(struct ymd_mach *vm, struct func *fn, int argc, char *argv[]);
-
-//-----------------------------------------------------------------------------
-// Function table:
-// ----------------------------------------------------------------------------
-struct func *ymd_spawnf(struct ymd_mach *vm, struct chunk *blk,
-                        const char *name, unsigned short *id);
+int ymd_main(struct ymd_context *l, int argc, char *argv[]);
 
 //-----------------------------------------------------------------------------
 // Misc:
@@ -169,21 +161,27 @@ static inline struct variable *ymd_bval(struct ymd_context *l, int i) {
 // Stack functions:
 // ----------------------------------------------------------------------------
 static inline struct variable *ymd_push(struct ymd_context *l) {
-	assert(l->top < l->stk + MAX_STACK); // "Stack overflow!"
+	if (l->top >= l->stk + MAX_STACK)
+		vm_die(l->vm, "Stack overflow!");
 	++l->top;
 	return l->top - 1;
 }
 
 static inline struct variable *ymd_top(struct ymd_context *l, int i) {
-	assert(l->top != l->stk); // "Stack empty!"
-	assert(i >= 0 || 1 - i < l->top - l->stk); // "Stack out of range"
-	assert(i <= 0 ||     i < l->top - l->stk); // "Stack out of range"
+	if (l->top == l->stk)
+		vm_die(l->vm, "Stack empty!");
+	if (i < 0 && 1 - i >= l->top - l->stk)
+		vm_die(l->vm, "Stack out of range");
+	if (i > 0 &&     i >= l->top - l->stk)
+		vm_die(l->vm, "Stack out of range");
 	return i < 0 ? l->stk + 1 - i : l->top - 1 - i;
 }
 
 static inline void ymd_pop(struct ymd_context *l, int n) {
-	assert(n <= 0 || l->top != l->stk); // "Stack empty!"
-	assert(n <= l->top - l->stk); // "Bad pop"
+	if (n > 0 && l->top == l->stk)
+		vm_die(l->vm, "Stack empty!");
+	if (n > l->top - l->stk)
+		vm_die(l->vm, "Bad pop!");
 	l->top -= n;
 	memset(l->top, 0, sizeof(*l->top) * n);
 }
@@ -259,6 +257,14 @@ static inline void ymd_bool(struct ymd_context *l, int b) {
 static inline void ymd_nafn(struct ymd_context *l, ymd_nafn_t fn,
                             const char *name, int nbind) {
 	struct func *o = func_new_c(l->vm, fn, name);
+	o->marked = 0;
+	o->n_bind = nbind;
+	vset_func(ymd_push(l), o);
+}
+
+static inline void ymd_func(struct ymd_context *l, struct chunk *blk,
+                            const char *name, int nbind) {
+	struct func *o = func_new(l->vm, blk, name);
 	o->marked = 0;
 	o->n_bind = nbind;
 	vset_func(ymd_push(l), o);

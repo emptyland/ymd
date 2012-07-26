@@ -239,19 +239,18 @@ int ymd_load_ut(struct ymd_mach *vm) {
 	return rv;
 }
 
-int ymd_test(struct ymd_mach *vm, struct func *fn, int argc, char *argv[]) {
-	struct kvi *i, *kend = vm->global->item + (1 << vm->global->shift);
-	(void)argc;
-	(void)argv;
-	if (ymd_main(vm, fn, argc, argv) < 0)
+int ymd_test(struct ymd_context *l, int argc, char *argv[]) {
+	struct kvi *i, *kend = l->vm->global->item +
+	                       (1 << l->vm->global->shift);
+	if (ymd_main(l, argc, argv) < 0)
 		return -1;
-	for (i = vm->global->item; i != kend; ++i) {
+	for (i = l->vm->global->item; i != kend; ++i) {
 		const char *clazz;
 		if (!i->flag)
 			continue;
-		clazz = kstr_of(vm, &i->k)->land;
+		clazz = kstr_of(l->vm, &i->k)->land;
 		if (strstr(clazz, "Test")) {
-			if (yut_test(vm, clazz, &i->v) < 0)
+			if (yut_test(l->vm, clazz, &i->v) < 0)
 				return -1;
 		}
 	}

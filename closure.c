@@ -6,7 +6,7 @@
 #include <string.h>
 
 #define INST_ALIGN 128
-#define KSTR_ALIGN 64
+#define KVAL_ALIGN 64
 #define LVAR_ALIGN 32
 
 static int kz_find(struct kstr **kz, int count, const char *z, int n) {
@@ -34,15 +34,49 @@ int blk_emit(struct ymd_mach *vm, struct chunk *core, ymd_inst_t inst,
 	return ++core->kinst;
 }
 
-int blk_kz(struct ymd_mach *vm, struct chunk *core, const char *z, int n) {
-	int i = kz_find(core->kz, core->kkz, z, n);
-	if (i >= core->kkz) {
-		core->kz = mm_need(vm, core->kz, core->kkz, KSTR_ALIGN,
-		                   sizeof(*core->kz));
-		core->kz[core->kkz++] = kstr_fetch(vm, z, n);
-		return core->kkz - 1;
+static struct variable *blk_klast(struct ymd_mach *vm, struct chunk *core) {
+	core->kval = mm_need(vm, core->kval, core->kkval, KVAL_ALIGN,
+						 sizeof(*core->kval));
+	return core->kval + core->kkval;
+}
+
+int blk_kz(struct ymd_mach *vm, struct chunk *core, const char *z, int k) {
+	int i = core->kkval;
+	struct kstr *kz;
+	while (i--) {
+		if (core->kval[i].type == T_KSTR &&
+			kstr_k(core->kval + i)->len == k &&
+			memcmp(kstr_k(core->kval + i)->land, z, k) == 0)
+			return i;
 	}
-	return i;
+	kz = kstr_fetch(vm, z, k);
+	vset_kstr(blk_klast(vm, core), kz);
+	kz->marked = 0;
+	return core->kkval++;
+}
+
+int blk_ki(struct ymd_mach *vm, struct chunk *core, ymd_int_t n) {
+	int i = core->kkval;
+	while (i--) {
+		if (core->kval[i].type == T_INT &&
+			core->kval[i].value.i == n)
+			return i;
+	}
+	vset_int(blk_klast(vm, core), n);
+	return core->kkval++;
+}
+
+int blk_kf(struct ymd_mach *vm, struct chunk *core, void *p) {
+	int i = core->kkval;
+	struct func *fn = p;
+	while (i--) {
+		if (core->kval[i].type == T_FUNC &&
+		    core->kval[i].value.ref == p)
+			return i;
+	}
+	vset_func(blk_klast(vm, core), fn);
+	fn->marked = 0;
+	return core->kkval++;
 }
 
 void blk_final(struct ymd_mach *vm, struct chunk *core) {
@@ -50,8 +84,8 @@ void blk_final(struct ymd_mach *vm, struct chunk *core) {
 		mm_free(vm, core->inst, core->kinst, sizeof(*core->inst));
 	if (core->line)
 		mm_free(vm, core->line, core->kinst, sizeof(*core->line));
-	if (core->kz)
-		mm_free(vm, core->kz, core->kkz, sizeof(*core->kz));
+	if (core->kval)
+		mm_free(vm, core->kval, core->kkval, sizeof(*core->kval));
 	if (core->lz)
 		mm_free(vm, core->lz, core->klz, sizeof(*core->lz));
 }
@@ -80,9 +114,9 @@ void blk_shrink(struct ymd_mach *vm, struct chunk *core) {
 	if (core->line)
 		core->line = mm_shrink(vm, core->line, core->kinst, INST_ALIGN,
 		                       sizeof(*core->line));
-	if (core->kz)
-		core->kz = mm_shrink(vm, core->kz, core->kkz, KSTR_ALIGN,
-		                     sizeof(*core->kz));
+	if (core->kval)
+		core->kval = mm_shrink(vm, core->kval, core->kkval, KVAL_ALIGN,
+		                       sizeof(*core->kval));
 	if (core->lz)
 		core->lz = mm_shrink(vm, core->lz, core->klz, LVAR_ALIGN,
 		                     sizeof(*core->lz));
@@ -153,8 +187,8 @@ void func_dump(struct func *fn, FILE *fp) {
 	struct chunk *core = fn->u.core;
 	assert(!fn->is_c);
 	fprintf(fp, "Constant string:\n");
-	for (i = 0; i < core->kkz; ++i)
-		fprintf(fp, "[%d] %s\n", i, core->kz[i]->land);
+	//for (i = 0; i < core->kkval; ++i)
+		// TODO:
 	fprintf(fp, "Local variable:\n");
 	for (i = 0; i < core->klz; ++i)
 		fprintf(fp, "[%d] %s\n", i, core->lz[i]->land);

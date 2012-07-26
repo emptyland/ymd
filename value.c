@@ -91,9 +91,8 @@ int equals(const struct variable *lhs, const struct variable *rhs) {
 		return lhs->value.i == rhs->value.i;
 	case T_KSTR:
 		return kstr_equals(kstr_k(lhs), kstr_k(rhs));
-	//case T_CLOSURE:
-	// TODO:
-	//	break;
+	case T_FUNC:
+		return func_k(lhs) == func_k(rhs); // FIXME:
 	case T_EXT:
 		return lhs->value.ext == rhs->value.ext;
 	case T_DYAY:

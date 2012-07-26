@@ -237,24 +237,10 @@ struct ymd_mach *ymd_init() {
 
 void ymd_final(struct ymd_mach *vm) {
 	vm_final_context(vm);
-	if (vm->fn)
-		mm_free(vm, vm->fn, (1 + vm->n_fn / FUNC_ALIGN) * FUNC_ALIGN,
-				sizeof(*vm->fn));
 	kpool_final(vm);
 	gc_final(vm);
 	assert(vm->gc.used == 0); // Must free all memory!
 	free(vm);
-}
-
-struct func *ymd_spawnf(struct ymd_mach *vm,
-                        struct chunk *blk,
-						const char *name,
-                        unsigned short *id) {
-	vm->fn = mm_need(vm, vm->fn, vm->n_fn, FUNC_ALIGN,
-	                 sizeof(struct func*));
-	*id = vm->n_fn;
-	vm->fn[vm->n_fn++] = func_new(vm, blk, name);
-	return vm->fn[vm->n_fn - 1];
 }
 
 void vm_die(struct ymd_mach *vm, const char *fmt, ...) {

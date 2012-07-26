@@ -20,15 +20,15 @@ struct ymd_parser {
 };
 
 // Compile to chunk object
-struct chunk *ymc_compile(struct ymd_mach *vm, struct ymd_parser *p);
+int ymc_compile(struct ymd_parser *p, struct chunk *blk);
 
 // Compile from source code buffer
-struct func *ymd_compile(struct ymd_mach *vm, const char *name,
-                         const char *file, const char *code);
+int ymd_compile(struct ymd_context *l, const char *name,
+                const char *file, const char *code);
 
 // Compile from file stream
-struct func *ymd_compilef(struct ymd_mach *vm, const char *name,
-                          const char *file, FILE *fp);
+int ymd_compilef(struct ymd_context *l, const char *name,
+                 const char *file, FILE *fp);
 
 #endif // YMD_COMPILER_H
 

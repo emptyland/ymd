@@ -57,10 +57,10 @@ struct chunk {
 	ymd_inst_t *inst; // Instructions
 	int *line; // Instruction-line mapping
 	int kinst; // Number of instructions
-	struct kstr **kz; // Local constant strings
+	struct variable *kval; // Constant values
 	struct kstr **lz; // Local variable mapping
 	struct kstr *file; // File name in complied or null
-	unsigned short kkz;
+	unsigned short kkval;
 	unsigned short klz;
 	unsigned short kargs; // Prototype number of arguments
 };
@@ -264,7 +264,10 @@ void mand_final(struct ymd_mach *vm, struct mand *pm);
 void blk_final(struct ymd_mach *vm, struct chunk *core);
 int blk_emit(struct ymd_mach *vm, struct chunk *core, ymd_inst_t inst,
              int line);
-int blk_kz(struct ymd_mach *vm, struct chunk *core, const char *z, int n);
+int blk_kz(struct ymd_mach *vm, struct chunk *core, const char *z,
+           int k);
+int blk_ki(struct ymd_mach *vm, struct chunk *core, ymd_int_t i);
+int blk_kf(struct ymd_mach *vm, struct chunk *core, void *fn);
 int blk_find_lz(struct chunk *core, const char *z);
 int blk_add_lz(struct ymd_mach *vm, struct chunk *core, const char *z);
 void blk_shrink(struct ymd_mach *vm, struct chunk *core);

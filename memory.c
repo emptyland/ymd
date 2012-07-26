@@ -63,8 +63,10 @@ static int gc_mark_func(struct func *o) {
 	core->file->marked |= GC_BLACK_BIT0;
 	for (i = 0; i < core->klz; ++i)
 		core->lz[i]->marked |= GC_BLACK_BIT0;
-	for (i = 0; i < core->kkz; ++i)
-		core->kz[i]->marked |= GC_BLACK_BIT0;
+	for (i = 0; i < core->kkval; ++i) {
+		if (!marked(core->kval + i, GC_BLACK_BIT0))
+			gc_mark_var(core->kval + i);
+	}
 	return 0;
 }
 
@@ -109,12 +111,6 @@ static int gc_mark(struct ymd_mach *vm) {
 	struct ymd_context *l = ioslate(vm);
 	// Mark all reached variable from global
 	gc_mark_hmap(vm->global);
-	if (vm->n_fn > 0) { // Mark all literal function
-		int i;
-		for (i = 0; i < vm->n_fn; ++i)
-			if ((vm->fn[i]->marked & GC_BLACK_BIT0) == 0)
-				gc_mark_func(vm->fn[i]);
-	}
 	if (l->info) { // Mark all local variable
 		int n = func_nlocal(l->info->run);
 		struct variable *i, *k = l->info->loc + n;

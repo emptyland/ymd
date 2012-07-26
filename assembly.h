@@ -10,7 +10,7 @@
 #define I_JMP     25 // jmp label
 #define I_FOREACH 30 // foreach label
 #define I_SETF    35 // setf stack|fast
-#define I_PUSH    40 // push "string"|true|false|nil|number|local|off
+#define I_PUSH    40 // push kval|true|false|nil|local|off
 #define I_TEST    45 // test gt|ge|lt|le|eq|ne|match
 #define I_JNT     50 // jnt label
 #define I_JNN     55 // jnn label
@@ -32,7 +32,7 @@
 #define I_NEWSKL  135 // newskl
 #define I_NEWDYA  140 // newdya
 #define I_BIND    145 // bind n
-#define I_LOAD    150 // load id
+// 150 reserved
 #define I_GETF    155 // getf stack|fast
 #define I_NOT     160 // not
 
@@ -42,13 +42,11 @@
 #define F_UNDEF    2 // param: Ignore
 
 // push
-#define F_INT     0 // param: 16bit integer
-#define F_PARTIAL  1 // param: Partal integer
-#define F_ZSTR    2 // param: `kz` offset
-#define F_LOCAL   3 // param: `loc` offset
-#define F_BOOL    4 // param: 0 true other false
-#define F_NIL     5 // param: Ignore
-#define F_OFF     6 // param: `kz` offset
+#define F_KVAL    1 // param: `kval` offset
+#define F_LOCAL   2 // param: `loc` offset
+#define F_BOOL    3 // param: 0 true other false
+#define F_NIL     4 // param: Ignore
+#define F_OFF     5 // param: `kz` offset
 
 // test
 // param: Ignore all

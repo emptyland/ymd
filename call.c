@@ -31,13 +31,11 @@ static inline struct variable *vm_find_local(struct ymd_context *l,
 
 static inline const struct variable *do_keyz(struct func *fn, int i,
                                              struct variable *key) {
-	struct kstr *k;
 	struct chunk *core = fn->u.core;
 	assert(i >= 0);
-	assert(i < core->kkz);
-	k = core->kz[i];
-	key->type = T_KSTR;
-	key->value.ref = gcx(k);
+	assert(i < core->kkval);
+	assert(core->kval[i].type == T_KSTR);
+	*key = core->kval[i];
 	return key;
 }
 
@@ -213,12 +211,11 @@ retry:
 					vm_iput(vm, var, ymd_top(l, i + 1), ymd_top(l, i));
 				ymd_pop(l, k + 1);
 				} break;
-			case F_FAST: {
-				struct variable key;
-				vset_kstr(&key, core->kz[param]);
-				vm_iput(vm, ymd_top(l, 1), &key, ymd_top(l, 0));
+			case F_FAST:
+				vm_iput(vm, ymd_top(l, 1), &core->kval[param],
+				        ymd_top(l, 0));
 				ymd_pop(l, 2);
-				} break;
+				break;
 			default:
 				assert(0);
 				break;
@@ -227,26 +224,8 @@ retry:
 		case I_PUSH: {
 			struct variable var;
 			switch (flag) {
-			case F_INT:
-				var.type = T_INT;
-				var.value.i = zigzag_decode(param);
-				break;
-			case F_PARTIAL: {
-				ushort_t partial[MAX_VARINT16_LEN];
-				int i = 0;
-				while (asm_flag(inst) != F_INT) {
-					inst = core->inst[info->pc];
-					assert(asm_op(inst) == I_PUSH);
-					partial[i++] = asm_param(inst);
-					++info->pc;
-				}
-				var.type = T_INT;
-				var.value.i = varint16_decode(partial, i);
-				--info->pc;
-				} break;
-			case F_ZSTR:
-				var.type = T_KSTR;
-				var.value.ref = gcx(core->kz[param]);
+			case F_KVAL:
+				var = core->kval[param];
 				break;
 			case F_LOCAL:
 				var = *vm_local(l, fn, param);
@@ -309,11 +288,10 @@ retry:
 				ymd_pop(l, 2);
 				*ymd_push(l) = *v;
 				} break;
-			case F_FAST: {
-				struct variable k;
-				vset_kstr(&k, core->kz[param]);
-				*ymd_top(l, 0) = *vm_get(vm, ymd_top(l, 0), &k);
-				} break;
+			case F_FAST:
+				*ymd_top(l, 0) = *vm_get(vm, ymd_top(l, 0),
+				                         &core->kval[param]);
+				break;
 			default:
 				assert(0);
 				break;
@@ -321,11 +299,8 @@ retry:
 			} break;
 		case I_TYPEOF: {
 			const unsigned tt = ymd_top(l, 0)->type;
-			struct kstr *kz;
 			assert(tt < T_MAX);
-			kz = typeof_kstr(vm, tt);
-			ymd_top(l, 0)->type = T_KSTR;
-			ymd_top(l, 0)->value.ref = gcx(kz);
+			vset_kstr(ymd_top(l, 0), typeof_kstr(vm, tt));
 			} break;
 		case I_INV: {
 			struct variable *opd = ymd_top(l, 0);
@@ -449,13 +424,12 @@ retry:
 		// flag  : argc
 		// param : method name
 		case I_SELFCALL: {
-			struct variable method;
 			struct func *called;
 			int adjust = asm_aret(inst);
 			int argc = asm_argc(inst);
 			int imethod = asm_method(inst);
-			vset_kstr(&method, fn->u.core->kz[imethod]);
-			called = func_of(vm, vm_get(vm, ymd_top(l, argc), &method));
+			called = func_of(vm, vm_get(vm, ymd_top(l, argc),
+			                            &core->kval[imethod]));
 			ymd_adjust(l, adjust, ymd_call(l, called, argc, 1));
 			} break;
 		case I_NEWMAP: {
@@ -495,12 +469,6 @@ retry:
 			copied->marked = 0;
 			opd->value.ref = gcx(copied); // Copy-on-wirte bind
 			ymd_pop(l, param);
-			} break;
-		case I_LOAD: {
-			struct variable *var = ymd_push(l);
-			struct func *land = vm->fn[param];
-			var->type = T_FUNC;
-			var->value.ref = gcx(land);
 			} break;
 		default:
 			assert(0);
@@ -577,10 +545,9 @@ int ymd_ncall(struct ymd_context *l, struct func *fn, int nret, int narg) {
 	return rv;
 }
 
-int ymd_main(struct ymd_mach *vm, struct func *fn, int argc, char *argv[]) {
+int ymd_main(struct ymd_context *l, int argc, char *argv[]) {
 	int i;
-	struct ymd_context *l = ioslate(vm);
-	vset_func(ymd_push(l), fn);
+	struct func *fn = func_of(l->vm, ymd_top(l, 0));
 	for (i = 0; i < argc; ++i)
 		ymd_kstr(l, argv[i], -1);
 	if (setjmp(l->jpt)) {

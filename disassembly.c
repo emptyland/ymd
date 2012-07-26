@@ -1,4 +1,6 @@
 #include "disassembly.h"
+#include "tostring.h"
+#include <string.h>
 #include <assert.h>
 
 static const char *kz_test_op[] = {
@@ -9,19 +11,19 @@ static const char *kz_shift_op[] = {
 	"left", "right:l", "right:a",
 };
 
+static const char *fn_kz(const struct func *fn, int i) {
+	return kstr_k(fn->u.core->kval + i)->land;
+}
+
 static const char *address(const struct func *fn, uint_t inst,
                            char *buf, size_t n) {
 	switch (asm_flag(inst)) {
-	case F_INT:
-		snprintf(buf, n, "[imm]:%u", asm_param(inst));
-		break;
-	case F_PARTIAL:
-		snprintf(buf, n, "[partial]:%04x", asm_param(inst));
-		break;
-	case F_ZSTR:
-		snprintf(buf, n, "[str]:%d:\"%s\"", fn->u.core->kz[asm_param(inst)]->len,
-				 fn->u.core->kz[asm_param(inst)]->land);
-		break;
+	case F_KVAL: {
+		struct fmtx fx = FMTX_INIT;
+		snprintf(buf, n, "%s",
+		         tostring(&fx, fn->u.core->kval + asm_param(inst)));
+		fmtx_final(&fx);
+		} break;
 	case F_LOCAL:
 		snprintf(buf, n, "[local]:<%d>", asm_param(inst));
 		break;
@@ -32,7 +34,7 @@ static const char *address(const struct func *fn, uint_t inst,
 		snprintf(buf, n, "nil");
 		break;
 	case F_OFF:
-		snprintf(buf, n, "[global]:@%s", fn->u.core->kz[asm_param(inst)]->land);
+		snprintf(buf, n, "[global]:@%s", fn_kz(fn, asm_param(inst)));
 		break;
 	default:
 		assert(0);
@@ -63,8 +65,8 @@ static const char *getf(const struct func *fn, uint_t inst,
 		snprintf(buf, n, "%d", asm_param(inst));
 		break;
 	case F_FAST:
-		assert(asm_param(inst) < fn->u.core->kkz);
-		snprintf(buf, n, "[%s]", fn->u.core->kz[asm_param(inst)]->land);
+		assert(asm_param(inst) < fn->u.core->kkval);
+		snprintf(buf, n, "[%s]", fn_kz(fn, asm_param(inst)));
 		break;
 	default:
 		assert(0);
@@ -75,7 +77,7 @@ static const char *getf(const struct func *fn, uint_t inst,
 
 const char *method(const struct func *fn, uint_t inst) {
 	int i = asm_method(inst);
-	return fn->u.core->kz[i]->land;
+	return fn_kz(fn, i);
 }
 
 int dis_inst(FILE *fp, const struct func *fn, uint_t inst) {
@@ -179,9 +181,6 @@ int dis_inst(FILE *fp, const struct func *fn, uint_t inst) {
 		break;
 	case I_BIND:
 		rv = fprintf(fp, "bind %d", asm_param(inst));
-		break;
-	case I_LOAD:
-		rv = fprintf(fp, "load [func]:<%d>", asm_param(inst));
 		break;
 	default:
 		assert(0);

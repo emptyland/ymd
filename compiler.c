@@ -24,6 +24,14 @@ struct loop_info {
 	int death; // is death loop
 };
 
+struct func_decl_desc {
+	int method; // is method ?
+	char name[260]; // func real name
+	ushort_t load_p; // load point
+	ushort_t id;
+	int n_bind;
+};
+
 static inline int ymc_peek(struct ymd_parser *p) {
 	return p->lah.token;
 }
@@ -108,13 +116,9 @@ static inline ushort_t ymk_hold(struct ymd_parser *p) {
 	return ipos;
 }
 
-static void ymk_emit_int(
+static inline void ymk_emit_int(
 	struct ymd_parser *p, ymd_int_t imm) {
-	ushort_t partial[MAX_VARINT16_LEN];
-	int i, k = varint16_encode(imm, partial) - 1;
-	for (i = 0; i < k; ++i)
-		ymk_emitOfP(p, I_PUSH, F_PARTIAL, partial[i]);
-	ymk_emitOfP(p, I_PUSH, F_INT, partial[k]);
+	ymk_emitOfP(p, I_PUSH, F_KVAL, blk_ki(p->vm, p->blk, imm));
 }
 
 static void ymk_emit_kz(
@@ -129,7 +133,7 @@ static void ymk_emit_kz(
 	} else {
 		i = blk_kz(p->vm, p->blk, "", 0);
 	}
-	ymk_emitOfP(p, I_PUSH, F_ZSTR, i);
+	ymk_emitOfP(p, I_PUSH, F_KVAL, i);
 }
 
 static void ymk_emit_store(
@@ -157,7 +161,7 @@ static void ymk_emit_push(
 static void ymk_emit_pushz(
 	struct ymd_parser *p, const char *symbol, int n) {
 	int i = blk_kz(p->vm, p->blk, symbol, n);
-	ymk_emitOfP(p, I_PUSH, F_ZSTR, i);
+	ymk_emitOfP(p, I_PUSH, F_KVAL, i);
 }
 
 static int ymk_new_locvar(
@@ -226,6 +230,15 @@ static inline void ymk_hack_jmp(
 	ushort_t off = core->kinst - i;
 	assert(core->kinst >= i);
 	ymk_hack(p, i, asm_build(op, bwd ? F_BACKWARD : F_FORWARD, off));
+}
+
+static inline void ymk_emit_func(
+	struct ymd_parser *p,
+	const struct func_decl_desc *desc,
+	struct func *fn) {
+	fn->n_bind = desc->n_bind;
+	ymk_hack(p, desc->load_p,
+	         emitAfP(PUSH, KVAL, blk_kf(p->vm, p->blk, fn)));
 }
 
 static inline char *ymk_literal(struct ymd_parser *p) {
@@ -843,15 +856,9 @@ static void parse_block(struct ymd_parser *p) {
 	ymc_next(p);
 }
 
-struct func_decl_desc {
-	int method; // is method ?
-	char name[260]; // func real name
-	ushort_t load_p; // load point
-	ushort_t id;
-};
-
 static void parse_func_decl(struct ymd_parser *p, const char *prefix,
                             int local, struct func_decl_desc *desc) {
+	memset(desc, 0, sizeof(*desc));
 	strcpy(desc->name, prefix); // FIXME: strncpy
 	if (ymc_peek(p) == '.') {
 		ymk_emit_push(p, prefix);
@@ -876,43 +883,49 @@ static void parse_func_decl(struct ymd_parser *p, const char *prefix,
 	}
 }
 
+static inline struct chunk *fbk(struct ymd_context *l) {
+	struct func *fn = func_of(l->vm, ymd_top(l, 0));
+	return fn->u.core;
+}
+
 static void parse_func(struct ymd_parser *p, int local) {
-	struct chunk *blk;
+	struct ymd_context *l = ioslate(p->vm);
 	struct func_decl_desc desc;
 	ymc_next(p);
 	if (ymc_peek(p) != SYMBOL)
 		ymc_fail(p, "Function need a name.");
 	parse_func_decl(p, ymk_symbol(p), local, &desc);
-	blk = ymk_chunk(p);
-	ymk_enter(p, blk);
+	ymd_func(l, ymk_chunk(p), desc.name, 0);
+	ymk_enter(p, fbk(l));
 		parse_params(p, desc.method);
-		ymk_chunk_reserved(p, blk);
+		ymk_chunk_reserved(p, fbk(l));
 		parse_block(p);
 		ymk_emit_end(p);
-	blk = ymk_leave(p);
-	ymd_spawnf(p->vm, blk, desc.name, &desc.id); // spawn func and fillback code.
-	ymk_hack(p, desc.load_p, emitAP(LOAD, desc.id));
+	ymk_leave(p);
+	ymk_emit_func(p, &desc, func_of(l->vm, ymd_top(l, 0)));
+	ymd_pop(l, 1);
 }
 
 static void parse_closure(struct ymd_parser *p) {
-	ushort_t i, id, nbind = 0;
-	struct chunk *blk = ymk_chunk(p);
-	char name[128];
+	struct ymd_context *l = ioslate(p->vm);
+	struct func_decl_desc desc;
 	ymc_next(p);
-	i = ymk_hold(p);
+	desc.load_p = ymk_hold(p);
+	snprintf(desc.name, sizeof(desc.name), "__blk_xl%d__",
+	         p->lex.i_line);
+	ymd_func(l, ymk_chunk(p), desc.name, 0);
 	if (ymc_peek(p) == '[')
-		nbind = parse_bind(p, blk);
-	ymk_enter(p, blk);
+		desc.n_bind = parse_bind(p, fbk(l));
+	else
+		desc.n_bind = 0;
+	ymk_enter(p, fbk(l));
 		parse_params(p, 0);
-		ymk_chunk_reserved(p, blk);
+		ymk_chunk_reserved(p, fbk(l));
 		parse_block(p);
 		ymk_emit_end(p);
-	blk = ymk_leave(p);
-	snprintf(name, sizeof(name), "__blk_xl%d__",
-	         p->lex.i_line);
-	// spawn func and fillback code.
-	ymd_spawnf(p->vm, blk, name, &id)->n_bind = nbind; 
-	ymk_hack(p, i, emitAP(LOAD, id));
+	ymk_leave(p);
+	ymk_emit_func(p, &desc, func_of(l->vm, ymd_top(l, 0)));
+	ymd_pop(l, 1);
 }
 
 static void parse_return(struct ymd_parser *p) {
@@ -1068,63 +1081,59 @@ static void ymc_final(struct ymd_parser *p) {
 			if (!last->ref) {
 				blk_final(p->vm, last);
 				mm_free(p->vm, last, 1, sizeof(*last));
+				ymd_pop(ioslate(p->vm), 1);
 			}
 		}
 		p->blk = NULL;
 	}
 }
 
-struct chunk *ymc_compile(struct ymd_mach *vm, struct ymd_parser *p) {
-	struct chunk *rv;
-	p->vm = vm;
+int ymc_compile(struct ymd_parser *p, struct chunk *blk) {
 	lex_next(&p->lex, &p->lah);
-	rv = ymk_chunk(p);
-	ymk_chunk_reserved(p, rv);
-	ymk_enter(p, rv);
+	ymk_chunk_reserved(p, blk);
+	ymk_enter(p, blk);
 	if (setjmp(p->jpt)) {
 		ymc_final(p);
-		return NULL;
+		return -1;
 	}
 	while (ymc_peek(p) != EOS)
 		parse_stmt(p);
 	ymk_emit_end(p);
-	rv = ymk_leave(p);
+	ymk_leave(p);
 	assert(!p->blk);
 	ymc_final(p);
+	return 0;
+}
+
+int ymd_compile(struct ymd_context *l, const char *name,
+                const char *file, const char *code) {
+	struct ymd_parser p;
+	struct chunk *blk;
+	int rv;
+	memset(&p, 0, sizeof(p));
+	p.vm = l->vm;
+	lex_init(&p.lex, file, code);
+	blk = ymk_chunk(&p);
+	ymd_func(l, blk, name, 0);
+	if ((rv = ymc_compile(&p, blk)) < 0)
+		ymd_pop(l, 1);
 	return rv;
 }
 
-struct func *ymd_compile(struct ymd_mach *vm,
-                         const char *name,
-                         const char *file,
-                         const char *code) {
-	struct chunk *blk;
-	struct ymd_parser p;
-	memset(&p, 0, sizeof(p));
-	lex_init(&p.lex, file, code);
-	blk = ymc_compile(vm, &p);
-	if (!blk)
-		return NULL;
-	return func_new(vm, blk, name);
-}
-
-struct func *ymd_compilef(struct ymd_mach *vm,
-                          const char *name,
-                          const char *file,
-                          FILE *fp) {
+int ymd_compilef(struct ymd_context *l, const char *name,
+                 const char *file, FILE *fp) {
 	long len;
 	int rv;
-	struct func *fn = NULL;
 	char *code = NULL;
 	fseek(fp, 0, SEEK_END);
 	len = ftell(fp);
 	rewind(fp);
-	code = vm_zalloc(vm, len + 1);
+	code = vm_zalloc(l->vm, len + 1);
 	rv = fread(code, 1, len, fp);
 	if (rv <= 0)
 		goto fail;
-	fn = ymd_compile(vm, name, file, code);
+	rv = ymd_compile(l, name, file, code);
 fail:
-	if (code) vm_free(vm, code);
-	return fn;
+	if (code) vm_free(l->vm, code);
+	return rv;
 }

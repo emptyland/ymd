@@ -348,8 +348,7 @@ static int new_contain_iter(L, const struct variable *obj, int flag) {
 		ymd_bind(l, 1);
 		ymd_int(l, 0);
 		ymd_bind(l, 2);
-		y
-			struct skls *map = skls_new(tvm);md_int(l, flag);
+		ymd_int(l, flag);
 		ymd_bind(l, 3);
 		vset_ref(ymd_push(l), obj->value.ref);
 		ymd_bind(l, 4);
@@ -515,8 +514,10 @@ static int ansic_file_readn(struct ymd_context *l,
                             struct ansic_file *self, ymd_int_t n) {
 	char *buf = vm_zalloc(l->vm, n);
 	int rvl = fread(buf, 1, n, self->fp);
-	if (rvl <= 0)
+	if (rvl <= 0) {
+		vm_free(l->vm, buf);
 		return 0;
+	}
 	ymd_kstr(l, buf, rvl);
 	vm_free(l->vm, buf);
 	return 1;
@@ -714,7 +715,6 @@ static const char *file2blknam(const char *name, char *buf, int len) {
 static int libx_import(L) {
 	int i;
 	FILE *fp;
-	struct func *block;
 	char blknam[MAX_BLOCK_NAME_LEN];
 	struct kstr *name = kstr_of(l->vm, ymd_argv_get(l, 0));
 	if (vm_reached(l->vm, name->land))
@@ -722,39 +722,35 @@ static int libx_import(L) {
 	fp = fopen(name->land, "r");
 	if (!fp)
 		vm_die(l->vm, "Can not open import file: %s", name->land);
-	block = ymd_compilef(l->vm,
-		file2blknam(name->land, blknam, sizeof(blknam)), name->land, fp);
+	i = ymd_compilef(l, file2blknam(name->land, blknam, sizeof(blknam)),
+	                 name->land, fp);
 	fclose(fp);
-	if (!block)
+	if (i < 0)
 		vm_die(l->vm, "Import fatal, syntax error in file: `%s`",
 		       name->land);
-	vset_func(ymd_push(l), block);
 	for (i = 1; i < ymd_argv(l)->count; ++i)
 		*ymd_push(l) = *ymd_argv_get(l, i);
-	return ymd_call(l, block, ymd_argv(l)->count - 1, 0);
+	return ymd_call(l, func_of(l->vm, ymd_top(l, 0)),
+	                ymd_argv(l)->count - 1, 0);
 }
 
 static int libx_eval(L) {
 	int i;
-	struct func *chunk;
+	struct func *fn;
 	struct kstr *script = kstr_of(l->vm, ymd_argv_get(l, 0));
-	chunk = ymd_compile(l->vm, "__blk_eval__", "[chunk]", script->land);
-	if (!chunk)
+	i = ymd_compile(l, "__blk_eval__", "[chunk]", script->land);
+	if (i < 0)
 		return 0;
-	vset_func(ymd_push(l), chunk);
+	fn = func_of(l->vm, ymd_top(l, 0));
 	for (i = 1; i < ymd_argv(l)->count; ++i)
 		*ymd_push(l) = *ymd_argv_get(l, i);
-	return ymd_call(l, chunk, ymd_argv(l)->count - 1, 0);
+	return ymd_call(l, fn, ymd_argv(l)->count - 1, 0);
 }
 
 static int libx_compile(L) {
-	struct func *chunk;
 	struct kstr *script = kstr_of(l->vm, ymd_argv_get(l, 0));
-	chunk = ymd_compile(l->vm, "__blk_compile__", "[chunk]", script->land);
-	if (!chunk)
-		return 0;
-	vset_func(ymd_push(l), chunk);
-	return 1;
+	int i = ymd_compile(l, "__blk_compile__", "[chunk]", script->land);
+	return (i < 0) ? 0 : 1;
 }
 
 static int libx_env(L) {
