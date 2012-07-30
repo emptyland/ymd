@@ -225,14 +225,14 @@ int ymd_load_chunk(struct zistream *is, struct chunk *x, int *ok) {
 		x->lz = mm_zalloc(l->vm, k, sizeof(*x->lz));
 		for (i = 0; i < k; ++i) {
 			ymd_load_kstr(is, CHECK_OK);
-			x->lz[i] = kstr_of(l->vm, ymd_top(l, 0));
+			x->lz[i] = kstr_of(l, ymd_top(l, 0));
 			ymd_pop(l, 1);
 		}
 		x->klz = k;
 	}
 	// :file
 	ymd_load_kstr(is, CHECK_OK);
-	x->file = kstr_of(l->vm, ymd_top(l, 0));
+	x->file = kstr_of(l, ymd_top(l, 0));
 	ymd_pop(l, 1);
 	// :kargs
 	x->kargs = zis_u32(is);
@@ -247,7 +247,7 @@ int ymd_load_func(struct zistream *is, int *ok) {
 	int i;
 	// :proto
 	ymd_load_kstr(is, CHECK_OK);
-	fn->proto = kstr_of(l->vm, ymd_top(l, 0));
+	fn->proto = kstr_of(l, ymd_top(l, 0));
 	ymd_pop(l, 1);
 	// :bind
 	fn->n_bind = zis_u32(is);

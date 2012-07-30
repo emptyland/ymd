@@ -5,6 +5,33 @@
 #include "3rd/regex/regex.h"
 #include <stdio.h>
 
+#define call_init(l, x) { \
+	int __k = func_nlocal(l->info->run); \
+	memset((x), 0, sizeof(*(x))); \
+	(x)->loc = l->info->loc + __k; \
+	memset((x)->loc, 0, __k * sizeof(*(x)->loc)); \
+} (void)0
+
+#define call_root_init(l, x) { \
+	memset((x), 0, sizeof(*(x))); \
+	(x)->loc = l->loc; \
+} (void)0
+
+#define call_final(l) { \
+	l->info = l->info->chain; \
+} (void)0
+
+#define call_restore(l, curr) l->info = (curr)->chain
+
+#define call_jenter(l, x, lv) { \
+	memset (x, 0, sizeof(struct call_jmpbuf)); \
+	(x)->chain = l->jpt; \
+	(x)->level = lv; \
+	l->jpt = (x); \
+} (void)0
+
+#define call_jleave(l) { l->jpt = l->jpt->chain; } (void)0
+
 // +----------------------+
 // |  bind  |    local    |
 // +--------+-------------+
@@ -23,7 +50,7 @@ static inline struct variable *vm_find_local(struct ymd_context *l,
                                              const char *name) {
 	int i = blk_find_lz(fn->u.core, name);
 	if (i < 0)
-		vm_die(l->vm, "Can not find local: %s", name);
+		ymd_panic(l, "Can not find local: %s", name);
 	return vm_local(l, fn, i);
 }
 
@@ -58,7 +85,7 @@ static inline int vm_match(struct ymd_mach *vm,
 		char msg[128];
 		regerror(err, &regex, msg, sizeof(msg));
 		regfree(&regex);
-		vm_die(vm, "Regex match fatal: %s", msg);
+		ymd_panic(ioslate(vm), "Regex match fatal: %s", msg);
 		return 0;
 	}
 	err = regexec(&regex, lhs->land, 0, NULL, 0);
@@ -83,7 +110,7 @@ static inline void do_put(struct ymd_mach *vm,
 						  const struct variable *k,
                           const struct variable *v) {
 	if ((k && is_nil(k)) || is_nil(v))
-		vm_die(vm, "Value can not be `nil` in k-v pair");
+		ymd_panic(ioslate(vm), "Value can not be `nil` in k-v pair");
 	switch (raw->type) {
 	case T_HMAP:
 		*hmap_put(vm, (struct hmap *)raw, k) = *v;
@@ -106,7 +133,7 @@ static inline void vm_iput(struct ymd_mach *vm,
                           const struct variable *v) {
 	struct variable *rv = vm_put(vm, var, k);
 	if (is_nil(v))
-		vm_die(vm, "Value can not be `nil` in k-v pair");
+		ymd_panic(ioslate(vm), "Value can not be `nil` in k-v pair");
 	*rv = *v;
 }
 
@@ -143,7 +170,7 @@ retry:
 		l->vm->tick++;
 		switch (op) {
 		case I_PANIC:
-			vm_die(vm, "%s Panic!", fn->proto->land);
+			ymd_panic(ioslate(vm), "%s Panic!", fn->proto->land);
 			break;
 		case I_STORE:
 			switch (flag) {
@@ -265,7 +292,7 @@ retry:
 				rhs->value.i = compare(rhs, lhs) <= 0;
 				break;
 			case F_MATCH:
-				rhs->value.i = vm_match(vm, kstr_of(vm, rhs), kstr_of(vm, lhs));
+				rhs->value.i = vm_match(vm, kstr_of(l, rhs), kstr_of(l, lhs));
 				break;
 			default:
 				assert(0);
@@ -302,21 +329,21 @@ retry:
 			} break;
 		case I_INV: {
 			struct variable *opd = ymd_top(l, 0);
-			opd->value.i = -int_of(vm, opd);
+			opd->value.i = -int_of(l, opd);
 			} break;
 		case I_MUL: {
 			struct variable *rhs = ymd_top(l, 1),
 							*lhs = ymd_top(l, 0);
-			rhs->value.i = int_of(vm, rhs) * int_of(vm, lhs);
+			rhs->value.i = int_of(l, rhs) * int_of(l, lhs);
 			ymd_pop(l, 1);
 			} break;
 		case I_DIV: {
 			struct variable *rhs = ymd_top(l, 1),
 							*lhs = ymd_top(l, 0);
-			ymd_int_t opd2 = int_of(vm, lhs);
+			ymd_int_t opd2 = int_of(l, lhs);
 			if (opd2 == 0LL)
-				vm_die(vm, "Div to zero");
-			rhs->value.i = int_of(vm, rhs) / opd2;
+				ymd_panic(ioslate(vm), "Div to zero");
+			rhs->value.i = int_of(l, rhs) / opd2;
 			ymd_pop(l, 1);
 			} break;
 		case I_ADD: {
@@ -324,15 +351,15 @@ retry:
 							*lhs = ymd_top(l, 0);
 			switch (rhs->type) {
 			case T_INT:
-				rhs->value.i = rhs->value.i + int_of(vm, lhs);
+				rhs->value.i = rhs->value.i + int_of(l, lhs);
 				break;
 			case T_KSTR:
-				rhs->value.ref = gcx(vm_strcat(vm, kstr_of(vm, rhs),
-				                                kstr_of(vm, lhs)));
+				rhs->value.ref = gcx(vm_strcat(vm, kstr_of(l, rhs),
+				                                kstr_of(l, lhs)));
 				gc_release(rhs->value.ref);
 				break;
 			default:
-				vm_die(vm, "Operator + don't support this type");
+				ymd_panic(ioslate(vm), "Operator + don't support this type");
 				break;
 			}
 			ymd_pop(l, 1);
@@ -340,24 +367,24 @@ retry:
 		case I_SUB: {
 			struct variable *rhs = ymd_top(l, 1),
 							*lhs = ymd_top(l, 0);
-			rhs->value.i = int_of(vm, rhs) - int_of(vm, lhs);
+			rhs->value.i = int_of(l, rhs) - int_of(l, lhs);
 			ymd_pop(l, 1);
 			} break;
 		case I_MOD: {
 			struct variable *rhs = ymd_top(l, 1),
 							*lhs = ymd_top(l, 0);
-			ymd_int_t opd1 = int_of(vm, lhs);
+			ymd_int_t opd1 = int_of(l, lhs);
 			if (opd1 == 0LL)
-				vm_die(vm, "Mod to zero");
-			rhs->value.i = int_of(vm, rhs) % int_of(vm, lhs);
+				ymd_panic(ioslate(vm), "Mod to zero");
+			rhs->value.i = int_of(l, rhs) % int_of(l, lhs);
 			ymd_pop(l, 1);
 			} break;
 		case I_POW: {
 			struct variable *rhs = ymd_top(l, 1),
 							*lhs = ymd_top(l, 0);
-			ymd_int_t opd0 = int_of(vm, rhs), opd1 = int_of(vm, lhs);
+			ymd_int_t opd0 = int_of(l, rhs), opd1 = int_of(l, lhs);
 			if (opd1 < 0) {
-				vm_die(vm, "Pow must be great or equals 0");
+				ymd_panic(ioslate(vm), "Pow must be great or equals 0");
 			} else if (opd1 == 0) {
 				rhs->value.i = 1;
 			} else if (opd0 == 1) {
@@ -374,19 +401,19 @@ retry:
 		case I_ANDB: {
 			struct variable *rhs = ymd_top(l, 1),
 							*lhs = ymd_top(l, 0);
-			rhs->value.i = int_of(vm, rhs) & int_of(vm, lhs);
+			rhs->value.i = int_of(l, rhs) & int_of(l, lhs);
 			ymd_pop(l, 1);
 			} break;
 		case I_ORB: {
 			struct variable *rhs = ymd_top(l, 1),
 							*lhs = ymd_top(l, 0);
-			rhs->value.i = int_of(vm, rhs) | int_of(vm, lhs);
+			rhs->value.i = int_of(l, rhs) | int_of(l, lhs);
 			ymd_pop(l, 1);
 			} break;
 		case I_XORB: {
 			struct variable *rhs = ymd_top(l, 1),
 							*lhs = ymd_top(l, 0);
-			rhs->value.i = int_of(vm, rhs) ^ int_of(vm, lhs);
+			rhs->value.i = int_of(l, rhs) ^ int_of(l, lhs);
 			ymd_pop(l, 1);
 			} break;
 		case I_INVB: {
@@ -396,17 +423,17 @@ retry:
 		case I_SHIFT: {
 			struct variable *rhs = ymd_top(l, 1),
 							*lhs = ymd_top(l, 0);
-			if (int_of(vm, lhs) < 0)
-				vm_die(vm, "Shift must be great than 0");
+			if (int_of(l, lhs) < 0)
+				ymd_panic(ioslate(vm), "Shift must be great than 0");
 			switch (flag) {
 			case F_LEFT:
-				rhs->value.i = int_of(vm, rhs) << int_of(vm, lhs);
+				rhs->value.i = int_of(l, rhs) << int_of(l, lhs);
 				break;
 			case F_RIGHT_L:
-				rhs->value.i = ((unsigned long long)int_of(vm, rhs)) >> int_of(vm, lhs);
+				rhs->value.i = ((unsigned long long)int_of(l, rhs)) >> int_of(l, lhs);
 				break;
 			case F_RIGHT_A:
-				rhs->value.i = int_of(vm, rhs) >> int_of(vm, lhs);
+				rhs->value.i = int_of(l, rhs) >> int_of(l, lhs);
 				break;
 			default:
 				assert(0);
@@ -417,7 +444,7 @@ retry:
 		case I_CALL: {
 			int adjust = asm_aret(inst);
 			int argc = asm_argc(inst);
-			struct func *called = func_of(vm, ymd_top(l, argc));
+			struct func *called = func_of(l, ymd_top(l, argc));
 			ymd_adjust(l, adjust, ymd_call(l, called, argc, 0));
 			} break;
 		// flag  : argc
@@ -427,7 +454,7 @@ retry:
 			int adjust = asm_aret(inst);
 			int argc = asm_argc(inst);
 			int imethod = asm_method(inst);
-			called = func_of(vm, vm_get(vm, ymd_top(l, argc),
+			called = func_of(l, vm_get(vm, ymd_top(l, argc),
 			                            &core->kval[imethod]));
 			ymd_adjust(l, adjust, ymd_call(l, called, argc, 1));
 			} break;
@@ -460,7 +487,7 @@ retry:
 			} break;
 		case I_BIND: {
 			struct variable *opd = ymd_top(l, param);
-			struct func *copied = func_clone(vm, func_of(vm, opd));
+			struct func *copied = func_clone(vm, func_of(l, opd));
 			int i = param;
 			assert(copied->n_bind == param);
 			while (i--)
@@ -503,25 +530,15 @@ static void vm_copy_args(struct ymd_context *l, struct func *fn, int argc) {
 	}
 }
 
-int ymd_call(struct ymd_context *l, struct func *fn, int argc, int method) {
+static int vm_call(struct ymd_context *l, struct call_info *ci,
+	               struct func *fn, int argc, int method) {
 	int rv;
-	struct call_info scope;
-	int main_fn = (l->info == NULL);
 	if (method) ++argc; // Extra arg0: self
-
-	// Initialize local variable
-	if (main_fn) {
-		scope.loc = l->loc;
-	} else {
-		int n = func_nlocal(l->info->run);
-		scope.loc = l->info->loc + n;
-		memset(scope.loc, 0, n * sizeof(*scope.loc));
-	}
 	// Link the call info
-	scope.pc = 0;
-	scope.run = fn;
-	scope.chain = l->info;
-	l->info = &scope;
+	ci->pc = 0;
+	ci->run = fn;
+	ci->chain = l->info;
+	l->info = ci;
 	vm_copy_args(l, fn, argc);
 	// Pop all args
 	ymd_pop(l, argc + (method ? 0 : 1));
@@ -533,8 +550,14 @@ int ymd_call(struct ymd_context *l, struct func *fn, int argc, int method) {
 ret:
 	if (fn->argv)
 		dyay_final(l->vm, fn->argv);
-	l->info = l->info->chain;
+	call_final(l);
 	return rv;
+}
+
+int ymd_call(struct ymd_context *l, struct func *fn, int argc, int method) {
+	struct call_info scope;
+	call_init(l, &scope);
+	return vm_call(l, &scope, fn, argc, method);
 }
 
 int ymd_ncall(struct ymd_context *l, struct func *fn, int nret, int narg) {
@@ -543,15 +566,60 @@ int ymd_ncall(struct ymd_context *l, struct func *fn, int nret, int narg) {
 	return rv;
 }
 
+int ymd_pcall(struct ymd_context *l, struct func *fn, int argc) {
+	int i;
+	struct call_jmpbuf jpt;
+	struct call_info scope;
+	call_init(l, &scope);
+	call_jenter(l, &jpt, l->jpt->level + 1);
+	if ((i = setjmp(l->jpt->core)) != 0) {
+		call_jleave(l);
+		call_restore(l, &scope);
+		if (i < jpt.level) longjmp(l->jpt->core, i); // Jump to next
+		return -i;
+	}
+	i = vm_call(l, &scope, fn, argc, 0);
+	call_jleave(l);
+	return i;
+}
+
+int ymd_xcall(struct ymd_context *l, int argc) {
+	struct func *fn = func_of(l, ymd_top(l, argc));
+	int i;
+	struct call_jmpbuf jpt;
+	struct call_info scope;
+	call_root_init(l, &scope); // External call need root call info.
+	call_jenter(l, &jpt, 1);
+	// Error and panic handler
+	if ((i = setjmp(l->jpt->core)) != 0) {
+		call_jleave(l);
+		call_restore(l, &scope);
+		ymd_pop(l, (int)(l->top - l->stk)); // Keep stack empty!
+		return -i;
+	}
+	i = vm_call(l, &scope, fn, argc, 0);
+	call_jleave(l);
+	return i;
+}
+
 int ymd_main(struct ymd_context *l, int argc, char *argv[]) {
 	int i;
-	struct func *fn = func_of(l->vm, ymd_top(l, 0));
+	struct func *fn = func_of(l, ymd_top(l, 0));
+	struct call_jmpbuf jpt;
+	struct call_info scope;
+	call_root_init(l, &scope);
+	call_jenter(l, &jpt, 1);
 	for (i = 0; i < argc; ++i)
 		ymd_kstr(l, argv[i], -1);
-	if (setjmp(l->jpt)) {
-		// TODO:
-		return -1;
+	if ((i = setjmp(l->jpt->core)) != 0) {
+		if (!l->jpt->panic) puts("VM: Unhandled error!");
+		call_jleave(l);
+		call_restore(l, &scope);
+		ymd_pop(l, (int)(l->top - l->stk)); // Keep stack empty!
+		return -i;
 	}
-	return ymd_call(l, fn, argc, 0);
+	i = vm_call(l, &scope, fn, argc, 0);
+	call_jleave(l);
+	return i;
 }
 

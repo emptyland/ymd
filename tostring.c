@@ -47,18 +47,25 @@ const char *tostring(struct fmtx *ctx, const struct variable *var) {
 		                   func_k(var)->proto->len);
 	case T_DYAY: {
 		int i;
+		if (fg_self(var->value.ref))
+			return fmtx_append(ctx, "..[self]..", 10);
 		fmtx_append(ctx, "[", 1);
+		fg_enter(gcx(var->value.ref));
 		for (i = 0; i < dyay_k(var)->count; ++i) {
 			if (i > 0) fmtx_append(ctx, ", ", 2);
 			tostring(ctx, dyay_k(var)->elem + i);
 		}
+		fg_leave(gcx(var->value.ref));
 		} return fmtx_append(ctx, "]", 1);
 	case T_HMAP: {
 		struct kvi *initial = hmap_k(var)->item,
 				   *i = NULL,
 				   *k = initial + (1 << hmap_k(var)->shift);
 		int f = 0;
+		if (fg_self(var->value.ref))
+			return fmtx_append(ctx, "..{self}..", 10);
 		fmtx_append(ctx, "{", 1);
+		fg_enter(gcx(var->value.ref));
 		for (i = initial; i != k; ++i) {
 			if (!i->flag) continue;
 			if (f++ > 0) fmtx_append(ctx, ", ", 2);
@@ -66,18 +73,23 @@ const char *tostring(struct fmtx *ctx, const struct variable *var) {
 			fmtx_append(ctx, " : ", 3);
 			tostring(ctx, &i->v);
 		}
+		fg_leave(gcx(var->value.ref));
 		} return fmtx_append(ctx, "}", 1);
 	case T_SKLS: {
 		struct sknd *initial = skls_k(var)->head->fwd[0],
 				    *i = NULL;
 		int f = 0;
+		if (fg_self(var->value.ref))
+			return fmtx_append(ctx, "..@{self}..", 11);
 		fmtx_append(ctx, "@{", 2);
+		fg_enter(gcx(var->value.ref));
 		for (i = initial; i != NULL; i = i->fwd[0]) {
 			if (f++ > 0) fmtx_append(ctx, ", ", 2);
 			tostring(ctx, &i->k);
 			fmtx_append(ctx, " : ", 3);
 			tostring(ctx, &i->v);
 		}
+		fg_leave(gcx(var->value.ref));
 		} return fmtx_append(ctx, "}", 1);
 	case T_MAND: {
 		fmtx_append(ctx, "(", 1);

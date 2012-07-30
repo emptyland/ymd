@@ -7,11 +7,6 @@ struct ymd_mach;
 //--------------------------------------------------------------------------
 // Stream define
 //--------------------------------------------------------------------------
-struct yio_stream {
-	ymd_nafn_t read;
-	ymd_nafn_t write;
-};
-
 struct libfn_symbol {
 	int len;
 	const char *z;

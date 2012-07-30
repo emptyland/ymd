@@ -1,0 +1,48 @@
+ErrorHandleTest = @{
+	test00pcall : func (self) {
+		var func ret0 ()      {}
+		var func ret_str ()   { return "ReturnValue" }
+		var func ret_arg0 (a) { return a }
+		var func ret_nil ()   { return nil }
+
+		Assert:EQ(@{}, pcall(ret0))
+		Assert:EQ(@{ret: "ReturnValue"}, pcall(ret_str))
+		Assert:EQ(@{ret: 0}, pcall(ret_arg0, 0))
+		Assert:EQ(@{ret: []}, pcall(ret_arg0, []))
+		Assert:EQ(@{}, pcall(ret_nil))
+	},
+
+	test01error : func (self) {
+		var func ret_err (a) {
+			if not a { error("Not a error!") }
+		}
+		var func ret_void (a) {
+			if a { error() }
+			return "Reached!"
+		}
+
+		Assert:EQ("Not a error!", pcall(ret_err, nil).error)
+		Assert:EQ(@{}, pcall(ret_err, 0))
+		Assert:NE(ret_void, ret_err)
+		Assert:EQ("Unknown", pcall(ret_void, 0).error)
+		Assert:EQ("Reached!", pcall(ret_void, false).ret)
+	},
+
+	test02nested : func (self) {
+		Assert:EQ("Looooog!", pcall(maybe_error, 0, 0, 5).error)
+		var rv = pcall(maybe_error, 0, 0, 20)
+		Assert:EQ("string",   typeof rv.error)
+		Assert:EQ("Looooog!", rv.error)
+
+		rv = pcall(maybe_error, false, 0, 100)
+		Assert:EQ(@{a:false, i:101, k:100}, rv.ret)
+	}
+}
+
+func maybe_error (a, i, k) {
+	if i > k {
+		if a { error ("Looooog!") }
+		return @{a:a, i:i, k:k}
+	}
+	return maybe_error(a, i + 1, k)
+}

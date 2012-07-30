@@ -17,7 +17,7 @@ DECL_TREF(DEFINE_REFCAST)
 #undef DEFINE_REFCAST
 
 #define DECL_REFOF(name, tt) \
-struct name *name##_of(struct ymd_mach *vm, struct variable *var);
+struct name *name##_of(struct ymd_context *l, struct variable *var);
 DECL_TREF(DECL_REFOF)
 #undef DECL_REFOF
 

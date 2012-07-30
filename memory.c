@@ -132,6 +132,7 @@ static int gc_mark(struct ymd_mach *vm) {
 	if (l->info) { // Mark all local variable
 		int n = func_nlocal(l->info->run);
 		struct variable *i, *k = l->info->loc + n;
+		assert(l->info->loc);
 		for (i = l->loc; i != k; ++i)
 			if (!marked(i, GC_BLACK_BIT0))
 				gc_mark_var(i);

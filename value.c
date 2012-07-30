@@ -44,34 +44,35 @@ struct variable *knil = &knil_fake_var;
 //-------------------------------------------------------------------------
 // Type casting define:
 //-------------------------------------------------------------------------
-ymd_int_t int_of(struct ymd_mach *vm, const struct variable *var) {
+ymd_int_t int_of(struct ymd_context *l, const struct variable *var) {
 	if (var->type != T_INT)
-		vm_die(vm, "Variable is not `int`");
+		ymd_panic(l, "Variable is not `int`");
 	return var->value.i;
 }
 
-ymd_int_t bool_of(struct ymd_mach *vm, const struct variable *var) {
+ymd_int_t bool_of(struct ymd_context *l, const struct variable *var) {
 	if (var->type != T_BOOL)
-		vm_die(vm, "Variable is not `bool`");
+		ymd_panic(l, "Variable is not `bool`");
 	return var->value.i;
 }
 
 #define DEFINE_REFOF(name, tt)                   \
-struct name *name##_of(struct ymd_mach *vm,      \
+struct name *name##_of(struct ymd_context *l,      \
 		struct variable *var) {                  \
 	if (var->type != tt)                         \
-		vm_die(vm, "Variable is not `"#name"`"); \
+		ymd_panic(l, "Variable is not `"#name"`"); \
 	assert(var->value.ref != NULL);              \
 	return (struct name *)var->value.ref;        \
 }
 DECL_TREF(DEFINE_REFOF)
 #undef DEFINE_REFOF
 
-void *mand_land(struct ymd_mach *vm, struct variable *var, const char *tt) {
-	struct mand *m = mand_of(vm, var);
+void *mand_land(struct ymd_context *l, struct variable *var,
+                const char *tt) {
+	struct mand *m = mand_of(l, var);
 	if (tt == m->tt || strcmp(tt, m->tt) == 0)
 		return m->land;
-	vm_die(vm, "Unexpected managed type `%s`", tt);
+	ymd_panic(l, "Unexpected managed type `%s`", tt);
 	return NULL;
 }
 
@@ -194,7 +195,7 @@ void mand_final(struct ymd_mach *vm, struct mand *o) {
 	if (o->final)
 		rv = (*o->final)(o->land);
 	if (rv < 0)
-		vm_die(vm, "Managed data finalize failed.");
+		ymd_panic(ioslate(vm), "Managed data finalize failed.");
 }
 
 int mand_equals(const struct mand *o, const struct mand *rhs) {

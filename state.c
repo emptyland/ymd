@@ -11,37 +11,21 @@ static void vm_backtrace(struct ymd_context *l, int max);
 static int vm_init_context(struct ymd_mach *vm);
 static void vm_final_context(struct ymd_mach *vm);
 
-static void *default_zalloc(struct ymd_mach *m, void *p, size_t size) {
+static void *default_zalloc(struct ymd_mach *vm, void *p, size_t size) {
 	void *chunk = !p ? calloc(size, 1) : realloc(p, size);
 	if (!chunk) {
 		if (p)
 			free(p);
-		m->die(m, "System: Not enough memory");
+		ymd_panic(ioslate(vm), "System: Not enough memory");
 	}
 	assert(chunk != NULL);
 	return chunk;
 }
 
-static void default_free(struct ymd_mach *m, void *chunk) {
+static void default_free(struct ymd_mach *vm, void *chunk) {
 	if (!chunk)
-		m->die(m, "Fatal: NULL free");
+		ymd_panic(ioslate(vm), "Fatal: NULL free");
 	free(chunk);
-}
-
-static void default_die(struct ymd_mach *vm, const char *msg) {
-	struct ymd_context *l = ioslate(vm);
-	struct call_info *i = vm_nearcall(l);
-	if (!msg || !*msg)
-		msg = "Unknown!";
-	if (i)
-		fprintf(stderr, "== VM Panic!\n%s:%d %s\n",
-				i->run->u.core->file->land,
-				i->run->u.core->line[i->pc - 1], msg);
-	else
-		fprintf(stderr, "== VM Panic!\n%%%% %s\n", msg);
-	fprintf(stderr, "-- Back trace:\n");
-	vm_backtrace(l, 6);
-	longjmp(l->jpt, 1);
 }
 
 struct ymd_context *ioslate(struct ymd_mach *vm) {
@@ -65,7 +49,13 @@ static void vm_backtrace(struct ymd_context *l, int max) {
 	struct call_info *i = l->info;
 	assert(max >= 0);
 	while (i && max--) {
-		fprintf(stderr, " > %s\n", i->run->proto->land);
+		if (i->run->is_c)
+			fprintf(stderr, " > %s\n", i->run->proto->land);
+		else
+			fprintf(stderr, " > %s:%d %s\n",
+			        i->run->u.core->file->land,
+					i->run->u.core->line[i->pc - 1],
+					i->run->proto->land);
 		i = i->chain;
 	}
 	if (i != NULL)
@@ -83,7 +73,7 @@ struct call_info *vm_nearcall(struct ymd_context *l) {
 }
 
 int vm_reached(struct ymd_mach *vm, const char *name) {
-	struct hmap *lib = hmap_of(vm, vm_getg(vm, "__reached__"));
+	struct hmap *lib = hmap_of(ioslate(vm), vm_getg(vm, "__reached__"));
 	struct variable *count = vm_mem(vm, lib, name);
 	if (is_nil(count)) {
 		vset_int(vm_def(vm, lib, name), 0);
@@ -99,21 +89,22 @@ int vm_reached(struct ymd_mach *vm, const char *name) {
 struct variable *vm_put(struct ymd_mach *vm,
                         struct variable *var,
                         const struct variable *key) {
+	struct ymd_context *l = ioslate(vm);
 	if (is_nil(key))
-		vm_die(vm, "No any key will be `nil`");
+		ymd_panic(l, "No any key will be `nil`");
 	switch (var->type) {
 	case T_SKLS:
 		return skls_put(vm, skls_x(var), key);
 	case T_HMAP:
 		return hmap_put(vm, hmap_x(var), key);
 	case T_DYAY:
-		return dyay_get(dyay_x(var), int_of(vm, key));
+		return dyay_get(dyay_x(var), int_of(l, key));
 	case T_MAND:
 		if (!mand_x(var)->proto)
-			vm_die(vm, "Management memory has no metatable yet");
+			ymd_panic(l, "Management memory has no metatable yet");
 		return mand_put(vm, mand_x(var), key);
 	default:
-		vm_die(vm, "Variable can not be put");
+		ymd_panic(l, "Variable can not be put");
 		break;
 	}
 	return NULL;
@@ -122,28 +113,29 @@ struct variable *vm_put(struct ymd_mach *vm,
 static struct variable *vm_at(struct ymd_mach *vm, struct dyay *arr,
                               ymd_int_t i) {
 	if (i < 0 || i >= arr->count)
-		vm_die(vm, "Array out of range, index:%d, count:%d", i,
+		ymd_panic(ioslate(vm), "Array out of range, index:%d, count:%d", i,
 		       arr->count);
 	return dyay_get(arr, i);
 }
 
 struct variable *vm_get(struct ymd_mach *vm, struct variable *var,
                         const struct variable *key) {
+	struct ymd_context *l = ioslate(vm);
 	if (is_nil(key))
-		vm_die(vm, "No any key will be `nil`");
+		ymd_panic(l, "No any key will be `nil`");
 	switch (var->type) {
 	case T_SKLS:
 		return skls_get(skls_x(var), key);
 	case T_HMAP:
 		return hmap_get(hmap_x(var), key);
 	case T_DYAY:
-		return vm_at(vm, dyay_x(var), int_of(vm, key));
+		return vm_at(vm, dyay_x(var), int_of(l, key));
 	case T_MAND:
 		if (!mand_x(var)->proto)
-			vm_die(vm, "Management memory has no metatable yet");
+			ymd_panic(l, "Management memory has no metatable yet");
 		return mand_get(mand_x(var), key);
 	default:
-		vm_die(vm, "Variable can not be index");
+		ymd_panic(l, "Variable can not be index");
 		break;
 	}
 	assert(0); // Noreached!
@@ -229,6 +221,18 @@ struct kstr *vm_format(struct ymd_mach *vm, const char *fmt, ...) {
 	return kstr_fetch(vm, buf, -1);
 }
 
+void ymd_format(struct ymd_context *l, const char *fmt, ... ) {
+	va_list ap;
+	int rv;
+	char buf[MAX_MSG_LEN];
+	struct kstr *o;
+	va_start(ap, fmt);
+	rv = vsnprintf(buf, sizeof(buf), fmt, ap);
+	va_end(ap);
+	o = kstr_fetch(l->vm, buf, -1);
+	vset_kstr(ymd_push(l), o);
+	gc_release(o);
+}
 //-----------------------------------------------------------------------------
 // Mach:
 // ----------------------------------------------------------------------------
@@ -239,7 +243,6 @@ struct ymd_mach *ymd_init() {
 	// Basic memory functions:
 	vm->zalloc  = default_zalloc;
 	vm->free    = default_free;
-	vm->die     = default_die;
 	vm->tick    = 0;
 	// Init gc:
 	gc_init(vm, GC_THESHOLD);
@@ -264,12 +267,39 @@ void ymd_final(struct ymd_mach *vm) {
 	free(vm);
 }
 
-void vm_die(struct ymd_mach *vm, const char *fmt, ...) {
+static void do_panic(struct ymd_context *l, const char *msg) {
+	struct call_info *i = vm_nearcall(l);
+	if (!msg || !*msg)
+		msg = "Unknown!";
+	if (i)
+		fprintf(stderr, "== VM Panic!\n%s:%d %s\n",
+				i->run->u.core->file->land,
+				i->run->u.core->line[i->pc - 1], msg);
+	else
+		fprintf(stderr, "== VM Panic!\n%%%% %s\n", msg);
+	fprintf(stderr, "-- Back trace:\n");
+	vm_backtrace(l, 6);
+	assert(l->jpt);
+	l->jpt->panic = 1;
+	longjmp(l->jpt->core, 1);
+}
+
+void ymd_panic(struct ymd_context *l, const char *fmt, ...) {
 	va_list ap;
 	int rv;
 	char buf[MAX_MSG_LEN];
 	va_start(ap, fmt);
 	rv = vsnprintf(buf, sizeof(buf), fmt, ap);
 	va_end(ap);
-	return vm->die(vm, buf);
+	return do_panic(l, buf);
+}
+
+void ymd_error(struct ymd_context *l) {
+	assert (l->jpt);
+	// NOTE: Call chain back and cleanup argv!
+	if (ymd_called(l)->argv)
+		dyay_final(l->vm, ymd_called(l)->argv);
+	l->info = l->info->chain;
+	l->jpt->panic = 0;
+	longjmp(l->jpt->core, l->jpt->level);
 }

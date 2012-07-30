@@ -135,9 +135,10 @@ struct mand {
 extern struct variable *knil;
 
 // Safe casting
-ymd_int_t int_of(struct ymd_mach *vm, const struct variable *var);
-ymd_int_t bool_of(struct ymd_mach *vm, const struct variable *var);
-void *mand_land(struct ymd_mach *vm, struct variable *var, const char *tt);
+ymd_int_t int_of(struct ymd_context *l, const struct variable *var);
+ymd_int_t bool_of(struct ymd_context *l, const struct variable *var);
+void *mand_land(struct ymd_context *l, struct variable *var,
+                const char *tt);
 
 // Literal type strings
 const char *typeof_kz(unsigned tt);

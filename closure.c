@@ -133,9 +133,8 @@ static void func_init(struct ymd_mach *vm, struct func *fn,
 		fn->proto = vm_format(vm, "func %s(...) {[native:%p]}",
 							   !name ? "" : name, fn->u.nafn);
 	} else {
-		fn->proto = vm_format(vm, "func %s[*%d] (*%d) {...}",
-							   !name ? "" : name, fn->n_bind,
-							   fn->u.core->kargs);
+		fn->proto = vm_format(vm, "func %s(*) {...}",
+		                      !name ? "" : name);
 	}
 	gc_release(fn->proto);
 }

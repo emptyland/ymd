@@ -10,15 +10,14 @@ struct yut_cookie {
 	jmp_buf jpt;
 };
 
-static struct yut_cookie *yut_jpt(struct ymd_mach *vm,
-                                  struct variable *self) {
-	struct hmap *o = hmap_of(vm, self);
-	struct mand *cookie = mand_of(vm, vm_mem(vm, o, "__cookie__"));
+static struct yut_cookie *yut_jpt(L, struct variable *self) {
+	struct hmap *o = hmap_of(l, self);
+	struct mand *cookie = mand_of(l, vm_mem(l->vm, o, "__cookie__"));
 	return (struct yut_cookie *)cookie->land;
 }
 
 static void yut_raise(L) {
-	struct yut_cookie *cookie = yut_jpt(l->vm, ymd_argv_get(l, 0));
+	struct yut_cookie *cookie = yut_jpt(l, ymd_argv_get(l, 0));
 	longjmp(cookie->jpt, 1);
 }
 
@@ -66,7 +65,7 @@ static void yut_fail1(L, const char *expected,
 }
 
 static int libx_Fail(L) {
-	const struct kstr *arg0 = kstr_of(l->vm, ymd_argv_get(l, 1));
+	const struct kstr *arg0 = kstr_of(l, ymd_argv_get(l, 1));
 	struct call_info *up = l->info->chain;
 	struct func *fn = up->run;
 	ymd_printf(yYELLOW"[  XXX ] %s:%d Fail: %s\n"yEND,
@@ -146,7 +145,7 @@ static int yut_call(struct ymd_context *l, struct variable *test,
 		return -1;
 	vset_func(ymd_push(l), method);
 	*ymd_push(l) = *test;
-	return ymd_ncall(l, method, 0, 1);
+	return ymd_adjust(l, 0, ymd_xcall(l, 1));
 }
 
 static int yut_case(
@@ -187,13 +186,13 @@ static int yut_test(struct ymd_mach *vm, const char *clazz,
 	teardown = yut_method(vm, test->value.ref, "teardown");
 	init     = yut_method(vm, test->value.ref, "init");
 	final    = yut_method(vm, test->value.ref, "final");
-	if (setjmp(yut_jpt(vm, vm_getg(vm, "Assert"))->jpt)) {
+	if (setjmp(yut_jpt(l, vm_getg(vm, "Assert"))->jpt)) {
 		yut_fault(); // Print failed message
 		return -1; // Test Fail
 	}
 	yut_call(l, test, init); // ---- Initialize
 	for (i = skls_x(test)->head->fwd[0]; i != NULL; i = i->fwd[0]) {
-		const char *caze = kstr_of(vm, &i->k)->land;
+		const char *caze = kstr_of(l, &i->k)->land;
 		if (!strstr(caze, "test") || i->v.type != T_FUNC)
 			continue;
 		yut_case(l, clazz, caze, test, setup, teardown, func_x(&i->v));
@@ -246,7 +245,7 @@ int ymd_test(struct ymd_context *l, int argc, char *argv[]) {
 		const char *clazz;
 		if (!i->flag)
 			continue;
-		clazz = kstr_of(l->vm, &i->k)->land;
+		clazz = kstr_of(l, &i->k)->land;
 		if (strstr(clazz, "Test")) {
 			if (yut_test(l->vm, clazz, &i->v) < 0)
 				return -1;

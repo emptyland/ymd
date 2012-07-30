@@ -884,7 +884,7 @@ static void parse_func_decl(struct ymd_parser *p, const char *prefix,
 }
 
 static inline struct chunk *fbk(struct ymd_context *l) {
-	struct func *fn = func_of(l->vm, ymd_top(l, 0));
+	struct func *fn = func_of(l, ymd_top(l, 0));
 	return fn->u.core;
 }
 
@@ -902,7 +902,7 @@ static void parse_func(struct ymd_parser *p, int local) {
 		parse_block(p);
 		ymk_emit_end(p);
 	ymk_leave(p);
-	ymk_emit_func(p, &desc, func_of(l->vm, ymd_top(l, 0)));
+	ymk_emit_func(p, &desc, func_of(l, ymd_top(l, 0)));
 	ymd_pop(l, 1);
 }
 
@@ -924,7 +924,7 @@ static void parse_closure(struct ymd_parser *p) {
 		parse_block(p);
 		ymk_emit_end(p);
 	ymk_leave(p);
-	ymk_emit_func(p, &desc, func_of(l->vm, ymd_top(l, 0)));
+	ymk_emit_func(p, &desc, func_of(l, ymd_top(l, 0)));
 	ymd_pop(l, 1);
 }
 

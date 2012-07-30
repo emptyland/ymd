@@ -45,22 +45,22 @@ static void do_insert(L, struct dyay *self) {
 	case 2:
 		elem = ymd_argv_get(l, 1);
 		if (is_nil(elem))
-			vm_die(l->vm, "Element of array can not be `nil`");
+			ymd_panic(l, "Element of array can not be `nil`");
 		vset_dyay(ymd_push(l), self);
 			*ymd_push(l) = *elem; ymd_add(l);
 		ymd_pop(l, 1);
 		break;
 	case 3: {
-		ymd_int_t i = int_of(l->vm, ymd_argv_get(l, 1));
+		ymd_int_t i = int_of(l, ymd_argv_get(l, 1));
 		if (i < 0 || i >= self->count)
-			vm_die(l->vm, "array index out of range, %lld", i);
+			ymd_panic(l, "array index out of range, %lld", i);
 		elem = ymd_argv_get(l, 2);
 		if (is_nil(elem))
-			vm_die(l->vm, "Element in array can not be `nil`");
+			ymd_panic(l, "Element in array can not be `nil`");
 		*dyay_insert(l->vm, self, i) = *elem;
 		} break;
 	default:
-		vm_die(l->vm, "Too many arguments, %d", ymd_argv(l)->count);
+		ymd_panic(l, "Too many arguments, %d", ymd_argv(l)->count);
 		break;
 	}
 }
@@ -69,7 +69,7 @@ static void checked_put(L, struct variable *arg0,
                         const struct variable *k,
 						const struct variable *v) {
 	if (is_nil(k) || is_nil(v))
-		vm_die(l->vm, "Value can not be `nil` in k-v pair");
+		ymd_panic(l, "Value can not be `nil` in k-v pair");
 	switch (arg0->type) {
 	case T_HMAP:
 		*hmap_put(l->vm, hmap_x(arg0), k) = *v;
@@ -78,7 +78,7 @@ static void checked_put(L, struct variable *arg0,
 		*skls_put(l->vm, skls_x(arg0), k) = *v;
 		break;
 	default:
-		vm_die(l->vm, "This type: `%s` is not be support", typeof_kz(arg0->type));
+		ymd_panic(l, "This type: `%s` is not be support", typeof_kz(arg0->type));
 		break;
 	}
 }
@@ -112,18 +112,18 @@ static int libx_append(L) {
 		break;
 	case T_HMAP:
 		for (i = 1; i < ymd_argv_chk(l, 2)->count; ++i) {
-			struct dyay *pair = dyay_of(l->vm, ymd_argv_get(l, i));
+			struct dyay *pair = dyay_of(l, ymd_argv_get(l, i));
 			*hmap_put(l->vm, hmap_x(arg0), pair->elem) = pair->elem[1];
 		}
 		break;
 	case T_SKLS:
 		for (i = 1; i < ymd_argv_chk(l, 2)->count; ++i) {
-			struct dyay *pair = dyay_of(l->vm, ymd_argv_get(l, i));
+			struct dyay *pair = dyay_of(l, ymd_argv_get(l, i));
 			*skls_put(l->vm, skls_x(arg0), pair->elem) = pair->elem[1];
 		}
 		break;
 	default:
-		vm_die(l->vm, "This type: `%s` is not be support", typeof_kz(arg0->type));
+		ymd_panic(l, "This type: `%s` is not be support", typeof_kz(arg0->type));
 		break;
 	}
 	return 0;
@@ -163,7 +163,7 @@ static int libx_len(L) {
 		ymd_int(l, n);
 		} break;
 	default:
-		vm_die(l->vm, "This type: `%s` is not be support, "
+		ymd_panic(l, "This type: `%s` is not be support, "
 		       "need a container or string type",
 		       typeof_kz(arg0->type));
 		return 0;
@@ -244,9 +244,9 @@ static int dyay_iter(L) {
 	                *m = ymd_bval(l, 1)->value.ext;
 	if (i >= m)
 		return 0;
-	switch (int_of(l->vm, ymd_bval(l, 3))) {
+	switch (int_of(l, ymd_bval(l, 3))) {
 	case ITER_KEY: {
-		ymd_int_t idx = int_of(l->vm, ymd_bval(l, 2));
+		ymd_int_t idx = int_of(l, ymd_bval(l, 2));
 		ymd_int(l, idx);
 		vset_int(ymd_bval(l, 2), idx + 1);
 		} break;
@@ -254,7 +254,7 @@ static int dyay_iter(L) {
 		*ymd_push(l) = *i;
 		} break;
 	case ITER_KV: {
-		ymd_int_t idx = int_of(l->vm, ymd_bval(l, 2));
+		ymd_int_t idx = int_of(l, ymd_bval(l, 2));
 		ymd_dyay(l, 2);
 		ymd_int(l, idx);
 		ymd_add(l);
@@ -287,7 +287,7 @@ static int hmap_iter(L) {
 		vset_nil(ymd_push(l));
 		return 1;
 	}
-	switch (int_of(l->vm, ymd_bval(l, 2))) {
+	switch (int_of(l, ymd_bval(l, 2))) {
 	case ITER_KEY:
 		*ymd_push(l) = i->k;
 		break;
@@ -316,7 +316,7 @@ static int skls_iter(L) {
 		vset_nil(ymd_push(l));
 		return 1;
 	}
-	switch (int_of(l->vm, ymd_bval(l, 1))) {
+	switch (int_of(l, ymd_bval(l, 1))) {
 	case ITER_KEY:
 		*ymd_push(l) = i->k;
 		break;
@@ -383,7 +383,7 @@ static int new_contain_iter(L, const struct variable *obj, int flag) {
 		ymd_bind(l, 2);
 		} return 1;
 	default:
-		vm_die(l->vm, "Type is not be supported");
+		ymd_panic(l, "Type is not be supported");
 		break;
 	}
 	return 0;
@@ -401,16 +401,16 @@ static int libx_range(L) {
 	case 1:
 		return new_contain_iter(l, argv->elem, ITER_VALUE);
 	case 2: {
-		ymd_int_t i = int_of(l->vm, argv->elem),
-				  m = int_of(l->vm, argv->elem + 1);
+		ymd_int_t i = int_of(l, argv->elem),
+				  m = int_of(l, argv->elem + 1);
 		return new_step_iter(l, i, m, i > m ? -1 : +1);
 		}
 	case 3:
-		return new_step_iter(l, int_of(l->vm, argv->elem),
-		                     int_of(l->vm, argv->elem + 1),
-		                     int_of(l->vm, argv->elem + 2));
+		return new_step_iter(l, int_of(l, argv->elem),
+		                     int_of(l, argv->elem + 1),
+		                     int_of(l, argv->elem + 2));
 	default:
-		vm_die(l->vm, "Bad arguments, need 1 to 3");
+		ymd_panic(l, "Bad arguments, need 1 to 3");
 		break;
 	}
 	return 0;
@@ -429,12 +429,12 @@ static int libx_panic(L) {
 	struct dyay *argv = ymd_argv(l);
 	struct fmtx fx = FMTX_INIT;
 	if (!argv || argv->count == 0)
-		vm_die(l->vm, "Unknown");
+		ymd_panic(l, "Unknown");
 	for (i = 0; i < argv->count; ++i) {
 		if (i > 0) fmtx_append(&fx, " ", 1);
 		tostring(&fx, argv->elem + i);
 	}
-	vm_die(l->vm, fmtx_buf(&fx));
+	ymd_panic(l, fmtx_buf(&fx));
 	fmtx_final(&fx);
 	return 0;
 }
@@ -449,7 +449,7 @@ static int strbuf_final(struct fmtx *sb) {
 
 static int libx_cat(L) {
 	int i;
-	struct fmtx *self = mand_land(l->vm, ymd_argv_get(l, 0), T_STRBUF);
+	struct fmtx *self = mand_land(l, ymd_argv_get(l, 0), T_STRBUF);
 	struct dyay *argv = ymd_argv_chk(l, 2);
 	for (i = 1; i < argv->count; ++i)
 		tostring(self, argv->elem + i);
@@ -458,7 +458,7 @@ static int libx_cat(L) {
 }
 
 static int libx_get(L) {
-	struct fmtx *self = mand_land(l->vm, ymd_argv_get(l, 0), T_STRBUF);
+	struct fmtx *self = mand_land(l, ymd_argv_get(l, 0), T_STRBUF);
 	if (self->last == 0)
 		return 0;
 	ymd_kstr(l, fmtx_buf(self), self->last);
@@ -466,7 +466,7 @@ static int libx_get(L) {
 }
 
 static int libx_clear(L) {
-	strbuf_final(mand_land(l->vm, ymd_argv_get(l, 0), T_STRBUF));
+	strbuf_final(mand_land(l, ymd_argv_get(l, 0), T_STRBUF));
 	return 0;
 }
 
@@ -528,7 +528,7 @@ static int ansic_file_readline(L, struct ansic_file *self) {
 
 static int libx_read(L) {
 	struct variable *arg1;
-	struct ansic_file *self = mand_land(l->vm, ymd_argv_get(l, 0),
+	struct ansic_file *self = mand_land(l, ymd_argv_get(l, 0),
 	                                    T_STREAM);
 	if (ymd_argv_chk(l, 1)->count == 1)
 		return ansic_file_readn(l, self, 128);
@@ -540,13 +540,13 @@ static int libx_read(L) {
 		else if (strcmp(kstr_k(arg1)->land, "*line") == 0)
 			return ansic_file_readline(l, self);
 		else
-			vm_die(l->vm, "Bad read() option: %s", kstr_k(arg1)->land);
+			ymd_panic(l, "Bad read() option: %s", kstr_k(arg1)->land);
 		break;
 	case T_INT:
 		return ansic_file_readn(l, self,
-		                        int_of(l->vm, ymd_argv_get(l, 1)));
+		                        int_of(l, ymd_argv_get(l, 1)));
 	default:
-		vm_die(l->vm, "Bad read() option");
+		ymd_panic(l, "Bad read() option");
 		break;
 	}
 	return 0;
@@ -554,19 +554,19 @@ static int libx_read(L) {
 
 static int libx_write(L) {
 	struct kstr *bin = NULL;
-	struct ansic_file *self = mand_land(l->vm, ymd_argv_get(l, 0),
+	struct ansic_file *self = mand_land(l, ymd_argv_get(l, 0),
 	                                    T_STREAM);
 	if (is_nil(ymd_argv_get(l, 1)))
 		return 0;
-	bin = kstr_of(l->vm, ymd_argv_get(l, 1));
+	bin = kstr_of(l, ymd_argv_get(l, 1));
 	int rv = fwrite(bin->land, 1, bin->len, self->fp);
 	if (rv < 0)
-		vm_die(l->vm, "Write file failed!");
+		ymd_panic(l, "Write file failed!");
 	return 0;
 }
 
 static int libx_close(L) {
-	struct ansic_file *self = mand_land(l->vm, ymd_argv_get(l, 0),
+	struct ansic_file *self = mand_land(l, ymd_argv_get(l, 0),
 	                                    T_STREAM);
 	ansic_file_final(self);
 	return 0;
@@ -584,8 +584,8 @@ static int libx_open(L) {
 	self = ymd_mand(l, T_STREAM, sizeof(*self),
 	                (ymd_final_t)ansic_file_final);
 	if (ymd_argv_chk(l, 1)->count > 1)
-		mod = kstr_of(l->vm, ymd_argv_get(l, 1))->land;
-	self->fp = fopen(kstr_of(l->vm, ymd_argv_get(l, 0))->land, mod);
+		mod = kstr_of(l, ymd_argv_get(l, 1))->land;
+	self->fp = fopen(kstr_of(l, ymd_argv_get(l, 0))->land, mod);
 	if (!self->fp) {
 		ymd_pop(l, 1);
 		return 0;
@@ -610,7 +610,7 @@ static int posix_regex_final(struct posix_regex *self) {
 // print(result)
 static int libx_pattern(L) {
 	int err = 0, cflag = REG_EXTENDED;
-	struct kstr *arg0 = kstr_of(l->vm, ymd_argv_get(l, 0));
+	struct kstr *arg0 = kstr_of(l, ymd_argv_get(l, 0));
 	struct posix_regex *rv = ymd_mand(l, T_REGEX, sizeof(*rv),
 		(ymd_final_t)posix_regex_final);
 	switch (ymd_argv(l)->count) {
@@ -618,16 +618,16 @@ static int libx_pattern(L) {
 		cflag = REG_NOSUB;
 		break;
 	case 2: {
-		struct kstr *arg1 = kstr_of(l->vm, ymd_argv_get(l, 1));
+		struct kstr *arg1 = kstr_of(l, ymd_argv_get(l, 1));
 		if (strcmp(arg1->land, "*nosub") == 0)
 			cflag |= REG_NOSUB;
 		else if (strcmp(arg1->land, "*sub") == 0)
 			rv->sub = 1;
 		else
-			vm_die(l->vm, "Bad regex option: %s", arg1->land);
+			ymd_panic(l, "Bad regex option: %s", arg1->land);
 		} break;
 	default:
-		vm_die(l->vm, "Too many args, %d", ymd_argv(l)->count);
+		ymd_panic(l, "Too many args, %d", ymd_argv(l)->count);
 		break;
 	}
 	err = regcomp(&rv->core, arg0->land, cflag);
@@ -639,9 +639,9 @@ static int libx_pattern(L) {
 }
 
 static int libx_match(L) {
-	struct posix_regex *self = mand_land(l->vm, ymd_argv_get(l, 0),
+	struct posix_regex *self = mand_land(l, ymd_argv_get(l, 0),
 	                                     T_REGEX);
-	struct kstr *arg1 = kstr_of(l->vm, ymd_argv_get(l, 1));
+	struct kstr *arg1 = kstr_of(l, ymd_argv_get(l, 1));
 	int err = 0;
 	if (self->sub) {
 		regmatch_t matched[128];
@@ -691,45 +691,45 @@ static int libx_import(L) {
 	int i;
 	FILE *fp;
 	char blknam[MAX_BLOCK_NAME_LEN];
-	struct kstr *name = kstr_of(l->vm, ymd_argv_get(l, 0));
+	struct kstr *name = kstr_of(l, ymd_argv_get(l, 0));
 	if (vm_reached(l->vm, name->land))
 		return 0;
 	fp = fopen(name->land, "r");
 	if (!fp)
-		vm_die(l->vm, "Can not open import file: %s", name->land);
+		ymd_panic(l, "Can not open import file: %s", name->land);
 	i = ymd_compilef(l, file2blknam(name->land, blknam, sizeof(blknam)),
 	                 name->land, fp);
 	fclose(fp);
 	if (i < 0)
-		vm_die(l->vm, "Import fatal, syntax error in file: `%s`",
+		ymd_panic(l, "Import fatal, syntax error in file: `%s`",
 		       name->land);
 	for (i = 1; i < ymd_argv(l)->count; ++i)
 		*ymd_push(l) = *ymd_argv_get(l, i);
-	return ymd_call(l, func_of(l->vm, ymd_top(l, 0)),
+	return ymd_call(l, func_of(l, ymd_top(l, 0)),
 	                ymd_argv(l)->count - 1, 0);
 }
 
 static int libx_eval(L) {
 	int i;
 	struct func *fn;
-	struct kstr *script = kstr_of(l->vm, ymd_argv_get(l, 0));
+	struct kstr *script = kstr_of(l, ymd_argv_get(l, 0));
 	i = ymd_compile(l, "__blk_eval__", "[chunk]", script->land);
 	if (i < 0)
 		return 0;
-	fn = func_of(l->vm, ymd_top(l, 0));
+	fn = func_of(l, ymd_top(l, 0));
 	for (i = 1; i < ymd_argv(l)->count; ++i)
 		*ymd_push(l) = *ymd_argv_get(l, i);
 	return ymd_call(l, fn, ymd_argv(l)->count - 1, 0);
 }
 
 static int libx_compile(L) {
-	struct kstr *script = kstr_of(l->vm, ymd_argv_get(l, 0));
+	struct kstr *script = kstr_of(l, ymd_argv_get(l, 0));
 	int i = ymd_compile(l, "__blk_compile__", "[chunk]", script->land);
 	return (i < 0) ? 0 : 1;
 }
 
 static int libx_env(L) {
-	struct kstr *which = kstr_of(l->vm, ymd_argv_get(l, 0));
+	struct kstr *which = kstr_of(l, ymd_argv_get(l, 0));
 	if (strcmp(which->land, "*global") == 0)
 		vset_hmap(ymd_push(l), l->vm->global);
 	else if (strcmp(which->land, "*current") == 0)
@@ -740,7 +740,7 @@ static int libx_env(L) {
 }
 
 static int libx_atoi(L) {
-	struct kstr *arg0 = kstr_of(l->vm, ymd_argv_get(l, 0));
+	struct kstr *arg0 = kstr_of(l, ymd_argv_get(l, 0));
 	int ok = 1;
 	ymd_int_t i = dtoll(arg0->land, &ok);
 	if (!ok)
@@ -751,7 +751,7 @@ static int libx_atoi(L) {
 
 static int libx_exit(L) {
 	(void)l;
-	longjmp(l->jpt, 2);
+	longjmp(l->jpt->core, 1); // jump to top
 	return 0;
 }
 
@@ -770,7 +770,7 @@ static int libx_rand(L) {
 		rv = rand();
 		break;
 	case 1: {
-		ymd_int_t limit = int_of(l->vm, ymd_argv_get(l, 0));
+		ymd_int_t limit = int_of(l, ymd_argv_get(l, 0));
 		if (limit > 0)
 			rv = rand() % limit;
 		else
@@ -778,8 +778,8 @@ static int libx_rand(L) {
 		} break;
 	case 2:
 	default: {
-		ymd_int_t arg0 = int_of(l->vm, ymd_argv_get(l, 0)),
-				  arg1 = int_of(l->vm, ymd_argv_get(l, 1));
+		ymd_int_t arg0 = int_of(l, ymd_argv_get(l, 0)),
+				  arg1 = int_of(l, ymd_argv_get(l, 1));
 		ymd_int_t min, max;
 		if (arg0 < arg1)
 			min = arg0, max = arg1;
@@ -797,7 +797,7 @@ static int libx_rand(L) {
 }
 
 static int libx_gc(L) {
-	const struct kstr *arg0 = kstr_of(l->vm, ymd_argv_get(l, 0));
+	const struct kstr *arg0 = kstr_of(l, ymd_argv_get(l, 0));
 	if (strcmp(arg0->land, "pause") == 0)
 		gc_active(l->vm, GC_PAUSE);
 	else if (strcmp(arg0->land, "resume") == 0)
@@ -808,20 +808,90 @@ static int libx_gc(L) {
 }
 
 static int libx_setmetatable(L) {
-	struct mand *o = mand_of(l->vm, ymd_argv_get(l, 0));
+	struct mand *o = mand_of(l, ymd_argv_get(l, 0));
 	if (ymd_argv_get(l, 1)->type != T_HMAP &&
 		ymd_argv_get(l, 1)->type != T_SKLS)
-		vm_die(l->vm, "Not metatable type!");
+		ymd_panic(l, "Not metatable type!");
 	mand_proto(o, ymd_argv_get(l, 1)->value.ref);
 	return 0;
 }
 
 static int libx_metatable(L) {
-	struct mand *o = mand_of(l->vm, ymd_argv_get(l, 0));
+	struct mand *o = mand_of(l, ymd_argv_get(l, 0));
 	if (mand_proto(o, NULL))
 		vset_ref(ymd_push(l), mand_proto(o, NULL));
 	else
 		vset_nil(ymd_push(l));
+	return 1;
+}
+
+static int libx_error(L) {
+	struct dyay *argv = ymd_argv(l);
+	int i;
+	struct call_info *ci = vm_nearcall(l);
+	if (argv->count > 0) {
+		struct fmtx fx = FMTX_INIT;
+		for (i = 0; i < argv->count; ++i) {
+			if (i) fmtx_append(&fx, " ", 1);
+			tostring(&fx, argv->elem + i);
+		}
+		ymd_kstr(l, fmtx_buf(&fx), fx.last);
+		fmtx_final(&fx);
+	} else
+		ymd_kstr(l, "Unknown", -1);
+	if (ci) {
+		struct func *run = ci->run;
+		ymd_format(l, "%s:%d %s", run->u.core->file->land,
+				   run->u.core->line[ci->pc - 1],
+				   run->proto->land);
+	} else {
+		ymd_nil(l);
+	}
+	ci = l->info;
+	ymd_dyay(l, 8);
+	while (ci) {
+		struct func *run = ci->run;
+		if (run->is_c)
+			ymd_format(l, "%s", run->proto->land);
+		else
+			ymd_format(l, "%s:%d %s", run->u.core->file->land,
+			           run->u.core->line[ci->pc - 1],
+					   run->proto->land);
+		ymd_add(l);
+		ci = ci->chain;
+	}
+	ymd_error(l);
+	assert(0);
+	return 0; // Never
+}
+
+static int libx_pcall(L) {
+	struct dyay *argv = ymd_argv_chk(l, 1);
+	struct func *fn = func_of(l, argv->elem);
+	int i;
+	vset_func(ymd_push(l), fn);
+	for (i = 1; i < argv->count; ++i)
+		*ymd_push(l) = argv->elem[i];
+	i = ymd_pcall(l, fn, argv->count - 1);
+	ymd_skls(l);
+	if (i < 0) {
+		ymd_move(l, 1);
+		ymd_def(l, "backtrace");
+		ymd_move(l, 1);
+		ymd_def(l, "where");
+		ymd_move(l, 1);
+		ymd_def(l, "error");
+		ymd_int(l, -i);
+		ymd_def(l, "level");
+	} else {
+		if (i) {
+			ymd_move(l, 1);
+			if (is_nil(ymd_top(l, 0)))
+				ymd_pop(l, 1);
+			else
+				ymd_def(l, "ret");
+		}
+	}
 	return 1;
 }
 
@@ -849,6 +919,8 @@ LIBC_BEGIN(Builtin)
 	LIBC_ENTRY(gc)
 	LIBC_ENTRY(setmetatable)
 	LIBC_ENTRY(metatable)
+	LIBC_ENTRY(error)
+	LIBC_ENTRY(pcall)
 LIBC_END
 
 int ymd_load_lib(struct ymd_mach *vm, ymd_libc_t lbx) {
