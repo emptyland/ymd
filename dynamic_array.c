@@ -1,6 +1,4 @@
-#include "value.h"
-#include "state.h"
-#include "memory.h"
+#include "core.h"
 #include <stdlib.h>
 #include <assert.h>
 

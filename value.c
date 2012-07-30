@@ -189,24 +189,52 @@ struct mand *mand_new(struct ymd_mach *vm, int size, ymd_final_t final) {
 	return x;
 }
 
-void mand_final(struct ymd_mach *vm, struct mand *pm) {
+void mand_final(struct ymd_mach *vm, struct mand *o) {
 	int rv = 0;
-	if (pm->final)
-		rv = (*pm->final)(pm->land);
+	if (o->final)
+		rv = (*o->final)(o->land);
 	if (rv < 0)
 		vm_die(vm, "Managed data finalize failed.");
 }
 
-int mand_equals(const struct mand *pm, const struct mand *rhs) {
-	if (pm == rhs)
+int mand_equals(const struct mand *o, const struct mand *rhs) {
+	if (o == rhs)
 		return 1;
-	if (pm->len == rhs->len && pm->final == rhs->final) {
-		if (memcmp(pm->land, rhs->land, pm->len) == 0)
+	if (o->len == rhs->len && o->final == rhs->final) {
+		if (memcmp(o->land, rhs->land, o->len) == 0)
 			return 1;
 	}
 	return 0;
 }
 
-int mand_compare(const struct mand *pm, const struct mand *rhs) {
-	return kz_compare(pm->land, pm->len, rhs->land, rhs->len);
+int mand_compare(const struct mand *o, const struct mand *rhs) {
+	return kz_compare(o->land, o->len, rhs->land, rhs->len);
 }
+
+struct variable *mand_get(struct mand *o, const struct variable *k) {
+	if (!o->proto)
+		return knil;
+	assert (o->proto->type == T_HMAP || o->proto->type == T_SKLS);
+	switch (o->proto->type) {
+	case T_HMAP:
+		return hmap_get(hmap_f(o->proto), k);
+	case T_SKLS:
+		return skls_get(skls_f(o->proto), k);
+	}
+	return knil;
+}
+
+struct variable *mand_put(struct ymd_mach *vm, struct mand *o,
+                          const struct variable *k) {
+	if (!o->proto)
+		return knil;
+	assert (o->proto->type == T_HMAP || o->proto->type == T_SKLS);
+	switch (o->proto->type) {
+	case T_HMAP:
+		return hmap_put(vm, hmap_f(o->proto), k);
+	case T_SKLS:
+		return skls_put(vm, skls_f(o->proto), k);
+	}
+	return knil;
+}
+

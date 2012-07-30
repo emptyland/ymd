@@ -3,6 +3,7 @@
 
 #include "memory.h"
 #include "value.h"
+#include "value_inl.h"
 #include <string.h>
 #include <setjmp.h>
 #include <assert.h>
@@ -204,8 +205,8 @@ static inline void ymd_adjust(struct ymd_context *l, int adjust, int ret) {
 // ----------------------------------------------------------------------------
 static inline void ymd_dyay(struct ymd_context *l, int k) {
 	struct dyay *o = dyay_new(l->vm, k);
-	o->marked = 0;
 	vset_dyay(ymd_push(l), o); 
+	gc_release(o);
 }
 
 static inline void ymd_add(struct ymd_context *l) {
@@ -216,30 +217,30 @@ static inline void ymd_add(struct ymd_context *l) {
 
 static inline void ymd_hmap(struct ymd_context *l, int k) {
 	struct hmap *o = hmap_new(l->vm, k);
-	o->marked = 0;
 	vset_hmap(ymd_push(l), o);
+	gc_release(o);
 }
 
 static inline void ymd_skls(struct ymd_context *l) {
 	struct skls *o = skls_new(l->vm);
-	o->marked = 0;
 	vset_skls(ymd_push(l), o);
+	gc_release(o);
 }
 
 static inline void *ymd_mand(struct ymd_context *l, const char *tt,
                              size_t size, ymd_final_t final) {
 	struct mand *o = mand_new(l->vm, size, final);
-	o->marked = 0;
 	o->tt = tt;
 	vset_mand(ymd_push(l), o);
+	gc_release(o);
 	return o->land;
 }
 
 static inline void ymd_kstr(struct ymd_context *l, const char *z,
-                            int len) {
+	                        int len) {
 	struct kstr *o = kstr_fetch(l->vm, z, len);
-	o->marked = 0;
 	vset_kstr(ymd_push(l), o);
+	gc_release(o);
 }
 
 static inline void ymd_int(struct ymd_context *l, ymd_int_t i) {
@@ -254,20 +255,32 @@ static inline void ymd_bool(struct ymd_context *l, int b) {
 	vset_bool(ymd_push(l), b);
 }
 
+static inline void ymd_nil(struct ymd_context *l) {
+	vset_nil(ymd_push(l));
+}
+
 static inline void ymd_nafn(struct ymd_context *l, ymd_nafn_t fn,
                             const char *name, int nbind) {
 	struct func *o = func_new_c(l->vm, fn, name);
-	o->marked = 0;
 	o->n_bind = nbind;
 	vset_func(ymd_push(l), o);
+	gc_release(o);
 }
 
 static inline void ymd_func(struct ymd_context *l, struct chunk *blk,
                             const char *name, int nbind) {
 	struct func *o = func_new(l->vm, blk, name);
-	o->marked = 0;
 	o->n_bind = nbind;
 	vset_func(ymd_push(l), o);
+	gc_release(o);
+}
+
+static inline struct func *ymd_naked(struct ymd_context *l,
+	                                 struct chunk *blk) {
+	struct func *o = func_new(l->vm, blk, NULL);
+	vset_func(ymd_push(l), o);
+	gc_release(o);
+	return o;
 }
 
 static inline void ymd_getf(struct ymd_context *l) {
@@ -316,6 +329,14 @@ static inline void ymd_insert(struct ymd_context *l) {
 	ymd_int_t i = int_of(l->vm, ymd_top(l, 1));
 	*dyay_insert(l->vm, o, i) = *ymd_top(l, 0);
 	ymd_pop(l, 2);
+}
+
+static inline void ymd_setmetatable(struct ymd_context *l) {
+	struct mand *o = mand_of(l->vm, ymd_top(l, 1));
+	if (ymd_top(l, 0)->type != T_HMAP &&
+		ymd_top(l, 0)->type != T_SKLS) vm_die(l->vm, "Not metatable type!");
+	mand_proto(o, ymd_top(l, 0)->value.ref);
+	ymd_pop(l, 1);
 }
 
 #endif // YMD_STATE_H

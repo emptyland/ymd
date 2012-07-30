@@ -1,5 +1,6 @@
 #include "tostring.h"
 #include "value.h"
+#include "value_inl.h"
 #include <stdlib.h>
 
 void fmtx_final(struct fmtx *self) {

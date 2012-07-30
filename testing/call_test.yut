@@ -1,0 +1,89 @@
+
+func gfunc (a, b, c, d, e, f) {
+	var k = len(argv)
+	if k > 0 { Assert:EQ(a, argv[0]) }
+	if k > 1 { Assert:EQ(b, argv[1]) }
+	if k > 2 { Assert:EQ(c, argv[2]) }
+	if k > 3 { Assert:EQ(d, argv[3]) }
+	if k > 4 { Assert:EQ(e, argv[4]) }
+	if k > 5 { Assert:EQ(f, argv[5]) }
+	return "gfunc"
+}
+
+var func lfunc (a, b, c, d, e, f) {
+	var k = len(argv)
+	if k > 0 { Assert:EQ(a, argv[0]) }
+	if k > 1 { Assert:EQ(b, argv[1]) }
+	if k > 2 { Assert:EQ(c, argv[2]) }
+	if k > 3 { Assert:EQ(d, argv[3]) }
+	if k > 4 { Assert:EQ(e, argv[4]) }
+	if k > 5 { Assert:EQ(f, argv[5]) }
+	return "lfunc"
+}
+
+CallTest = @{
+	test00argv : func (self) {
+		Assert:EQ("function", typeof gfunc)
+		Assert:Nil(lfunc)
+		var k = "gfunc"
+		Assert:EQ(k, gfunc())
+		Assert:EQ(k, gfunc(1))
+		Assert:EQ(k, gfunc(1, "2"))
+		Assert:EQ(k, gfunc(1, "2", []))
+		Assert:EQ(k, gfunc(1, "2", [], {}))
+		Assert:EQ(k, gfunc(1, "2", [], {}, func () {}))
+	},
+
+	test01nested : func (self) {
+		var func foo () {
+			var k = len(argv)
+			if k > 0 { Assert:EQ(0, argv[0]) }
+			if k > 1 { Assert:EQ(1, argv[1]) }
+			if k > 2 { Assert:EQ(2, argv[2]) }
+			return k - 1
+		}
+		Assert:EQ("function", typeof foo)
+		Assert:EQ(0, foo(0))
+		Assert:EQ(1, foo(0, 1))
+		Assert:EQ(2, foo(0, 1, 2))
+		Assert:EQ(3, foo(0, 1, 2, 3))
+	},
+
+	test02method : func (self) {
+		var o = {}
+		func o.init () {
+			self.num = 1024
+		}
+		func o.set (k) {
+			self.num = k
+		}
+		Assert:Nil(o.num)
+		o:init()
+		Assert:EQ(1024, o.num)
+		o:set(2048)
+		Assert:EQ(2048, o.num)
+	},
+
+	test03closure : func (self) {
+		var func build (i) {
+			return func [i] () {
+				i = i + 1
+				return i
+			}
+		}
+		var f = build(0)
+		var i
+		Assert:EQ("function", typeof f)
+		Assert:EQ(1, f())
+		Assert:EQ(2, f())
+		for i in range (3, 100) {
+			Assert:EQ(i, f())
+		}
+
+		f = build(-1)
+		Assert:EQ("function", typeof f)
+		for i in range (0, 100) {
+			Assert:EQ(i, f())
+		}
+	}
+}

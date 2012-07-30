@@ -1,10 +1,8 @@
 #include "3rd/regex/regex.h"
 #include "tostring.h"
-#include "state.h"
-#include "value.h"
-#include "memory.h"
+#include "core.h"
 #include "compiler.h"
-#include "encode.h"
+#include "encoding.h"
 #include "libc.h"
 #include <stdio.h>
 #include <setjmp.h>
@@ -13,13 +11,13 @@ struct posix_regex {
 	regex_t core; // NOTE: This field must be first!
 	int sub;
 };
-static const char *T_REGEX = "regex";
-
-static const char *T_STRBUF = "strbuf";
 
 struct ansic_file {
 	FILE *fp;
 };
+
+static const char *T_REGEX = "regex";
+static const char *T_STRBUF = "strbuf";
 static const char *T_STREAM = "stream";
 
 #define PRINT_SPLIT " "
@@ -451,23 +449,16 @@ static int strbuf_final(struct fmtx *sb) {
 
 static int libx_cat(L) {
 	int i;
-	struct fmtx *self;
+	struct fmtx *self = mand_land(l->vm, ymd_argv_get(l, 0), T_STRBUF);
 	struct dyay *argv = ymd_argv_chk(l, 2);
-	*ymd_push(l) = argv->elem[0]; // push self
-	ymd_mem(l, "__core__");
-	self = mand_land(l->vm, ymd_top(l, 0), T_STRBUF);
-	ymd_pop(l, 1);
 	for (i = 1; i < argv->count; ++i)
 		tostring(self, argv->elem + i);
+	*ymd_push(l) = *ymd_argv_get(l, 0);
 	return 1;
 }
 
 static int libx_get(L) {
-	struct fmtx *self;
-	*ymd_push(l) = *ymd_argv_get(l, 0);
-	ymd_mem(l, "__core__");
-	self = mand_land(l->vm, ymd_top(l, 0), T_STRBUF);
-	ymd_pop(l, 2); // pop self/fmtx
+	struct fmtx *self = mand_land(l->vm, ymd_argv_get(l, 0), T_STRBUF);
 	if (self->last == 0)
 		return 0;
 	ymd_kstr(l, fmtx_buf(self), self->last);
@@ -475,10 +466,7 @@ static int libx_get(L) {
 }
 
 static int libx_clear(L) {
-	*ymd_push(l) = *ymd_argv_get(l, 0);
-	ymd_mem(l, "__core__");
-	strbuf_final(mand_land(l->vm, ymd_top(l, 0), T_STRBUF));
-	ymd_pop(l, 2);
+	strbuf_final(mand_land(l->vm, ymd_argv_get(l, 0), T_STRBUF));
 	return 0;
 }
 
@@ -489,13 +477,12 @@ LIBC_BEGIN(StringBuffer)
 LIBC_END
 
 static int libx_strbuf(L) {
-	struct fmtx *self;
-	ymd_skls(l);
-	self = ymd_mand(l, T_STRBUF, sizeof(struct fmtx),
-	                (ymd_final_t)strbuf_final);
+	struct fmtx *self = ymd_mand(l, T_STRBUF, sizeof(struct fmtx),
+	                             (ymd_final_t)strbuf_final);
 	self->max = FMTX_STATIC_MAX;
-	ymd_def(l, "__core__");
+	ymd_skls(l); // FIXME:
 	ymd_load_mem(l, "__buitin__.strbuf", lbxStringBuffer);
+	ymd_setmetatable(l);
 	return 1;
 }
 
@@ -510,8 +497,7 @@ static int ansic_file_final(struct ansic_file *self) {
 	return 0;
 }
 
-static int ansic_file_readn(struct ymd_context *l,
-                            struct ansic_file *self, ymd_int_t n) {
+static int ansic_file_readn(L, struct ansic_file *self, ymd_int_t n) {
 	char *buf = vm_zalloc(l->vm, n);
 	int rvl = fread(buf, 1, n, self->fp);
 	if (rvl <= 0) {
@@ -523,8 +509,7 @@ static int ansic_file_readn(struct ymd_context *l,
 	return 1;
 }
 
-static int ansic_file_readall(struct ymd_context *l,
-                              struct ansic_file *self) {
+static int ansic_file_readall(L, struct ansic_file *self) {
 	ymd_int_t len;
 	fseek(self->fp, 0, SEEK_END);
 	len = ftell(self->fp);
@@ -532,8 +517,7 @@ static int ansic_file_readall(struct ymd_context *l,
 	return ansic_file_readn(l, self, len);
 }
 
-static int ansic_file_readline(struct ymd_context *l,
-                               struct ansic_file *self) {
+static int ansic_file_readline(L, struct ansic_file *self) {
 	char line[1024];
 	char *rv = fgets(line, sizeof(line), self->fp);
 	if (!rv)
@@ -544,11 +528,8 @@ static int ansic_file_readline(struct ymd_context *l,
 
 static int libx_read(L) {
 	struct variable *arg1;
-	struct ansic_file *self;
-	*ymd_push(l) = *ymd_argv_get(l, 0);
-	ymd_mem(l, "__core__");
-	self = mand_land(l->vm, ymd_top(l, 0), T_STREAM);
-	ymd_pop(l, 2);
+	struct ansic_file *self = mand_land(l->vm, ymd_argv_get(l, 0),
+	                                    T_STREAM);
 	if (ymd_argv_chk(l, 1)->count == 1)
 		return ansic_file_readn(l, self, 128);
 	arg1 = ymd_argv_get(l, 1);
@@ -572,12 +553,9 @@ static int libx_read(L) {
 }
 
 static int libx_write(L) {
-	struct ansic_file *self;
 	struct kstr *bin = NULL;
-	*ymd_push(l) = *ymd_argv_get(l, 0);
-	ymd_mem(l, "__core__");
-	self = mand_land(l->vm, ymd_top(l, 0), T_STREAM);
-	ymd_pop(l, 2);
+	struct ansic_file *self = mand_land(l->vm, ymd_argv_get(l, 0),
+	                                    T_STREAM);
 	if (is_nil(ymd_argv_get(l, 1)))
 		return 0;
 	bin = kstr_of(l->vm, ymd_argv_get(l, 1));
@@ -588,11 +566,8 @@ static int libx_write(L) {
 }
 
 static int libx_close(L) {
-	struct ansic_file *self;
-	*ymd_push(l) = *ymd_argv_get(l, 0);
-	ymd_mem(l, "__core__");
-	self = mand_land(l->vm, ymd_top(l, 0), T_STREAM);
-	ymd_pop(l, 2);
+	struct ansic_file *self = mand_land(l->vm, ymd_argv_get(l, 0),
+	                                    T_STREAM);
 	ansic_file_final(self);
 	return 0;
 }
@@ -606,10 +581,8 @@ LIBC_END
 static int libx_open(L) {
 	const char *mod = "r";
 	struct ansic_file *self;
-	ymd_skls(l);
 	self = ymd_mand(l, T_STREAM, sizeof(*self),
 	                (ymd_final_t)ansic_file_final);
-	ymd_def(l, "__core__");
 	if (ymd_argv_chk(l, 1)->count > 1)
 		mod = kstr_of(l->vm, ymd_argv_get(l, 1))->land;
 	self->fp = fopen(kstr_of(l->vm, ymd_argv_get(l, 0))->land, mod);
@@ -617,7 +590,9 @@ static int libx_open(L) {
 		ymd_pop(l, 1);
 		return 0;
 	}
+	ymd_skls(l); // FIXME:
 	ymd_load_mem(l, "__buitin__.file", lbxANSICFile);
+	ymd_setmetatable(l);
 	return 1;
 }
 
@@ -821,7 +796,7 @@ static int libx_rand(L) {
 	return 1;
 }
 
-static int libx_gc(struct ymd_context *l) {
+static int libx_gc(L) {
 	const struct kstr *arg0 = kstr_of(l->vm, ymd_argv_get(l, 0));
 	if (strcmp(arg0->land, "pause") == 0)
 		gc_active(l->vm, GC_PAUSE);
@@ -830,6 +805,24 @@ static int libx_gc(struct ymd_context *l) {
 	else if (strcmp(arg0->land, "collect") == 0)
 		gc_active(l->vm, GC_MARK), gc_active(l->vm, GC_SWEEP);
 	return 0;
+}
+
+static int libx_setmetatable(L) {
+	struct mand *o = mand_of(l->vm, ymd_argv_get(l, 0));
+	if (ymd_argv_get(l, 1)->type != T_HMAP &&
+		ymd_argv_get(l, 1)->type != T_SKLS)
+		vm_die(l->vm, "Not metatable type!");
+	mand_proto(o, ymd_argv_get(l, 1)->value.ref);
+	return 0;
+}
+
+static int libx_metatable(L) {
+	struct mand *o = mand_of(l->vm, ymd_argv_get(l, 0));
+	if (mand_proto(o, NULL))
+		vset_ref(ymd_push(l), mand_proto(o, NULL));
+	else
+		vset_nil(ymd_push(l));
+	return 1;
 }
 
 LIBC_BEGIN(Builtin)
@@ -854,8 +847,9 @@ LIBC_BEGIN(Builtin)
 	LIBC_ENTRY(exit)
 	LIBC_ENTRY(rand)
 	LIBC_ENTRY(gc)
+	LIBC_ENTRY(setmetatable)
+	LIBC_ENTRY(metatable)
 LIBC_END
-
 
 int ymd_load_lib(struct ymd_mach *vm, ymd_libc_t lbx) {
 	const struct libfn_entry *i;
@@ -869,7 +863,7 @@ int ymd_load_lib(struct ymd_mach *vm, ymd_libc_t lbx) {
 	return rv;
 }
 
-int ymd_load_mem(struct ymd_context *l, const char *clazz, ymd_libc_t lbx) {
+int ymd_load_mem(L, const char *clazz, ymd_libc_t lbx) {
 	int rv = 0;
 	const struct libfn_entry *i;
 	for (i = lbx; i->native != NULL; ++i) {

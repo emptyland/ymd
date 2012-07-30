@@ -1,7 +1,5 @@
 #include "libc.h"
-#include "memory.h"
-#include "state.h"
-#include "value.h"
+#include "core.h"
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>

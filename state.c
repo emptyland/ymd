@@ -1,5 +1,4 @@
-#include "state.h"
-#include "value.h"
+#include "core.h"
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
@@ -109,6 +108,10 @@ struct variable *vm_put(struct ymd_mach *vm,
 		return hmap_put(vm, hmap_x(var), key);
 	case T_DYAY:
 		return dyay_get(dyay_x(var), int_of(vm, key));
+	case T_MAND:
+		if (!mand_x(var)->proto)
+			vm_die(vm, "Management memory has no metatable yet");
+		return mand_put(vm, mand_x(var), key);
 	default:
 		vm_die(vm, "Variable can not be put");
 		break;
@@ -135,6 +138,10 @@ struct variable *vm_get(struct ymd_mach *vm, struct variable *var,
 		return hmap_get(hmap_x(var), key);
 	case T_DYAY:
 		return vm_at(vm, dyay_x(var), int_of(vm, key));
+	case T_MAND:
+		if (!mand_x(var)->proto)
+			vm_die(vm, "Management memory has no metatable yet");
+		return mand_get(mand_x(var), key);
 	default:
 		vm_die(vm, "Variable can not be index");
 		break;
@@ -154,47 +161,59 @@ struct kstr *vm_strcat(struct ymd_mach *vm, const struct kstr *lhs, const struct
 }
 
 struct variable *vm_def(struct ymd_mach *vm, void *o, const char *field) {
-	struct variable k;
+	struct variable k, *v;
 	switch (gcx(o)->type) {
 	case T_HMAP:
 		vset_kstr(&k, kstr_fetch(vm, field, -1));
-		return hmap_put(vm, o, &k);
+		v = hmap_put(vm, o, &k);
+		gc_release(k.value.ref);
+		break;
 	case T_SKLS:
 		vset_kstr(&k, kstr_fetch(vm, field, -1));
-		return skls_put(vm, o, &k);
+		v = skls_put(vm, o, &k);
+		gc_release(k.value.ref);
+		break;
 	default:
 		assert(0);
 		break;
 	}
-	return NULL;
+	return v;
 }
 
 struct variable *vm_mem(struct ymd_mach *vm, void *o, const char *field) {
-	struct variable k;
+	struct variable k, *v = NULL;
 	switch (gcx(o)->type) {
 	case T_HMAP:
 		vset_kstr(&k, kstr_fetch(vm, field, -1));
-		return hmap_get(o, &k);
+		v = hmap_get(o, &k);
+		gc_release(k.value.ref);
+		break;
 	case T_SKLS:
 		vset_kstr(&k, kstr_fetch(vm, field, -1));
-		return skls_get(o, &k);
+		v = skls_get(o, &k);
+		gc_release(k.value.ref);
+		break;
 	default:
 		assert(0);
 		break;
 	}
-	return NULL;
+	return v;
 }
 
 struct variable *vm_getg(struct ymd_mach *vm, const char *field) {
-	struct variable k;
+	struct variable k, *v;
 	vset_kstr(&k, kstr_fetch(vm, field, -1));
-	return hmap_get(vm->global, &k);
+	v = hmap_get(vm->global, &k);
+	gc_release(k.value.ref);
+	return v;
 }
 
 struct variable *vm_putg(struct ymd_mach *vm, const char *field) {
-	struct variable k;
+	struct variable k, *v;
 	vset_kstr(&k, kstr_fetch(vm, field, -1));
-	return hmap_put(vm, vm->global, &k);
+	v = hmap_put(vm, vm->global, &k);
+	gc_release(k.value.ref);
+	return v;
 }
 
 //-----------------------------------------------------------------------------
@@ -227,11 +246,13 @@ struct ymd_mach *ymd_init() {
 	// Init global map:
 	kpool_init(vm);
 	vm->global = hmap_new(vm, -1);
-	// Load symbols
-	// `reached` variable: for all of loaded chunks
-	vset_hmap(vm_putg(vm, "__reached__"), hmap_new(vm, -1));
+	gc_release(vm->global);
 	// Init context
 	vm_init_context(vm);
+	// Load symbols
+	// `reached` variable: for all of loaded chunks
+	ymd_hmap(ioslate(vm), 1);
+	ymd_putg(ioslate(vm), "__reached__");
 	return vm;
 }
 

@@ -2,6 +2,7 @@
 #define YMD_VALUE_H
 
 #include "memory.h"
+#include "builtin.h"
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
@@ -13,13 +14,16 @@
 #define T_INT     1
 #define T_BOOL    2
 #define T_EXT     3 // Naked pointer
+// -->
 #define T_REF     4 /* Flag the follow type are gc type: */
+// <--
 #define T_KSTR    4 // Constant string
 #define T_FUNC    5 // Closure
 #define T_DYAY    6 // Dynamic array
 #define T_HMAP    7 // Hash map
 #define T_SKLS    8 // Skip list
 #define T_MAND    9 // Managed data(from C/C++)
+
 #define T_MAX    10
 
 #define DECL_TREF(v) \
@@ -31,15 +35,6 @@
 	v(mand, T_MAND)
 
 #define MAX_CHUNK_LEN 512
-
-struct ymd_context;
-struct ymd_mach;
-
-typedef long long          ymd_int_t;
-typedef unsigned long long ymd_uint_t;
-typedef unsigned int       ymd_inst_t;
-typedef int (*ymd_nafn_t)(struct ymd_context *);
-
 
 struct variable {
 	union {
@@ -127,79 +122,24 @@ struct skls {
 };
 
 // Managed data (must be from C/C++)
-typedef int (*ymd_final_t)(void *);
 struct mand {
 	GC_HEAD;
 	int len; // land length
 	const char *tt; // Type name
 	ymd_final_t final; // Release function, call in deleted
+	struct gc_node *proto; // metatable
 	unsigned char land[1]; // Payload data
 };
 
 // A flag fake variable:
 extern struct variable *knil;
 
-#define DEFINE_REFCAST(name, tt) \
-static inline struct name *name##_x(struct variable *var) { \
-	assert(var->value.ref->type == tt); \
-	return (struct name *)var->value.ref; \
-} \
-static inline const struct name *name##_k(const struct variable *var) { \
-	assert(var->value.ref->type == tt); \
-	return (const struct name *)var->value.ref; \
-} \
-static inline struct name *name##_f(void *o) { \
-	return (struct name *)o; \
-}
-DECL_TREF(DEFINE_REFCAST)
-#undef DEFINE_REFCAST
-
-// Generic functions:
-static inline int is_nil(const struct variable *v) {
-	return v->type == T_NIL;
-}
+// Safe casting
 ymd_int_t int_of(struct ymd_mach *vm, const struct variable *var);
 ymd_int_t bool_of(struct ymd_mach *vm, const struct variable *var);
-#define DECL_REFOF(name, tt) \
-struct name *name##_of(struct ymd_mach *vm, struct variable *var);
-DECL_TREF(DECL_REFOF)
-#undef DECL_REFOF
-
 void *mand_land(struct ymd_mach *vm, struct variable *var, const char *tt);
-#define mand_cast(var, tt, type) ((type)mand_land(var, tt))
 
-static inline void vset_nil(struct variable *v) {
-	v->type = T_NIL;
-	v->value.i = 0;
-}
-static inline void vset_int(struct variable *v, ymd_int_t i) {
-	v->type = T_INT;
-	v->value.i = i;
-}
-static inline void vset_bool(struct variable *v, ymd_int_t i) {
-	v->type = T_BOOL;
-	v->value.i = i;
-}
-static inline void vset_ext(struct variable *v, void *p) {
-	v->type = T_EXT;
-	v->value.ext = p;
-}
-static inline void vset_ref(struct variable *v, struct gc_node *p) {
-	v->type = p->type;
-	v->value.ref = p;
-}
-#define DEFINE_SETTER(name, tt) \
-static inline void vset_##name(struct variable *v, struct name *o) { \
-	v->type = tt; \
-	v->value.ref = gcx(o); \
-}
-DECL_TREF(DEFINE_SETTER)
-#undef DEFINE_SETTER
-
-static inline int is_ref(const struct variable *v) {
-	return v->type >= T_REF;
-}
-
+// Literal type strings
 const char *typeof_kz(unsigned tt);
 struct kstr *typeof_kstr(struct ymd_mach *vm, unsigned tt);
 
@@ -210,14 +150,14 @@ int compare(const struct variable *lhs, const struct variable *rhs);
 // Internal comparing
 int kstr_equals(const struct kstr *kz, const struct kstr *rhs);
 int kstr_compare(const struct kstr *kz, const struct kstr *rhs);
-int hmap_equals(const struct hmap *map, const struct hmap *rhs);
-int hmap_compare(const struct hmap *map, const struct hmap *rhs);
-int skls_equals(const struct skls *list, const struct skls *rhs);
-int skls_compare(const struct skls *list, const struct skls *rhs);
-int dyay_equals(const struct dyay *arr, const struct dyay *rhs);
-int dyay_compare(const struct dyay *arr, const struct dyay *rhs);
-int mand_equals(const struct mand *pm, const struct mand *rhs);
-int mand_compare(const struct mand *pm, const struct mand *rhs);
+int hmap_equals(const struct hmap *o, const struct hmap *rhs);
+int hmap_compare(const struct hmap *o, const struct hmap *rhs);
+int skls_equals(const struct skls *o, const struct skls *rhs);
+int skls_compare(const struct skls *o, const struct skls *rhs);
+int dyay_equals(const struct dyay *o, const struct dyay *rhs);
+int dyay_compare(const struct dyay *o, const struct dyay *rhs);
+int mand_equals(const struct mand *o, const struct mand *rhs);
+int mand_compare(const struct mand *o, const struct mand *rhs);
 
 // Constant string: `kstr`
 struct kstr *kstr_fetch(struct ymd_mach *vm, const char *z, int count);
@@ -237,28 +177,33 @@ void kpool_final(struct ymd_mach *vm);
 
 // Hash map: `hmap` functions:
 struct hmap *hmap_new(struct ymd_mach *vm, int count);
-void hmap_final(struct ymd_mach *vm, struct hmap *map);
-struct variable *hmap_put(struct ymd_mach *vm, struct hmap *map,
+void hmap_final(struct ymd_mach *vm, struct hmap *o);
+struct variable *hmap_put(struct ymd_mach *vm, struct hmap *o,
                           const struct variable *key);
-struct variable *hmap_get(struct hmap *map, const struct variable *key);
+struct variable *hmap_get(struct hmap *o, const struct variable *k);
 
 // Skip list: `skls` functions:
 struct skls *skls_new(struct ymd_mach *vm);
-void skls_final(struct ymd_mach *vm, struct skls *list);
-struct variable *skls_put(struct ymd_mach *vm, struct skls *list,
-                          const struct variable *key);
-struct variable *skls_get(struct skls *list, const struct variable *key);
+void skls_final(struct ymd_mach *vm, struct skls *o);
+struct variable *skls_put(struct ymd_mach *vm, struct skls *o,
+                          const struct variable *k);
+struct variable *skls_get(struct skls *o, const struct variable *k);
 
 // Dynamic array: `dyay` functions:
 struct dyay *dyay_new(struct ymd_mach *vm, int count);
-void dyay_final(struct ymd_mach *vm, struct dyay *arr);
-struct variable *dyay_get(struct dyay *arr, ymd_int_t i);
-struct variable *dyay_add(struct ymd_mach *vm, struct dyay *arr);
-struct variable *dyay_insert(struct ymd_mach *vm, struct dyay *arr, ymd_int_t i);
+void dyay_final(struct ymd_mach *vm, struct dyay *o);
+struct variable *dyay_get(struct dyay *o, ymd_int_t i);
+struct variable *dyay_add(struct ymd_mach *vm, struct dyay *o);
+struct variable *dyay_insert(struct ymd_mach *vm, struct dyay *o,
+	                         ymd_int_t i);
 
 // Managed data: `mand` functions:
 struct mand *mand_new(struct ymd_mach *vm, int size, ymd_final_t final);
-void mand_final(struct ymd_mach *vm, struct mand *pm);
+void mand_final(struct ymd_mach *vm, struct mand *o);
+// Proxy getting and putting
+struct variable *mand_get(struct mand *o, const struct variable *k);
+struct variable *mand_put(struct ymd_mach *vm, struct mand *o,
+                          const struct variable *k);
 
 // Chunk and compiling:
 void blk_final(struct ymd_mach *vm, struct chunk *core);
@@ -283,14 +228,4 @@ int func_bind(struct ymd_mach *vm, struct func *fn, int i,
               const struct variable *var);
 void func_dump(struct func *fn, FILE *fp);
 
-static inline int func_nlocal(const struct func *fn) {
-	return fn->is_c ? 0 : fn->u.core->klz - fn->n_bind;
-}
-
-static inline struct variable *func_bval(struct ymd_mach *vm,
-                                         struct func *fn, int i) {
-	struct variable nil; memset(&nil, 0, sizeof(nil));
-	func_bind(vm, fn, i, &nil);
-	return fn->bind + i;
-}
 #endif // YMD_VALUE_H

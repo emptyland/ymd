@@ -1,7 +1,5 @@
 #include "tostring.h"
-#include "state.h"
-#include "memory.h"
-#include "value.h"
+#include "core.h"
 #include "libc.h"
 #include "print.h"
 #include <setjmp.h>

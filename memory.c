@@ -11,6 +11,7 @@ static int gc_mark_hmap(struct hmap *o);
 static int gc_mark_func(struct func *o);
 static int gc_mark_dyay(struct dyay *o);
 static int gc_mark_skls(struct skls *o);
+static int gc_mark_mand(struct mand *o);
 static void gc_adjust(struct ymd_mach *vm, size_t prev);
 
 static inline int marked(struct variable *var, unsigned flag) {
@@ -27,9 +28,10 @@ static int gc_mark_var(struct variable *var) {
 	struct gc_node *o = var->value.ref;
 	switch (var->type) {
 	case T_KSTR:
-	case T_MAND:
 		o->marked |= GC_BLACK_BIT0;
 		break;
+	case T_MAND:
+		return gc_mark_mand(mand_f(o));
 	case T_FUNC:
 		return gc_mark_func(func_f(o));
 	case T_DYAY:
@@ -107,6 +109,22 @@ static int gc_mark_skls(struct skls *o) {
 	return 0;
 }
 
+static int gc_mark_mand(struct mand *o) {
+	o->marked |= GC_BLACK_BIT0;
+	if (!o->proto || gc_marked(o->proto, GC_BLACK_BIT0))
+		return 1;
+	switch (o->proto->type) {
+	case T_HMAP:
+		return gc_mark_hmap(hmap_f(o->proto));
+	case T_SKLS:
+		return gc_mark_skls(skls_f(o->proto));
+	default:
+		assert (0); // Noreached!
+		break;
+	}
+	return 0;
+}
+
 static int gc_mark(struct ymd_mach *vm) {
 	struct ymd_context *l = ioslate(vm);
 	// Mark all reached variable from global
@@ -160,6 +178,8 @@ static int gc_kpool_sweep(struct ymd_mach *vm) {
 					x = p->next;
 					rv++;
 				} else {
+					if (x->marked & GC_GRAY_BIT0)
+						++vm->gc.grab;
 					x->marked &= ~GC_BLACK_BIT0;
 					p = x;
 					x = x->next;
@@ -185,6 +205,8 @@ static size_t gc_sweep(struct ymd_mach *vm) {
 			gc_del(vm, i);
 			i = p->next;
 		} else {
+			if (i->marked & GC_GRAY_BIT0)
+				++gc->grab;
 			i->marked &= ~GC_BLACK_BIT0;
 			p = i;
 			i = i->next;
@@ -312,10 +334,11 @@ static void gc_adjust(struct ymd_mach *vm, size_t prev) {
 	else if (rate >= 0.6f) // collected > 6%
 		gc->threshold >>= 1;
 	if (prev > 0 && gc->logf)
-		fprintf(gc->logf, "Full GC: %zd\t%zd\t%zd\t%02f\t%lld\n",
+		fprintf(gc->logf, "Full GC: %zd\t%zd\t%zd\t%02f\t%lld\t%d\n",
 		        prev, gc->used + prev, gc->threshold, rate,
-				vm->tick - gc->last);
+				vm->tick - gc->last, gc->grab);
 	gc->last = vm->tick;
+	gc->grab = 0;
 }
 
 void *mm_zalloc(struct ymd_mach *vm, int n, size_t chunk) {

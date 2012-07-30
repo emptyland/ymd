@@ -1,7 +1,5 @@
 #include "disassembly.h"
-#include "value.h"
-#include "memory.h"
-#include "state.h"
+#include "core.h"
 #include "compiler.h"
 #include "libc.h"
 #include "libtest.h"

@@ -14,6 +14,7 @@ struct ymd_mach;
 
 #define GC_BLACK_BIT0 1U
 #define GC_GRAY_BIT0  (1U << 4)
+#define GC_GRAY_BIT1  (1U << 5)
 
 enum gc_state {
 	GC_PAUSE, // gc->pause++ gc stop if pause > 0
@@ -33,10 +34,18 @@ struct gc_struct {
 	size_t used; // used bytes
 	long long last; // last full gc tick number
 	int pause; // pause counter
+	int grab;  // number of grab objects
 	FILE *logf; // gc log file
 };
 
-#define gcx(obj) ((struct gc_node *)(obj))
+#define gcx(obj)             ((struct gc_node *)(obj))
+#define gc_release(obj)      (void)((obj)->marked &= ~GC_GRAY_BIT0)
+#define gc_marked(obj, bits) ((obj)->marked & (bits))
+#define gc_black(obj)        gc_marked(obj, GC_BLACK_BIT0)
+
+#define fg_self(obj)    ((obj)->marked &   GC_GRAY_BIT1)
+#define fg_enter(obj)   ((obj)->marked |=  GC_GRAY_BIT1)
+#define fg_leave(obj)   ((obj)->marked &= ~GC_GRAY_BIT1)
 
 // GC functions:
 int gc_init(struct ymd_mach *vm, int k);

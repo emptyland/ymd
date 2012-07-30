@@ -3,6 +3,7 @@
 
 #include "assembly.h"
 #include "value.h"
+#include "value_inl.h"
 #include <stdio.h>
 
 

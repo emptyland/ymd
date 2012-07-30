@@ -1,5 +1,4 @@
-#include "value.h"
-#include "state.h"
+#include "core.h"
 #include "assembly.h"
 #include <stdlib.h>
 #include <stdio.h>
@@ -51,7 +50,7 @@ int blk_kz(struct ymd_mach *vm, struct chunk *core, const char *z, int k) {
 	}
 	kz = kstr_fetch(vm, z, k);
 	vset_kstr(blk_klast(vm, core), kz);
-	kz->marked = 0;
+	gc_release(kz);
 	return core->kkval++;
 }
 
@@ -75,7 +74,7 @@ int blk_kf(struct ymd_mach *vm, struct chunk *core, void *p) {
 			return i;
 	}
 	vset_func(blk_klast(vm, core), fn);
-	fn->marked = 0;
+	gc_release(fn);
 	return core->kkval++;
 }
 
@@ -103,7 +102,9 @@ int blk_add_lz(struct ymd_mach *vm, struct chunk *core, const char *z) {
 		return -1;
 	core->lz = mm_need(vm, core->lz, core->klz, LVAR_ALIGN,
 	                   sizeof(*core->lz));
-	core->lz[core->klz++] = kstr_fetch(vm, z, -1);
+	core->lz[core->klz] = kstr_fetch(vm, z, -1);
+	gc_release(core->lz[core->klz]);
+	core->klz++;
 	return core->klz - 1;
 }
 
@@ -136,6 +137,7 @@ static void func_init(struct ymd_mach *vm, struct func *fn,
 							   !name ? "" : name, fn->n_bind,
 							   fn->u.core->kargs);
 	}
+	gc_release(fn->proto);
 }
 
 struct func *func_new_c(struct ymd_mach *vm, ymd_nafn_t nafn,
@@ -155,7 +157,7 @@ struct func *func_new(struct ymd_mach *vm, struct chunk *blk,
 	mm_grab(blk);
 	x->u.core = blk;
 	x->is_c = 0;
-	func_init(vm, x, name);
+	if (name) func_init(vm, x, name);
 	return x;
 }
 

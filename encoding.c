@@ -1,53 +1,5 @@
-#include "encode.h"
-#include "state.h"
+#include "encoding.h"
 #include <assert.h>
-
-int varint16_encode(long long d, unsigned short rv[]) {
-	unsigned long long coded = zigzag_encode(d);
-	unsigned long long partial = 0;
-	int i = 0;
-	partial = coded & 0xffff000000000000ULL;
-	if (partial) goto bits_48;
-	partial = coded & 0x0000ffff00000000ULL;
-	if (partial) goto bits_32;
-	partial = coded & 0x00000000ffff0000ULL;
-	if (partial) goto bits_16;
-	partial = coded & 0x000000000000ffffULL;
-	goto bits_00;
-bits_48:
-	rv[i++] = (unsigned short)(partial >> 48);
-	partial = coded & 0x0000ffff00000000ULL;
-bits_32:
-	rv[i++] = (unsigned short)(partial >> 32);
-	partial = coded & 0x00000000ffff0000ULL;
-bits_16:
-	rv[i++] = (unsigned short)(partial >> 16);
-	partial = coded & 0x000000000000ffffULL;
-bits_00:
-	rv[i++] = (unsigned short)partial;
-	return i;
-}
-
-long long varint16_decode(const unsigned short by[], int n) {
-	int i = 0;
-	unsigned long long raw = 0;
-	switch (n) {
-	case 1: goto bits_00;
-	case 2: goto bits_16;
-	case 3: goto bits_32;
-	case 4: goto bits_48;
-	default: assert(0); break;
-	}
-bits_48:
-	raw |= ((unsigned long long)by[i++] << 48);
-bits_32:
-	raw |= ((unsigned long long)by[i++] << 32);
-bits_16:
-	raw |= ((unsigned long long)by[i++] << 16);
-bits_00:
-	raw |= by[i];
-	return zigzag_decode(raw);
-}
 
 //------------------------------------------------------------------------------
 // Symbol -> Integer -> String
@@ -165,3 +117,112 @@ ymd_int_t dtoll(const char *raw, int *ok) {
 	return k ? -rv : rv;
 }
 
+#define TEST_OR_SET(c) \
+	by = ((x & 0x7fULL << (c*7)) >> (c*7))
+#define FILL_AND_TEST_OR_SET(c) \
+	rv[i++] = (by | 0x80); \
+	TEST_OR_SET(c)
+int uint64encode(ymd_uint_t x, ymd_byte_t *rv) {
+	int i = 0;
+	ymd_byte_t by;
+	//       [+---+---+---+---]
+	if (x & 0xFFFE000000000000ULL) {
+		if ((by = ((x & 0x1ULL << 63) >> 63)) != 0) // 64
+			goto bit_63_k0;
+		if ((TEST_OR_SET(8)) != 0) // 58~63
+			goto bit_56_k1;
+		if ((TEST_OR_SET(7)) != 0) // 50~57
+			goto bit_49_k2;
+	}
+	//      [-+---+---+---]
+	if (x & 0x1FFFFF0000000ULL) {
+		if ((TEST_OR_SET(6)) != 0) // 43~49
+			goto bit_42_k3;
+		if ((TEST_OR_SET(5)) != 0) // 36~42
+			goto bit_35_k4;
+		if ((TEST_OR_SET(4)) != 0) // 29~35
+			goto bit_28_k5;
+	}
+	//       [---+---]
+	if (x & 0xFFFFF80ULL) {
+		if ((TEST_OR_SET(3)) != 0) // 22~28
+			goto bit_21_k6;
+		if ((TEST_OR_SET(2)) != 0) // 15~21
+			goto bit_14_k7;
+		if ((TEST_OR_SET(1)) != 0) // 8~14
+			goto bit_07_k8;
+	}
+	TEST_OR_SET(0);
+	rv[i++] = by;
+	return i;
+bit_63_k0:
+	FILL_AND_TEST_OR_SET(8);
+bit_56_k1:
+	FILL_AND_TEST_OR_SET(7);
+bit_49_k2:
+	FILL_AND_TEST_OR_SET(6);
+bit_42_k3:
+	FILL_AND_TEST_OR_SET(5);
+bit_35_k4:
+	FILL_AND_TEST_OR_SET(4);
+bit_28_k5:
+	FILL_AND_TEST_OR_SET(3);
+bit_21_k6:
+	FILL_AND_TEST_OR_SET(2);
+bit_14_k7:
+	FILL_AND_TEST_OR_SET(1);
+bit_07_k8:
+	FILL_AND_TEST_OR_SET(0);
+	rv[i++] = by;
+	return i;
+}
+#undef TEST_OR_SET
+#undef FILL_AND_TEST_OR_SET
+
+ymd_uint_t uint64decode(const ymd_byte_t *rv, size_t *k) {
+	size_t i = 0;
+	ymd_byte_t by;
+	ymd_uint_t x = 0;
+	while ((by = rv[i++]) >= 0x80) {
+		x |= (by & 0x7f);
+		x <<= 7;
+	}
+	x |= by; // last 7bit
+	*k = i;
+	return x;
+}
+
+#define TEST_OR_SET(c) \
+	by = ((x & 0x7FU << (c*7)) >> (c*7))
+#define FILL_AND_TEST_OR_SET(c) \
+	rv[i++] = (by | 0x80); \
+	TEST_OR_SET(c)
+int uint32encode(ymd_u32_t x, ymd_byte_t *rv) {
+	int i = 0;
+	ymd_byte_t by;
+	if ((by = ((x & 0xFU << 28) >> 28)) != 0) // 29~32
+		goto bit_28_k5;
+	if ((TEST_OR_SET(3)) != 0) // 22~28
+		goto bit_21_k6;
+	if ((TEST_OR_SET(2)) != 0) // 15~21
+		goto bit_14_k7;
+	if ((TEST_OR_SET(1)) != 0) // 8~14
+		goto bit_07_k8;
+	TEST_OR_SET(0);
+	rv[i++] = by;
+	return i;
+bit_28_k5:
+	FILL_AND_TEST_OR_SET(3);
+bit_21_k6:
+	FILL_AND_TEST_OR_SET(2);
+bit_14_k7:
+	FILL_AND_TEST_OR_SET(1);
+bit_07_k8:
+	FILL_AND_TEST_OR_SET(0);
+	rv[i++] = by;
+	return i;
+}
+
+ymd_u32_t uint32decode(const ymd_byte_t *x, size_t *k) {
+	return (ymd_u32_t)uint64decode(x, k);
+}

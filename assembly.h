@@ -1,6 +1,8 @@
 #ifndef YMD_ASSEMBLY_H
 #define YMD_ASSEMBLY_H
 
+#include "builtin.h"
+
 // Instructions:
 #define I_PANIC   0
 #define I_SELFCALL 5 // selfcall a, n, "string"
@@ -67,11 +69,6 @@
 // setf/getf
 #define F_STACK 0 // param: number
 #define F_FAST  1 // param: `kz` offset
-
-
-typedef unsigned int   uint_t;
-typedef unsigned char  uchar_t;
-typedef unsigned short ushort_t;
 
 static inline uint_t asm_build(
 	uchar_t op,

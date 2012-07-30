@@ -1,9 +1,7 @@
 #include "compiler.h"
-#include "value.h"
-#include "state.h"
-#include "memory.h"
+#include "core.h"
 #include "assembly.h"
-#include "encode.h"
+#include "encoding.h"
 #include "3rd/regex/regex.h"
 #include <stdio.h>
 
@@ -331,6 +329,7 @@ retry:
 			case T_KSTR:
 				rhs->value.ref = gcx(vm_strcat(vm, kstr_of(vm, rhs),
 				                                kstr_of(vm, lhs)));
+				gc_release(rhs->value.ref);
 				break;
 			default:
 				vm_die(vm, "Operator + don't support this type");
@@ -438,8 +437,8 @@ retry:
 			for (i = 0; i < n; i += 2)
 				do_put(vm, gcx(map), ymd_top(l, i + 1), ymd_top(l, i));
 			ymd_pop(l, n);
-			map->marked = 0;
 			vset_hmap(ymd_push(l), map);
+			gc_release(map);
 			} break;
 		case I_NEWSKL: {
 			struct skls *map = skls_new(vm);
@@ -447,8 +446,8 @@ retry:
 			for (i = 0; i < n; i += 2)
 				do_put(vm, gcx(map), ymd_top(l, i + 1), ymd_top(l, i));
 			ymd_pop(l, n);
-			map->marked = 0;
 			vset_skls(ymd_push(l), map);
+			gc_release(map);
 			} break;
 		case I_NEWDYA: {
 			struct dyay *map = dyay_new(vm, 0);
@@ -456,8 +455,8 @@ retry:
 			while (i--)
 				do_put(vm, gcx(map), NULL, ymd_top(l, i));
 			ymd_pop(l, param);
-			map->marked = 0;
 			vset_dyay(ymd_push(l), map);
+			gc_release(map);
 			} break;
 		case I_BIND: {
 			struct variable *opd = ymd_top(l, param);
@@ -466,9 +465,9 @@ retry:
 			assert(copied->n_bind == param);
 			while (i--)
 				func_bind(vm, copied, param - i - 1, ymd_top(l, i));
-			copied->marked = 0;
 			opd->value.ref = gcx(copied); // Copy-on-wirte bind
 			ymd_pop(l, param);
+			gc_release(copied);
 			} break;
 		default:
 			assert(0);
@@ -483,6 +482,9 @@ retry:
 static void vm_copy_args(struct ymd_context *l, struct func *fn, int argc) {
 	int i;
 	struct variable *argv = NULL;
+	// Lazy creating
+	fn->argv = !fn->argv ? dyay_new(l->vm, argc) : fn->argv;
+	gc_release(fn->argv);
 	if (!fn->is_c) {
 		struct chunk *core = fn->u.core;
 		const int k = core->kargs < argc ? core->kargs : argc;
@@ -490,13 +492,9 @@ static void vm_copy_args(struct ymd_context *l, struct func *fn, int argc) {
 		vset_nil(argv);
 		i = k;
 		while (i--) // Copy to local variable
-			//*vm_local(l, fn, k - i - 1) = *ymd_top(l, i);
 			l->info->loc[k - i - 1] = *ymd_top(l, i);
 	}
 	if (argc > 0) {
-		// Lazy creating
-		fn->argv = !fn->argv ? dyay_new(l->vm, argc) : fn->argv;
-		fn->argv->marked = 0;
 		i = argc;
 		while (i--) // Copy to array: argv
 			*dyay_add(l->vm, fn->argv) = *ymd_top(l, i);

@@ -1,11 +1,11 @@
 include config.mk
 OBJS=state.o value.o memory.o dynamic_array.o hash_map.o skip_list.o closure.o \
-	 call.o libc.o libtest.o encode.o compiler.o lex.o tostring.o string.o \
-	 libos.o
+	 call.o libc.o libtest.o encoding.o compiler.o lex.o tostring.o string.o \
+	 libos.o pickle.o
 OBJX=print.o disassembly.o
 OBJI=yut_rand.o yut.o main_test.o
 OBJT=$(OBJS) $(OBJI)
-INCS=state.h value.h memory.h
+INCS=state.h value.h value_inl.h memory.h builtin.h core.h
 INCT=$(INCS) yut.h yut_rand.h
 
 LIB_REGEX=3rd/regex/libregex.a
@@ -22,12 +22,26 @@ ymd_main.o: $(INCS) disassembly.h libc.h ymd_main.c
 #-------------------------------------------------------------------------------
 # Run all test
 test: yut_test memory_test value_test skip_list_test hash_map_test \
-      closure_test dynamic_array_test encode_test lex_test
+      closure_test dynamic_array_test encoding_test lex_test zstream_test \
+	  pickle_test
 	./memory_test && ./value_test && ./skip_list_test && ./hash_map_test && \
-	./closure_test && ./dynamic_array_test && ./encode_test && ./lex_test
+	./closure_test && ./dynamic_array_test && ./encoding_test && ./lex_test && \
+	./zstream_test && ./pickle_test
 
 #-------------------------------------------------------------------------------
 # Unit test rules:
+pickle_test: $(OBJT) $(OBJX) pickle_test.o
+	$(CC) $(OBJT) $(OBJX) pickle_test.o -o pickle_test
+
+pickle_test.o: $(INCT) pickle_test.c pickle.h zstream.h
+	$(CC) $(CFLAGS) pickle_test.c -c -o pickle_test.o
+
+zstream_test: $(OBJT) $(OBJX) zstream_test.o
+	$(CC) $(OBJT) $(OBJX) zstream_test.o -o zstream_test
+
+zstream_test.o: $(INCT) zstream_test.c zstream.h
+	$(CC) $(CFLAGS) zstream_test.c -c -o zstream_test.o
+
 memory_test: $(OBJT) $(OBJX) memory_test.o
 	$(CC) $(OBJT) $(OBJX) memory_test.o -o memory_test
 
@@ -70,11 +84,11 @@ call_test: $(OBJT) $(OBJX) call_test.o
 call_test.o: $(INCT) libc.h call_test.c 
 	$(CC) $(CFLAGS) call_test.c -c -o call_test.o
 
-encode_test: $(OBJT) $(OBJX) encode_test.o
-	$(CC) $(OBJT) $(OBJX) encode_test.o -o encode_test
+encoding_test: $(OBJT) $(OBJX) encoding_test.o
+	$(CC) $(OBJT) $(OBJX) encoding_test.o -o encoding_test
 
-encode_test.o: $(INCT) encode_test.c encode.h assembly.h 
-	$(CC) $(CFLAGS) encode_test.c -c -o encode_test.o
+encoding_test.o: $(INCT) encoding_test.c encoding.h assembly.h 
+	$(CC) $(CFLAGS) encoding_test.c -c -o encoding_test.o
 
 compiler_test: $(OBJT) $(OBJX) compiler_test.o
 	$(CC) $(OBJT) compiler_test.o -o compiler_test
@@ -118,7 +132,7 @@ $(LIB_REGEX):
 
 #-------------------------------------------------------------------------------
 # Objects rules:
-disassembly.o: disassembly.c disassembly.h assembly.h value.h
+disassembly.o: disassembly.c disassembly.h assembly.h value.h value_inl.h
 	$(CC) $(CFLAGS) disassembly.c -c -o disassembly.o
 
 compiler.o: $(INCS) compiler.c compiler.h lex.h
@@ -127,7 +141,7 @@ compiler.o: $(INCS) compiler.c compiler.h lex.h
 lex.o: lex.c lex.h
 	$(CC) $(CFLAGS) lex.c -c -o lex.o
 
-state.o: state.c state.h value.h memory.h
+state.o: state.c state.h value.h value_inl.h memory.h
 	$(CC) $(CFLAGS) state.c -c -o state.o
 
 closure.o: $(INCS) closure.c
@@ -154,6 +168,9 @@ libos.o: $(INCS) libos_posix.c
 libtest.o: $(INCS) print.h libc.h libtest.h libtest.c
 	$(CC) $(CFLAGS) libtest.c -c -o libtest.o
 
+pickle.o: $(INCS) pickle.h zstream.h
+	$(CC) $(CFLAGS) pickle.c -c -o pickle.o
+
 print.o: print.h print_posix.c
 	$(CC) $(CFLAGS) print_posix.c -c -o print.o
 
@@ -163,10 +180,10 @@ tostring.o: $(INCS) tostring.c tostring.h
 string.o: $(INCS) string.c
 	$(CC) $(CFLAGS) string.c -c -o string.o
 
-encode.o: $(INCS) encode.c encode.h
-	$(CC) $(CFLAGS) encode.c -c -o encode.o
+encoding.o: $(INCS) encoding.c encoding.h
+	$(CC) $(CFLAGS) encoding.c -c -o encoding.o
 
-value.o: value.c value.h state.h
+value.o: value.c value.h value_inl.h state.h
 	$(CC) $(CFLAGS) value.c -c -o value.o
 
 memory.o: memory.c memory.h state.h

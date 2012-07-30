@@ -1,7 +1,5 @@
 #include "disassembly.h"
-#include "value.h"
-#include "memory.h"
-#include "state.h"
+#include "core.h"
 #include "libc.h"
 #include "yut_rand.h"
 #include "yut.h"
