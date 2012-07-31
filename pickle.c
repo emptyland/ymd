@@ -168,6 +168,7 @@ int ymd_pdump(struct ymd_context *l) {
 		ymd_kstr(l, zos_buf(&os), os.last);
 	} else {
 		ymd_pop(l, 1);
+		ymd_nil(l);
 	}
 	zos_final(&os);
 	return ok ? i : 0;
@@ -224,6 +225,7 @@ int ymd_load_chunk(struct zistream *is, struct chunk *x, int *ok) {
 		pickle_assert(k < MAX_U16);
 		x->lz = mm_zalloc(l->vm, k, sizeof(*x->lz));
 		for (i = 0; i < k; ++i) {
+			pickle_assert(zis_u32(is) == T_KSTR);
 			ymd_load_kstr(is, CHECK_OK);
 			x->lz[i] = kstr_of(l, ymd_top(l, 0));
 			ymd_pop(l, 1);
@@ -231,6 +233,7 @@ int ymd_load_chunk(struct zistream *is, struct chunk *x, int *ok) {
 		x->klz = k;
 	}
 	// :file
+	pickle_assert(zis_u32(is) == T_KSTR);
 	ymd_load_kstr(is, CHECK_OK);
 	x->file = kstr_of(l, ymd_top(l, 0));
 	ymd_pop(l, 1);
@@ -246,6 +249,7 @@ int ymd_load_func(struct zistream *is, int *ok) {
 	struct func *fn = ymd_naked(l, x);
 	int i;
 	// :proto
+	pickle_assert(T_KSTR == zis_u32(is));
 	ymd_load_kstr(is, CHECK_OK);
 	fn->proto = kstr_of(l, ymd_top(l, 0));
 	ymd_pop(l, 1);

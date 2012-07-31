@@ -825,10 +825,10 @@ static int libx_metatable(L) {
 	return 1;
 }
 
+
 static int libx_error(L) {
 	struct dyay *argv = ymd_argv(l);
 	int i;
-	struct call_info *ci = vm_nearcall(l);
 	if (argv->count > 0) {
 		struct fmtx fx = FMTX_INIT;
 		for (i = 0; i < argv->count; ++i) {
@@ -839,28 +839,8 @@ static int libx_error(L) {
 		fmtx_final(&fx);
 	} else
 		ymd_kstr(l, "Unknown", -1);
-	if (ci) {
-		struct func *run = ci->run;
-		ymd_format(l, "%s:%d %s", run->u.core->file->land,
-				   run->u.core->line[ci->pc - 1],
-				   run->proto->land);
-	} else {
-		ymd_nil(l);
-	}
-	ci = l->info;
-	ymd_dyay(l, 8);
-	while (ci) {
-		struct func *run = ci->run;
-		if (run->is_c)
-			ymd_format(l, "%s", run->proto->land);
-		else
-			ymd_format(l, "%s:%d %s", run->u.core->file->land,
-			           run->u.core->line[ci->pc - 1],
-					   run->proto->land);
-		ymd_add(l);
-		ci = ci->chain;
-	}
-	ymd_error(l);
+	ymd_error(l, NULL);
+	ymd_raise(l);
 	assert(0);
 	return 0; // Never
 }

@@ -35,7 +35,12 @@ int ymd_load_lib(struct ymd_mach *vm, ymd_libc_t lbx);
 int ymd_load_mem(struct ymd_context *l, const char *clazz, ymd_libc_t lbx);
 
 // Load os library
+// System calls
 int ymd_load_os(struct ymd_mach *vm);
+
+// Load pickle library:
+// Serializing and Parsing
+int ymd_load_pickle(struct ymd_mach *vm);
 
 #endif // YMD_LIBC_H
 

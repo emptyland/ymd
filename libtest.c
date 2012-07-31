@@ -10,13 +10,17 @@ struct yut_cookie {
 	jmp_buf jpt;
 };
 
-static struct yut_cookie *yut_jpt(L, struct variable *self) {
+static inline void yut_fault() {
+	ymd_printf(yRED"[ FAIL ]"yEND" Test fail, stop all.\n");
+}
+
+static inline struct yut_cookie *yut_jpt(L, struct variable *self) {
 	struct hmap *o = hmap_of(l, self);
 	struct mand *cookie = mand_of(l, vm_mem(l->vm, o, "__cookie__"));
 	return (struct yut_cookie *)cookie->land;
 }
 
-static void yut_raise(L) {
+static inline void yut_raise(L) {
 	struct yut_cookie *cookie = yut_jpt(l, ymd_argv_get(l, 0));
 	longjmp(cookie->jpt, 1);
 }
@@ -30,7 +34,7 @@ static void yut_fail2(L, const char *op,
 	struct fmtx fx0 = FMTX_INIT, fx1 = FMTX_INIT;
 	tostring(&fx0, arg0);
 	tostring(&fx1, arg1);
-	ymd_printf(yYELLOW"%s:%d Assert fail: "yEND
+	ymd_printf(yYELLOW"[  XXX ] %s:%d Assert fail: "yEND
 	           "("yPURPLE"%s"yEND") %s ("yPURPLE"%s"yEND")\n"
 			   "Expected : <"yPURPLE"%s"yEND">\n"
 			   "Actual   : <"yPURPLE"%s"yEND">\n",
@@ -44,6 +48,25 @@ static void yut_fail2(L, const char *op,
 	fmtx_final(&fx0);
 	fmtx_final(&fx1);
 	yut_raise(l);
+}
+
+static void yut_fail0(L) {
+	struct fmtx fx = FMTX_INIT;
+	// print backtrace info
+	struct dyay *ax = dyay_of(l, ymd_top(l, 0));
+	int i;
+	for (i = 0; i < ax->count; ++i) {
+		fmtx_append(&fx, "\t", 1);
+		tostring(&fx, ax->elem + i);
+		fmtx_append(&fx, "\n", 1);
+	}
+	ymd_printf(yYELLOW"[  XXX ] %s\n"yEND
+	           "Runtime error: %s\nBacktrace:\n%s",
+	           kstr_of(l, ymd_top(l, 1))->land,
+			   kstr_of(l, ymd_top(l, 2))->land,
+			   fmtx_buf(&fx));
+	fmtx_final(&fx);
+	ymd_pop(l, 3);
 }
 
 static void yut_fail1(L, const char *expected,
@@ -141,11 +164,15 @@ static struct func *yut_method(struct ymd_mach *vm, void *o,
 
 static int yut_call(struct ymd_context *l, struct variable *test,
                     struct func *method) {
+	int i;
 	if (!method)
 		return -1;
 	vset_func(ymd_push(l), method);
 	*ymd_push(l) = *test;
-	return ymd_adjust(l, 0, ymd_xcall(l, 1));
+	i = ymd_xcall(l, 1);
+	if (i < 0)
+		return i;
+	return ymd_adjust(l, 0, i);
 }
 
 static int yut_case(
@@ -164,15 +191,15 @@ static int yut_case(
 			   full_name);
 	yut_call(l, test, setup);
 	ymd_printf(yGREEN"[ RUN  ]"yEND" Running ...\n");
-	yut_call(l, test, unit);
+	if (yut_call(l, test, unit) < 0) {
+		yut_fail0(l);
+		yut_fault();
+		return -1;
+	}
 	ymd_printf(yGREEN"[   OK ]"yEND" Passed!\n");
 	yut_call(l, test, teardown);
 	ymd_printf(yGREEN"[------]"yEND" Test teardown.\n");
 	return 0;
-}
-
-static void yut_fault() {
-	ymd_printf(yRED"[ FAIL ]"yEND" Test fail, stop all.\n");
 }
 
 static int yut_test(struct ymd_mach *vm, const char *clazz,
@@ -195,7 +222,9 @@ static int yut_test(struct ymd_mach *vm, const char *clazz,
 		const char *caze = kstr_of(l, &i->k)->land;
 		if (!strstr(caze, "test") || i->v.type != T_FUNC)
 			continue;
-		yut_case(l, clazz, caze, test, setup, teardown, func_x(&i->v));
+		if (yut_case(l, clazz, caze, test, setup, teardown,
+			         func_x(&i->v)) < 0)
+			break;
 	}
 	yut_call(l, test, final); // ---- Finalize
 	return 0;

@@ -1,7 +1,7 @@
 include config.mk
 OBJS=state.o value.o memory.o dynamic_array.o hash_map.o skip_list.o closure.o \
 	 call.o libc.o libtest.o encoding.o compiler.o lex.o tostring.o string.o \
-	 libos.o pickle.o
+	 libos.o pickle.o libpickle.o
 OBJX=print.o disassembly.o
 OBJI=yut_rand.o yut.o main_test.o
 OBJT=$(OBJS) $(OBJI)
@@ -168,7 +168,10 @@ libos.o: $(INCS) libos_posix.c
 libtest.o: $(INCS) print.h libc.h libtest.h libtest.c
 	$(CC) $(CFLAGS) libtest.c -c -o libtest.o
 
-pickle.o: $(INCS) pickle.h zstream.h
+libpickle.o: $(INCS) libpickle.c libc.h pickle.h
+	$(CC) $(CFLAGS) libpickle.c -c -o libpickle.o
+
+pickle.o: $(INCS) pickle.c pickle.h zstream.h
 	$(CC) $(CFLAGS) pickle.c -c -o pickle.o
 
 print.o: print.h print_posix.c

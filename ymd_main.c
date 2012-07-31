@@ -61,6 +61,7 @@ int main(int argc, char *argv[]) {
 		exit(1);
 	ymd_load_lib(vm, lbxBuiltin);
 	ymd_load_os(vm);
+	ymd_load_pickle(vm);
 	if (opt.test) ymd_load_ut(vm);
 	//if (opt.debug) {
 	//	printf("====[main]====\n");

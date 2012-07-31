@@ -294,7 +294,7 @@ void ymd_panic(struct ymd_context *l, const char *fmt, ...) {
 	return do_panic(l, buf);
 }
 
-void ymd_error(struct ymd_context *l) {
+void ymd_raise(struct ymd_context *l) {
 	assert (l->jpt);
 	// NOTE: Call chain back and cleanup argv!
 	if (ymd_called(l)->argv)
@@ -303,3 +303,32 @@ void ymd_error(struct ymd_context *l) {
 	l->jpt->panic = 0;
 	longjmp(l->jpt->core, l->jpt->level);
 }
+
+int ymd_error(struct ymd_context *l, const char *msg) {
+	struct call_info *ci = vm_nearcall(l);
+	if (msg)
+		ymd_kstr(l, msg, -1);
+	if (ci) {
+		struct func *run = ci->run;
+		ymd_format(l, "%s:%d %s", run->u.core->file->land,
+				   run->u.core->line[ci->pc - 1],
+				   run->proto->land);
+	} else {
+		ymd_nil(l);
+	}
+	ci = l->info;
+	ymd_dyay(l, 8);
+	while (ci) {
+		struct func *run = ci->run;
+		if (run->is_c)
+			ymd_format(l, "%s", run->proto->land);
+		else
+			ymd_format(l, "%s:%d %s", run->u.core->file->land,
+			           run->u.core->line[ci->pc - 1],
+					   run->proto->land);
+		ymd_add(l);
+		ci = ci->chain;
+	}
+	return msg ? 3 : 2;
+}
+

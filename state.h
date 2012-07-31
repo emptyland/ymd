@@ -105,7 +105,7 @@ int vm_reached(struct ymd_mach *vm, const char *name);
 // ----------------------------------------------------------------------------
 void ymd_panic(struct ymd_context *l, const char *fmt, ...);
 
-void ymd_error(struct ymd_context *l);
+void ymd_raise(struct ymd_context *l);
 
 int ymd_call(struct ymd_context *l, struct func *fn, int argc, int method);
 
@@ -364,6 +364,9 @@ static inline void ymd_setmetatable(struct ymd_context *l) {
 	mand_proto(o, ymd_top(l, 0)->value.ref);
 	ymd_pop(l, 1);
 }
+
+// Push error info in stack! pcall() can use it.
+int ymd_error(struct ymd_context *l, const char *msg);
 
 #endif // YMD_STATE_H
 

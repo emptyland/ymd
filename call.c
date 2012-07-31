@@ -594,7 +594,7 @@ int ymd_xcall(struct ymd_context *l, int argc) {
 	if ((i = setjmp(l->jpt->core)) != 0) {
 		call_jleave(l);
 		call_restore(l, &scope);
-		ymd_pop(l, (int)(l->top - l->stk)); // Keep stack empty!
+		// Don't clear stack, keep the error info.
 		return -i;
 	}
 	i = vm_call(l, &scope, fn, argc, 0);
