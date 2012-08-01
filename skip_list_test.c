@@ -7,16 +7,16 @@ static int test_skls_creation_1() {
 	struct skls *ls = skls_new(tvm);
 
 	k1.type = T_INT;
-	k1.value.i = 1024;
+	k1.u.i = 1024;
 	rv = skls_put(tvm, ls, &k1);
 	rv->type = T_KSTR;
-	rv->value.ref = gcx(kstr_fetch(tvm, "1024", -1));
+	rv->u.ref = gcx(kstr_fetch(tvm, "1024", -1));
 
 	k2.type = T_KSTR;
-	k2.value.ref = gcx(kstr_fetch(tvm, "1024", -1));
+	k2.u.ref = gcx(kstr_fetch(tvm, "1024", -1));
 	rv = skls_put(tvm, ls, &k2);
 	rv->type = T_INT;
-	rv->value.i = 1024;
+	rv->u.i = 1024;
 
 	rv = skls_get(ls, &k1);
 	ASSERT_NOTNULL(rv);
@@ -26,7 +26,7 @@ static int test_skls_creation_1() {
 	rv = skls_get(ls, &k2);
 	ASSERT_NOTNULL(rv);
 	ASSERT_EQ(uint, rv->type, T_INT);
-	ASSERT_EQ(large, rv->value.i, 1024LL);
+	ASSERT_EQ(large, rv->u.i, 1024LL);
 	return 0;
 }
 
@@ -40,10 +40,10 @@ static int test_skls_creation_2() {
 		while (i--) {
 			const struct yut_kstr *kz = RAND_STR();
 			k.type = T_KSTR;
-			k.value.ref = gcx(kstr_fetch(tvm, kz->land, kz->len));
+			k.u.ref = gcx(kstr_fetch(tvm, kz->land, kz->len));
 			v = skls_put(tvm, ls, &k);
 			v->type = T_INT;
-			v->value.i = i;
+			v->u.i = i;
 		}
 	RAND_END
 	ASSERT_LE(int, ls->count, BENCHMARK_COUNT);
@@ -57,17 +57,17 @@ static int test_skls_sequence() {
 	int i = BENCHMARK_COUNT;
 	while (i--) {
 		k.type = T_INT;
-		k.value.i = i;
+		k.u.i = i;
 		v = skls_put(tvm, ls, &k);
 		v->type = T_INT;
-		v->value.i = BENCHMARK_COUNT - 1 - i;
+		v->u.i = BENCHMARK_COUNT - 1 - i;
 	}
 	EXPECT_EQ(int, ls->count, BENCHMARK_COUNT);
 	x = ls->head;
 	ASSERT_NOTNULL(x);
 	i = 0;
 	while ((x = x->fwd[0]) != NULL)
-		ASSERT_EQ(large, x->k.value.i, i++);
+		ASSERT_EQ(large, x->k.u.i, i++);
 	EXPECT_EQ(int, i, BENCHMARK_COUNT);
 	return 0;
 }
@@ -77,10 +77,10 @@ static struct skls *build_skls(const int *raw, long i) {
 	while (i--) {
 		struct variable k, *v;
 		k.type = T_INT;
-		k.value.i = raw[i];
+		k.u.i = raw[i];
 		v = skls_put(tvm, ls, &k);
 		v->type = T_INT;
-		v->value.i = i;
+		v->u.i = i;
 	}
 	return ls;
 }
@@ -147,10 +147,10 @@ static int test_skls_search_1() {
 	while (i--) {
 		snprintf(buf, sizeof(buf), "%d", i);
 		k.type = T_KSTR;
-		k.value.ref = gcx(kstr_fetch(tvm, buf, -1));
+		k.u.ref = gcx(kstr_fetch(tvm, buf, -1));
 		rv = skls_put(tvm, list, &k);
 		rv->type = T_INT;
-		rv->value.i = i;
+		rv->u.i = i;
 	}
 	i = BENCHMARK_COUNT;
 	RAND_BEGIN(NORMAL)
@@ -159,10 +159,10 @@ static int test_skls_search_1() {
 			unsigned int index = RAND_RANGE(uint, 0, BENCHMARK_COUNT);
 			snprintf(buf, sizeof(buf), "%u", index);
 			k.type = T_KSTR;
-			k.value.ref = gcx(kstr_fetch(tvm, buf, -1));
+			k.u.ref = gcx(kstr_fetch(tvm, buf, -1));
 			rv = skls_get(list, &k);
 			ASSERT_EQ(uint, rv->type, T_INT);
-			ASSERT_EQ(large, rv->value.i, index);
+			ASSERT_EQ(large, rv->u.i, index);
 		}
 		TIME_RECORD_END
 	RAND_END
@@ -183,7 +183,7 @@ static int test_skls_search_2 () {
 		int j = 16;
 		while (j--) {
 			vset_int(&k, j);
-			ASSERT_EQ(large, skls_get(map, &k)->value.i, j);
+			ASSERT_EQ(large, skls_get(map, &k)->u.i, j);
 		}
 	}
 	TIME_RECORD_END

@@ -19,10 +19,10 @@ static const char *address(const struct func *fn, uint_t inst,
                            char *buf, size_t n) {
 	switch (asm_flag(inst)) {
 	case F_KVAL: {
-		struct fmtx fx = FMTX_INIT;
+		struct zostream os = ZOS_INIT;
 		snprintf(buf, n, "%s",
-		         tostring(&fx, fn->u.core->kval + asm_param(inst)));
-		fmtx_final(&fx);
+		         tostring(&os, fn->u.core->kval + asm_param(inst)));
+		zos_final(&os);
 		} break;
 	case F_LOCAL:
 		snprintf(buf, n, "[local]:<%d>", asm_param(inst));

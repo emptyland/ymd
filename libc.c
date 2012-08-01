@@ -26,14 +26,14 @@ static const char *T_STREAM = "stream";
 
 static int libx_print(L) {
 	int i;
-	struct fmtx fx = FMTX_INIT;
+	struct zostream os = ZOS_INIT;
 	struct dyay *argv = ymd_argv(l);
 	if (!argv) { puts(""); return 0; }
 	for (i = 0; i < argv->count; ++i) {
-		const char *raw = tostring(&fx, argv->elem + i);
+		const char *raw = tostring(&os, argv->elem + i);
 		if (i > 0) printf(PRINT_SPLIT);
-		fwrite(raw, fx.last, 1, stdout);
-		fmtx_final(&fx);
+		fwrite(raw, os.last, 1, stdout);
+		zos_final(&os);
 	}
 	puts("");
 	return 0;
@@ -183,10 +183,10 @@ static int libx_len(L) {
 // managed  -> "(stream)[24@0x08067FF]"
 static int libx_str(L) {
 	const struct variable *arg0 = ymd_argv_get(l, 0);
-	struct fmtx fx = FMTX_INIT;
-	const char *z = tostring(&fx, arg0);
-	ymd_kstr(l, z, fx.last);
-	fmtx_final(&fx);
+	struct zostream os = ZOS_INIT;
+	const char *z = tostring(&os, arg0);
+	ymd_kstr(l, z, os.last);
+	zos_final(&os);
 	return 1;
 }
 
@@ -204,15 +204,15 @@ static int step_iter(L) {
 					*s = ymd_bval(l, 2),
 					rv;
 	rv.type = T_NIL;
-	rv.value.i = 0;
-	if (s->value.i > 0 && i->value.i < m->value.i) {
+	rv.u.i = 0;
+	if (s->u.i > 0 && i->u.i < m->u.i) {
 		rv.type = T_INT;
-		rv.value.i = i->value.i;
-	} else if (s->value.i < 0 && i->value.i > m->value.i) {
+		rv.u.i = i->u.i;
+	} else if (s->u.i < 0 && i->u.i > m->u.i) {
 		rv.type = T_INT;
-		rv.value.i = i->value.i;
+		rv.u.i = i->u.i;
 	}
-	i->value.i += s->value.i;
+	i->u.i += s->u.i;
 	*ymd_push(l) = rv;
 	return 1;
 }
@@ -240,8 +240,8 @@ static int new_step_iter(L, ymd_int_t i, ymd_int_t m, ymd_int_t s) {
 // bind[3]: iterator flag
 // bind[4]: dyay self
 static int dyay_iter(L) {
-	struct variable *i = ymd_bval(l, 0)->value.ext,
-	                *m = ymd_bval(l, 1)->value.ext;
+	struct variable *i = ymd_bval(l, 0)->u.ext,
+	                *m = ymd_bval(l, 1)->u.ext;
 	if (i >= m)
 		return 0;
 	switch (int_of(l, ymd_bval(l, 3))) {
@@ -281,8 +281,8 @@ static inline struct kvi *move2valid(struct kvi *i, struct kvi *m) {
 // bind[1]: struct kvi *m; end of pointer
 // bind[2]: iterator flag
 static int hmap_iter(L) {
-	struct kvi *i = ymd_bval(l, 0)->value.ext,
-			   *m = ymd_bval(l, 1)->value.ext;
+	struct kvi *i = ymd_bval(l, 0)->u.ext,
+			   *m = ymd_bval(l, 1)->u.ext;
 	if (i >= m) {
 		vset_nil(ymd_push(l));
 		return 1;
@@ -311,7 +311,7 @@ static int hmap_iter(L) {
 // bind[0]: struct sknd *i; current pointer
 // bind[1]: iterator flag
 static int skls_iter(L) {
-	struct sknd *i = ymd_bval(l, 0)->value.ext;
+	struct sknd *i = ymd_bval(l, 0)->u.ext;
 	if (!i) {
 		vset_nil(ymd_push(l));
 		return 1;
@@ -348,7 +348,7 @@ static int new_contain_iter(L, const struct variable *obj, int flag) {
 		ymd_bind(l, 2);
 		ymd_int(l, flag);
 		ymd_bind(l, 3);
-		vset_ref(ymd_push(l), obj->value.ref);
+		vset_ref(ymd_push(l), obj->u.ref);
 		ymd_bind(l, 4);
 		return 1;
 	case T_HMAP: {
@@ -365,7 +365,7 @@ static int new_contain_iter(L, const struct variable *obj, int flag) {
 		ymd_bind(l, 1);
 		ymd_int(l, flag);
 		ymd_bind(l, 2);
-		vset_ref(ymd_push(l), obj->value.ref);
+		vset_ref(ymd_push(l), obj->u.ref);
 		ymd_bind(l, 3);
 		} return 1;
 	case T_SKLS: {
@@ -379,7 +379,7 @@ static int new_contain_iter(L, const struct variable *obj, int flag) {
 		ymd_bind(l, 0);
 		ymd_int(l, flag);
 		ymd_bind(l, 1);
-		vset_ref(ymd_push(l), obj->value.ref);
+		vset_ref(ymd_push(l), obj->u.ref);
 		ymd_bind(l, 2);
 		} return 1;
 	default:
@@ -427,29 +427,29 @@ static int libx_ranki(L) {
 static int libx_panic(L) {
 	int i;
 	struct dyay *argv = ymd_argv(l);
-	struct fmtx fx = FMTX_INIT;
+	struct zostream os = ZOS_INIT;
 	if (!argv || argv->count == 0)
 		ymd_panic(l, "Unknown");
 	for (i = 0; i < argv->count; ++i) {
-		if (i > 0) fmtx_append(&fx, " ", 1);
-		tostring(&fx, argv->elem + i);
+		if (i > 0) zos_append(&os, " ", 1);
+		tostring(&os, argv->elem + i);
 	}
-	ymd_panic(l, fmtx_buf(&fx));
-	fmtx_final(&fx);
+	ymd_panic(l, zos_buf(&os));
+	zos_final(&os);
 	return 0;
 }
 
 //------------------------------------------------------------------------------
 // String Buffer: strbuf
 //------------------------------------------------------------------------------
-static int strbuf_final(struct fmtx *sb) {
-	fmtx_final(sb);
+static int strbuf_final(struct zostream *sb) {
+	zos_final(sb);
 	return 0;
 }
 
 static int libx_cat(L) {
 	int i;
-	struct fmtx *self = mand_land(l, ymd_argv_get(l, 0), T_STRBUF);
+	struct zostream *self = mand_land(l, ymd_argv_get(l, 0), T_STRBUF);
 	struct dyay *argv = ymd_argv_chk(l, 2);
 	for (i = 1; i < argv->count; ++i)
 		tostring(self, argv->elem + i);
@@ -458,10 +458,10 @@ static int libx_cat(L) {
 }
 
 static int libx_get(L) {
-	struct fmtx *self = mand_land(l, ymd_argv_get(l, 0), T_STRBUF);
+	struct zostream *self = mand_land(l, ymd_argv_get(l, 0), T_STRBUF);
 	if (self->last == 0)
 		return 0;
-	ymd_kstr(l, fmtx_buf(self), self->last);
+	ymd_kstr(l, zos_buf(self), self->last);
 	return 1;
 }
 
@@ -477,9 +477,9 @@ LIBC_BEGIN(StringBuffer)
 LIBC_END
 
 static int libx_strbuf(L) {
-	struct fmtx *self = ymd_mand(l, T_STRBUF, sizeof(struct fmtx),
-	                             (ymd_final_t)strbuf_final);
-	self->max = FMTX_STATIC_MAX;
+	struct zostream *self = ymd_mand(l, T_STRBUF, sizeof(*self),
+	                                 (ymd_final_t)strbuf_final);
+	self->max = MAX_STATIC_LEN;
 	ymd_skls(l); // FIXME:
 	ymd_load_mem(l, "__buitin__.strbuf", lbxStringBuffer);
 	ymd_setmetatable(l);
@@ -812,7 +812,7 @@ static int libx_setmetatable(L) {
 	if (ymd_argv_get(l, 1)->type != T_HMAP &&
 		ymd_argv_get(l, 1)->type != T_SKLS)
 		ymd_panic(l, "Not metatable type!");
-	mand_proto(o, ymd_argv_get(l, 1)->value.ref);
+	mand_proto(o, ymd_argv_get(l, 1)->u.ref);
 	return 0;
 }
 
@@ -830,13 +830,13 @@ static int libx_error(L) {
 	struct dyay *argv = ymd_argv(l);
 	int i;
 	if (argv->count > 0) {
-		struct fmtx fx = FMTX_INIT;
+		struct zostream os = ZOS_INIT;
 		for (i = 0; i < argv->count; ++i) {
-			if (i) fmtx_append(&fx, " ", 1);
-			tostring(&fx, argv->elem + i);
+			if (i) zos_append(&os, " ", 1);
+			tostring(&os, argv->elem + i);
 		}
-		ymd_kstr(l, fmtx_buf(&fx), fx.last);
-		fmtx_final(&fx);
+		ymd_kstr(l, zos_buf(&os), os.last);
+		zos_final(&os);
 	} else
 		ymd_kstr(l, "Unknown", -1);
 	ymd_error(l, NULL);

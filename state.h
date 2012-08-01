@@ -324,14 +324,14 @@ static inline void ymd_mem(struct ymd_context *l, const char *field) {
 	struct variable *v;
 	if (!is_ref(ymd_top(l, 0)))
 		ymd_panic(l, "object must be hashmap or skiplist");
-	v = vm_mem(l->vm, ymd_top(l, 0)->value.ref, field);
+	v = vm_mem(l->vm, ymd_top(l, 0)->u.ref, field);
 	*ymd_push(l) = *v;
 }
 
 static inline void ymd_def(struct ymd_context *l, const char *field) {
 	if (!is_ref(ymd_top(l, 1)))
 		ymd_panic(l, "object must be hashmap or skiplist");
-	*vm_def(l->vm, ymd_top(l, 1)->value.ref, field) = *ymd_top(l, 0);
+	*vm_def(l->vm, ymd_top(l, 1)->u.ref, field) = *ymd_top(l, 0);
 	ymd_pop(l, 1);
 }
 
@@ -361,7 +361,7 @@ static inline void ymd_setmetatable(struct ymd_context *l) {
 	struct mand *o = mand_of(l, ymd_top(l, 1));
 	if (ymd_top(l, 0)->type != T_HMAP &&
 		ymd_top(l, 0)->type != T_SKLS) ymd_panic(l, "Not metatable type!");
-	mand_proto(o, ymd_top(l, 0)->value.ref);
+	mand_proto(o, ymd_top(l, 0)->u.ref);
 	ymd_pop(l, 1);
 }
 

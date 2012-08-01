@@ -132,11 +132,11 @@ int ymd_serialize(struct zostream *os, const struct variable *v,
 		break;
 	case T_INT:
 		i += zos_u32(os, T_INT);
-		i += zos_i64(os, v->value.i);
+		i += zos_i64(os, v->u.i);
 		break;
 	case T_BOOL:
 		i += zos_u32(os, T_BOOL);
-		i += zos_u64(os, v->value.i);
+		i += zos_u64(os, v->u.i);
 		break;
 	case T_KSTR:
 		i += ymd_dump_kstr(os, kstr_k(v));

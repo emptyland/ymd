@@ -98,7 +98,7 @@ static inline int vm_bool(const struct variable *lhs) {
 	case T_NIL:
 		return 0;
 	case T_BOOL:
-		return lhs->value.i;
+		return lhs->u.i;
 	default:
 		return 1;
 	}
@@ -257,11 +257,11 @@ retry:
 				break;
 			case F_BOOL:
 				var.type = T_BOOL;
-				var.value.i = param;
+				var.u.i = param;
 				break;
 			case F_NIL:
 				var.type = T_NIL;
-				var.value.i = 0;
+				var.u.i = 0;
 				break;
 			case F_OFF:
 				var = *vm_igetg(vm, param);
@@ -274,25 +274,25 @@ retry:
 							*lhs = ymd_top(l, 0);
 			switch (flag) {
 			case F_EQ:
-				rhs->value.i = equals(rhs, lhs);
+				rhs->u.i = equals(rhs, lhs);
 				break;
 			case F_NE:
-				rhs->value.i = !equals(rhs, lhs);
+				rhs->u.i = !equals(rhs, lhs);
 				break;
 			case F_GT:
-				rhs->value.i = compare(rhs, lhs) > 0;
+				rhs->u.i = compare(rhs, lhs) > 0;
 				break;
 			case F_GE:
-				rhs->value.i = compare(rhs, lhs) >= 0;
+				rhs->u.i = compare(rhs, lhs) >= 0;
 				break;
 			case F_LT:
-				rhs->value.i = compare(rhs, lhs) < 0;
+				rhs->u.i = compare(rhs, lhs) < 0;
 				break;
 			case F_LE:
-				rhs->value.i = compare(rhs, lhs) <= 0;
+				rhs->u.i = compare(rhs, lhs) <= 0;
 				break;
 			case F_MATCH:
-				rhs->value.i = vm_match(vm, kstr_of(l, rhs), kstr_of(l, lhs));
+				rhs->u.i = vm_match(vm, kstr_of(l, rhs), kstr_of(l, lhs));
 				break;
 			default:
 				assert(0);
@@ -329,12 +329,12 @@ retry:
 			} break;
 		case I_INV: {
 			struct variable *opd = ymd_top(l, 0);
-			opd->value.i = -int_of(l, opd);
+			opd->u.i = -int_of(l, opd);
 			} break;
 		case I_MUL: {
 			struct variable *rhs = ymd_top(l, 1),
 							*lhs = ymd_top(l, 0);
-			rhs->value.i = int_of(l, rhs) * int_of(l, lhs);
+			rhs->u.i = int_of(l, rhs) * int_of(l, lhs);
 			ymd_pop(l, 1);
 			} break;
 		case I_DIV: {
@@ -343,7 +343,7 @@ retry:
 			ymd_int_t opd2 = int_of(l, lhs);
 			if (opd2 == 0LL)
 				ymd_panic(ioslate(vm), "Div to zero");
-			rhs->value.i = int_of(l, rhs) / opd2;
+			rhs->u.i = int_of(l, rhs) / opd2;
 			ymd_pop(l, 1);
 			} break;
 		case I_ADD: {
@@ -351,12 +351,12 @@ retry:
 							*lhs = ymd_top(l, 0);
 			switch (rhs->type) {
 			case T_INT:
-				rhs->value.i = rhs->value.i + int_of(l, lhs);
+				rhs->u.i = rhs->u.i + int_of(l, lhs);
 				break;
 			case T_KSTR:
-				rhs->value.ref = gcx(vm_strcat(vm, kstr_of(l, rhs),
+				rhs->u.ref = gcx(vm_strcat(vm, kstr_of(l, rhs),
 				                                kstr_of(l, lhs)));
-				gc_release(rhs->value.ref);
+				gc_release(rhs->u.ref);
 				break;
 			default:
 				ymd_panic(ioslate(vm), "Operator + don't support this type");
@@ -367,7 +367,7 @@ retry:
 		case I_SUB: {
 			struct variable *rhs = ymd_top(l, 1),
 							*lhs = ymd_top(l, 0);
-			rhs->value.i = int_of(l, rhs) - int_of(l, lhs);
+			rhs->u.i = int_of(l, rhs) - int_of(l, lhs);
 			ymd_pop(l, 1);
 			} break;
 		case I_MOD: {
@@ -376,7 +376,7 @@ retry:
 			ymd_int_t opd1 = int_of(l, lhs);
 			if (opd1 == 0LL)
 				ymd_panic(ioslate(vm), "Mod to zero");
-			rhs->value.i = int_of(l, rhs) % int_of(l, lhs);
+			rhs->u.i = int_of(l, rhs) % int_of(l, lhs);
 			ymd_pop(l, 1);
 			} break;
 		case I_POW: {
@@ -386,39 +386,39 @@ retry:
 			if (opd1 < 0) {
 				ymd_panic(ioslate(vm), "Pow must be great or equals 0");
 			} else if (opd1 == 0) {
-				rhs->value.i = 1;
+				rhs->u.i = 1;
 			} else if (opd0 == 1) {
-				rhs->value.i = 1;
+				rhs->u.i = 1;
 			} else if (opd0 == 0) {
-				rhs->value.i = 0;
+				rhs->u.i = 0;
 			} else { 
 				--opd1;
 				while (opd1--)
-					rhs->value.i *= opd0;
+					rhs->u.i *= opd0;
 			}
 			ymd_pop(l, 1);
 			} break;
 		case I_ANDB: {
 			struct variable *rhs = ymd_top(l, 1),
 							*lhs = ymd_top(l, 0);
-			rhs->value.i = int_of(l, rhs) & int_of(l, lhs);
+			rhs->u.i = int_of(l, rhs) & int_of(l, lhs);
 			ymd_pop(l, 1);
 			} break;
 		case I_ORB: {
 			struct variable *rhs = ymd_top(l, 1),
 							*lhs = ymd_top(l, 0);
-			rhs->value.i = int_of(l, rhs) | int_of(l, lhs);
+			rhs->u.i = int_of(l, rhs) | int_of(l, lhs);
 			ymd_pop(l, 1);
 			} break;
 		case I_XORB: {
 			struct variable *rhs = ymd_top(l, 1),
 							*lhs = ymd_top(l, 0);
-			rhs->value.i = int_of(l, rhs) ^ int_of(l, lhs);
+			rhs->u.i = int_of(l, rhs) ^ int_of(l, lhs);
 			ymd_pop(l, 1);
 			} break;
 		case I_INVB: {
 			struct variable *opd0 = ymd_top(l, 0);
-			opd0->value.i = ~opd0->value.i;
+			opd0->u.i = ~opd0->u.i;
 			} break;
 		case I_SHIFT: {
 			struct variable *rhs = ymd_top(l, 1),
@@ -427,13 +427,13 @@ retry:
 				ymd_panic(ioslate(vm), "Shift must be great than 0");
 			switch (flag) {
 			case F_LEFT:
-				rhs->value.i = int_of(l, rhs) << int_of(l, lhs);
+				rhs->u.i = int_of(l, rhs) << int_of(l, lhs);
 				break;
 			case F_RIGHT_L:
-				rhs->value.i = ((unsigned long long)int_of(l, rhs)) >> int_of(l, lhs);
+				rhs->u.i = ((unsigned long long)int_of(l, rhs)) >> int_of(l, lhs);
 				break;
 			case F_RIGHT_A:
-				rhs->value.i = int_of(l, rhs) >> int_of(l, lhs);
+				rhs->u.i = int_of(l, rhs) >> int_of(l, lhs);
 				break;
 			default:
 				assert(0);
@@ -492,7 +492,7 @@ retry:
 			assert(copied->n_bind == param);
 			while (i--)
 				func_bind(vm, copied, param - i - 1, ymd_top(l, i));
-			opd->value.ref = gcx(copied); // Copy-on-wirte bind
+			opd->u.ref = gcx(copied); // Copy-on-wirte bind
 			ymd_pop(l, param);
 			gc_release(copied);
 			} break;

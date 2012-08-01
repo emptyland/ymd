@@ -3,108 +3,99 @@
 #include "value_inl.h"
 #include <stdlib.h>
 
-void fmtx_final(struct fmtx *self) {
-	if (self->dy) free(self->dy);
-	memset(self->kbuf, 0, sizeof(self->kbuf));
-	self->dy = NULL;
-	self->last = 0;
-	self->max  = FMTX_STATIC_MAX;
-}
+#define zos_add(os) zos_advance(os, (int)strlen(zos_last(os)))
 
-void fmtx_need(struct fmtx *self, int n) {
-	if (self->last + n <= (int)sizeof(self->kbuf))
-		return;
-	if (self->last + n <= self->max)
-		return;
-	self->max = (self->last + n) * 3 / 2 + FMTX_STATIC_MAX;
-	if (!self->dy) {
-		self->dy = calloc(self->max, 1);
-		memcpy(self->dy, self->kbuf, self->last);
-	} else {
-		self->dy = realloc(self->dy, self->max);
-	}
-}
-
-const char *tostring(struct fmtx *ctx, const struct variable *var) {
+const char *tostring(struct zostream *os, const struct variable *var) {
 	switch (var->type) {
 	case T_NIL:
-		return fmtx_append(ctx, "nil", 3);
+		zos_append(os, "nil", 3);
+		break;
 	case T_INT:
-		fmtx_need(ctx, 24);
-		snprintf(fmtx_last(ctx), fmtx_remain(ctx), "%lld", var->value.i);
-		return fmtx_add(ctx);
+		zos_reserved(os, 24);
+		snprintf(zos_last(os), zos_remain(os), "%lld", var->u.i);
+		zos_add(os);
+		break;
 	case T_BOOL:
-		return var->value.i ? fmtx_append(ctx, "true", 4)
-			: fmtx_append(ctx, "false", 5);
+		if (var->u.i)
+			zos_append(os, "true", 4);
+		else
+			zos_append(os, "false", 5);
+		break;
 	case T_EXT:
-		fmtx_need(ctx, 24);
-		snprintf(fmtx_last(ctx), fmtx_remain(ctx), "@%p", var->value.ext);
-		return fmtx_add(ctx);
+		zos_reserved(os, 24);
+		snprintf(zos_last(os), zos_remain(os), "@%p", var->u.ext);
+		zos_add(os);
+		break;
 	case T_KSTR:
-		return fmtx_append(ctx, kstr_k(var)->land, kstr_k(var)->len);
+		zos_append(os, kstr_k(var)->land, kstr_k(var)->len);
+		break;
 	case T_FUNC:
-		return fmtx_append(ctx, func_k(var)->proto->land,
-		                   func_k(var)->proto->len);
+		zos_append(os, func_k(var)->proto->land, func_k(var)->proto->len);
+		break;
 	case T_DYAY: {
 		int i;
-		if (fg_self(var->value.ref))
-			return fmtx_append(ctx, "..[self]..", 10);
-		fmtx_append(ctx, "[", 1);
-		fg_enter(gcx(var->value.ref));
+		if (fg_self(var->u.ref))
+			return zos_append(os, "..[self]..", 10);
+		zos_append(os, "[", 1);
+		fg_enter(gcx(var->u.ref));
 		for (i = 0; i < dyay_k(var)->count; ++i) {
-			if (i > 0) fmtx_append(ctx, ", ", 2);
-			tostring(ctx, dyay_k(var)->elem + i);
+			if (i > 0) zos_append(os, ", ", 2);
+			tostring(os, dyay_k(var)->elem + i);
 		}
-		fg_leave(gcx(var->value.ref));
-		} return fmtx_append(ctx, "]", 1);
+		fg_leave(gcx(var->u.ref));
+		zos_append(os, "]", 1);
+		} break;
 	case T_HMAP: {
 		struct kvi *initial = hmap_k(var)->item,
 				   *i = NULL,
 				   *k = initial + (1 << hmap_k(var)->shift);
 		int f = 0;
-		if (fg_self(var->value.ref))
-			return fmtx_append(ctx, "..{self}..", 10);
-		fmtx_append(ctx, "{", 1);
-		fg_enter(gcx(var->value.ref));
+		if (fg_self(var->u.ref))
+			return zos_append(os, "..{self}..", 10);
+		zos_append(os, "{", 1);
+		fg_enter(gcx(var->u.ref));
 		for (i = initial; i != k; ++i) {
 			if (!i->flag) continue;
-			if (f++ > 0) fmtx_append(ctx, ", ", 2);
-			tostring(ctx, &i->k);
-			fmtx_append(ctx, " : ", 3);
-			tostring(ctx, &i->v);
+			if (f++ > 0) zos_append(os, ", ", 2);
+			tostring(os, &i->k);
+			zos_append(os, " : ", 3);
+			tostring(os, &i->v);
 		}
-		fg_leave(gcx(var->value.ref));
-		} return fmtx_append(ctx, "}", 1);
+		fg_leave(gcx(var->u.ref));
+		zos_append(os, "}", 1);
+		} break;
 	case T_SKLS: {
 		struct sknd *initial = skls_k(var)->head->fwd[0],
 				    *i = NULL;
 		int f = 0;
-		if (fg_self(var->value.ref))
-			return fmtx_append(ctx, "..@{self}..", 11);
-		fmtx_append(ctx, "@{", 2);
-		fg_enter(gcx(var->value.ref));
+		if (fg_self(var->u.ref))
+			return zos_append(os, "..@{self}..", 11);
+		zos_append(os, "@{", 2);
+		fg_enter(gcx(var->u.ref));
 		for (i = initial; i != NULL; i = i->fwd[0]) {
-			if (f++ > 0) fmtx_append(ctx, ", ", 2);
-			tostring(ctx, &i->k);
-			fmtx_append(ctx, " : ", 3);
-			tostring(ctx, &i->v);
+			if (f++ > 0) zos_append(os, ", ", 2);
+			tostring(os, &i->k);
+			zos_append(os, " : ", 3);
+			tostring(os, &i->v);
 		}
-		fg_leave(gcx(var->value.ref));
-		} return fmtx_append(ctx, "}", 1);
+		fg_leave(gcx(var->u.ref));
+		zos_append(os, "}", 1);
+		} break;
 	case T_MAND: {
-		fmtx_append(ctx, "(", 1);
+		zos_append(os, "(", 1);
 		if (mand_k(var)->tt)
-			fmtx_append(ctx, mand_k(var)->tt, strlen(mand_k(var)->tt));
+			zos_append(os, mand_k(var)->tt, strlen(mand_k(var)->tt));
 		else
-			fmtx_append(ctx, "*", 1);
-		fmtx_append(ctx, ")", 1);
-		fmtx_need(ctx, 10 + 24 + 2);
-		snprintf(fmtx_last(ctx), fmtx_remain(ctx), "[%d@%p]",
+			zos_append(os, "*", 1);
+		zos_append(os, ")", 1);
+		zos_reserved(os, 10 + 24 + 2);
+		snprintf(zos_last(os), zos_remain(os), "[%d@%p]",
 		         mand_k(var)->len, mand_k(var)->land);
-		} return fmtx_add(ctx);
+		zos_add(os);
+		} break;
 	default:
 		assert(0);
-		break;
+		return NULL;
 	}
-	return NULL;
+	return zos_buf(os);
 }

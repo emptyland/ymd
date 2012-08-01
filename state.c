@@ -79,8 +79,8 @@ int vm_reached(struct ymd_mach *vm, const char *name) {
 		vset_int(vm_def(vm, lib, name), 0);
 		return 0;
 	}
-	++count->value.i;
-	return count->value.i;
+	++count->u.i;
+	return count->u.i;
 }
 
 //------------------------------------------------------------------------
@@ -158,12 +158,12 @@ struct variable *vm_def(struct ymd_mach *vm, void *o, const char *field) {
 	case T_HMAP:
 		vset_kstr(&k, kstr_fetch(vm, field, -1));
 		v = hmap_put(vm, o, &k);
-		gc_release(k.value.ref);
+		gc_release(k.u.ref);
 		break;
 	case T_SKLS:
 		vset_kstr(&k, kstr_fetch(vm, field, -1));
 		v = skls_put(vm, o, &k);
-		gc_release(k.value.ref);
+		gc_release(k.u.ref);
 		break;
 	default:
 		assert(0);
@@ -178,12 +178,12 @@ struct variable *vm_mem(struct ymd_mach *vm, void *o, const char *field) {
 	case T_HMAP:
 		vset_kstr(&k, kstr_fetch(vm, field, -1));
 		v = hmap_get(o, &k);
-		gc_release(k.value.ref);
+		gc_release(k.u.ref);
 		break;
 	case T_SKLS:
 		vset_kstr(&k, kstr_fetch(vm, field, -1));
 		v = skls_get(o, &k);
-		gc_release(k.value.ref);
+		gc_release(k.u.ref);
 		break;
 	default:
 		assert(0);
@@ -196,7 +196,7 @@ struct variable *vm_getg(struct ymd_mach *vm, const char *field) {
 	struct variable k, *v;
 	vset_kstr(&k, kstr_fetch(vm, field, -1));
 	v = hmap_get(vm->global, &k);
-	gc_release(k.value.ref);
+	gc_release(k.u.ref);
 	return v;
 }
 
@@ -204,7 +204,7 @@ struct variable *vm_putg(struct ymd_mach *vm, const char *field) {
 	struct variable k, *v;
 	vset_kstr(&k, kstr_fetch(vm, field, -1));
 	v = hmap_put(vm, vm->global, &k);
-	gc_release(k.value.ref);
+	gc_release(k.u.ref);
 	return v;
 }
 

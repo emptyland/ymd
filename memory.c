@@ -15,7 +15,7 @@ static int gc_mark_mand(struct mand *o);
 static void gc_adjust(struct ymd_mach *vm, size_t prev);
 
 static inline int marked(struct variable *var, unsigned flag) {
-	return (is_ref(var) ? (var->value.ref->marked & flag) != 0 : 1);
+	return (is_ref(var) ? (var->u.ref->marked & flag) != 0 : 1);
 }
 
 static inline int track(struct gc_struct *gc, struct gc_node *x) {
@@ -25,7 +25,7 @@ static inline int track(struct gc_struct *gc, struct gc_node *x) {
 }
 
 static int gc_mark_var(struct variable *var) {
-	struct gc_node *o = var->value.ref;
+	struct gc_node *o = var->u.ref;
 	switch (var->type) {
 	case T_KSTR:
 		o->marked |= GC_BLACK_BIT0;

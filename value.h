@@ -41,7 +41,7 @@ struct variable {
 		struct gc_node *ref;
 		void *ext;
 		ymd_int_t i;
-	} value;
+	} u;
 	unsigned char type;
 };
 

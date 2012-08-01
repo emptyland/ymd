@@ -58,7 +58,7 @@ int blk_ki(struct ymd_mach *vm, struct chunk *core, ymd_int_t n) {
 	int i = core->kkval;
 	while (i--) {
 		if (core->kval[i].type == T_INT &&
-			core->kval[i].value.i == n)
+			core->kval[i].u.i == n)
 			return i;
 	}
 	vset_int(blk_klast(vm, core), n);
@@ -70,7 +70,7 @@ int blk_kf(struct ymd_mach *vm, struct chunk *core, void *p) {
 	struct func *fn = p;
 	while (i--) {
 		if (core->kval[i].type == T_FUNC &&
-		    core->kval[i].value.ref == p)
+		    core->kval[i].u.ref == p)
 			return i;
 	}
 	vset_func(blk_klast(vm, core), fn);

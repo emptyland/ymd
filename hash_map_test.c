@@ -9,24 +9,24 @@ static int test_hmap_creation_1() {
 	struct variable k, *rv;
 
 	k.type = T_INT;
-	k.value.i = 1024;
+	k.u.i = 1024;
 	rv = hmap_put(tvm, map, &k);
 	rv->type = T_KSTR;
-	rv->value.ref = gcx(kstr_fetch(tvm, "1024", -1));
+	rv->u.ref = gcx(kstr_fetch(tvm, "1024", -1));
 
 	rv = hmap_put(tvm, map, &k);
 	ASSERT_EQ(uint, rv->type, T_KSTR);
 	ASSERT_STREQ(kstr_of(tvm, rv)->land, "1024");
 
 	k.type = T_KSTR;
-	k.value.ref = gcx(kstr_fetch(tvm, "1024", -1));
+	k.u.ref = gcx(kstr_fetch(tvm, "1024", -1));
 	rv = hmap_put(tvm, map, &k);
 	rv->type = T_INT;
-	rv->value.i = 1024;
+	rv->u.i = 1024;
 
 	rv = hmap_get(map, &k);
 	ASSERT_EQ(uint, rv->type, T_INT);
-	ASSERT_EQ(large, rv->value.i, 1024);
+	ASSERT_EQ(large, rv->u.i, 1024);
 	return 0;
 }
 
@@ -39,10 +39,10 @@ static int test_hmap_creation_2() {
 		while (i--) {
 			const struct yut_kstr *kz = RAND_STR();
 			k.type = T_KSTR;
-			k.value.ref = gcx(kstr_fetch(tvm, kz->land, kz->len));
+			k.u.ref = gcx(kstr_fetch(tvm, kz->land, kz->len));
 			rv = hmap_put(tvm, map, &k);
 			rv->type = T_INT;
-			rv->value.i = i;
+			rv->u.i = i;
 		}
 	RAND_END
 	return 0;
@@ -83,10 +83,10 @@ static int test_hmap_search_1 () {
 	while (i--) {
 		snprintf(buf, sizeof(buf), "%d", i);
 		k.type = T_KSTR;
-		k.value.ref = gcx(kstr_fetch(tvm, buf, -1));
+		k.u.ref = gcx(kstr_fetch(tvm, buf, -1));
 		rv = hmap_put(tvm, map, &k);
 		rv->type = T_INT;
-		rv->value.i = i;
+		rv->u.i = i;
 	}
 	i = BENCHMARK_COUNT;
 	RAND_BEGIN(NORMAL)
@@ -95,10 +95,10 @@ static int test_hmap_search_1 () {
 			unsigned int index = RAND_RANGE(uint, 0, BENCHMARK_COUNT);
 			snprintf(buf, sizeof(buf), "%u", index);
 			k.type = T_KSTR;
-			k.value.ref = gcx(kstr_fetch(tvm, buf, -1));
+			k.u.ref = gcx(kstr_fetch(tvm, buf, -1));
 			rv = hmap_get(map, &k);
 			ASSERT_EQ(uint, rv->type, T_INT);
-			ASSERT_EQ(large, rv->value.i, index);
+			ASSERT_EQ(large, rv->u.i, index);
 		}
 		TIME_RECORD_END
 	RAND_END
@@ -118,7 +118,7 @@ static int test_hmap_search_2 () {
 		int j = 16;
 		while (j--) {
 			vset_int(&k, j);
-			ASSERT_EQ(large, hmap_get(map, &k)->value.i, j);
+			ASSERT_EQ(large, hmap_get(map, &k)->u.i, j);
 		}
 	}
 	TIME_RECORD_END
@@ -129,10 +129,10 @@ static struct hmap *build_hmap(struct hmap *x, const int *raw, long i) {
 	while (i--) {
 		struct variable k, *rv;
 		k.type = T_INT;
-		k.value.i = raw[i];
+		k.u.i = raw[i];
 		rv = hmap_put(tvm, x, &k);
 		rv->type = T_INT;
-		rv->value.i = i;
+		rv->u.i = i;
 	}
 	return x;
 }

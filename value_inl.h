@@ -3,12 +3,12 @@
 
 #define DEFINE_REFCAST(name, tt) \
 static inline struct name *name##_x(struct variable *var) { \
-	assert(var->value.ref->type == tt); \
-	return (struct name *)var->value.ref; \
+	assert(var->u.ref->type == tt); \
+	return (struct name *)var->u.ref; \
 } \
 static inline const struct name *name##_k(const struct variable *var) { \
-	assert(var->value.ref->type == tt); \
-	return (const struct name *)var->value.ref; \
+	assert(var->u.ref->type == tt); \
+	return (const struct name *)var->u.ref; \
 } \
 static inline struct name *name##_f(void *o) { \
 	return (struct name *)o; \
@@ -28,38 +28,38 @@ DECL_TREF(DECL_REFOF)
 
 /*
 #define vset_nil(v) \
-	{ (v)->type = T_NIL; (v)->value.i = 0; }
+	{ (v)->type = T_NIL; (v)->u.i = 0; }
 #define vset_int(v, x) \
-	{ (v)->type = T_INT; (v)->value.i = (x); }
+	{ (v)->type = T_INT; (v)->u.i = (x); }
 #define vset_bool(v, x) \
-	{ (v)->type = T_BOOL; (v)->value.i = (x); }
+	{ (v)->type = T_BOOL; (v)->u.i = (x); }
 #define vset_ext(v, x) \
-	{ (v)->type = T_EXT; (v)->value.ext = (x); }
+	{ (v)->type = T_EXT; (v)->u.ext = (x); }
 #define vset_ref(v, x) \
-	{ (v)->type = gcx(x)->type; (v)->value.ref = gcx(x); }
+	{ (v)->type = gcx(x)->type; (v)->u.ref = gcx(x); }
 */
 static inline void vset_nil (struct variable *v) {
-	v->type = T_NIL; v->value.i = 0;
+	v->type = T_NIL; v->u.i = 0;
 }
 #define VSET_DECL(name, arg1) \
 	static inline void vset_##name (struct variable *v, arg1 x)
 VSET_DECL(int, ymd_int_t) {
-	v->type = T_INT; v->value.i = x;
+	v->type = T_INT; v->u.i = x;
 }
 VSET_DECL(bool, ymd_int_t) {
-	v->type = T_BOOL; v->value.i = x;
+	v->type = T_BOOL; v->u.i = x;
 }
 VSET_DECL(ext, void *) {
-	v->type = T_EXT; v->value.ext = x;
+	v->type = T_EXT; v->u.ext = x;
 }
 VSET_DECL(ref, struct gc_node *) {
-	v->type = gcx(x)->type; v->value.ref = gcx(x);
+	v->type = gcx(x)->type; v->u.ref = gcx(x);
 }
 #undef VSET_DECL
 #define DEFINE_SETTER(name, tt) \
 static inline void vset_##name(struct variable *v, struct name *o) { \
 	v->type = tt; \
-	v->value.ref = gcx(o); \
+	v->u.ref = gcx(o); \
 }
 DECL_TREF(DEFINE_SETTER)
 #undef DEFINE_SETTER

@@ -99,15 +99,15 @@ static size_t hash(const struct variable *v) {
 	case T_NIL:
 		return 0;
 	case T_INT:
-		return hash_int(v->value.i);
+		return hash_int(v->u.i);
 	case T_BOOL:
-		return hash_bool(v->value.i);
+		return hash_bool(v->u.i);
 	case T_KSTR:
 		return hash_kstr(kstr_k(v));
 	//case T_FUNC:
 	//	return hash_func(func_k(v));
 	case T_EXT:
-		return hash_ext(v->value.ext);
+		return hash_ext(v->u.ext);
 	case T_DYAY:
 		return hash_dyay(dyay_k(v));
 	case T_HMAP:

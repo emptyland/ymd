@@ -31,41 +31,41 @@ static void yut_fail2(L, const char *op,
                       const struct variable *arg1) {
 	struct call_info *up = l->info->chain;
 	struct func *fn = up->run;
-	struct fmtx fx0 = FMTX_INIT, fx1 = FMTX_INIT;
-	tostring(&fx0, arg0);
-	tostring(&fx1, arg1);
+	struct zostream os0 = ZOS_INIT, os1 = ZOS_INIT;
+	tostring(&os0, arg0);
+	tostring(&os1, arg1);
 	ymd_printf(yYELLOW"[  XXX ] %s:%d Assert fail: "yEND
 	           "("yPURPLE"%s"yEND") %s ("yPURPLE"%s"yEND")\n"
 			   "Expected : <"yPURPLE"%s"yEND">\n"
 			   "Actual   : <"yPURPLE"%s"yEND">\n",
 			   fn->u.core->file->land,
 			   fn->u.core->line[up->pc - 1],
-			   fmtx_buf(&fx0),
+			   zos_buf(&os0),
 			   op,
-			   fmtx_buf(&fx1),
-			   fmtx_buf(&fx0),
-			   fmtx_buf(&fx1));
-	fmtx_final(&fx0);
-	fmtx_final(&fx1);
+			   zos_buf(&os1),
+			   zos_buf(&os0),
+			   zos_buf(&os1));
+	zos_final(&os0);
+	zos_final(&os1);
 	yut_raise(l);
 }
 
 static void yut_fail0(L) {
-	struct fmtx fx = FMTX_INIT;
+	struct zostream os = ZOS_INIT;
 	// print backtrace info
 	struct dyay *ax = dyay_of(l, ymd_top(l, 0));
 	int i;
 	for (i = 0; i < ax->count; ++i) {
-		fmtx_append(&fx, "\t", 1);
-		tostring(&fx, ax->elem + i);
-		fmtx_append(&fx, "\n", 1);
+		zos_append(&os, "\t", 1);
+		tostring(&os, ax->elem + i);
+		zos_append(&os, "\n", 1);
 	}
 	ymd_printf(yYELLOW"[  XXX ] %s\n"yEND
 	           "Runtime error: %s\nBacktrace:\n%s",
 	           kstr_of(l, ymd_top(l, 1))->land,
 			   kstr_of(l, ymd_top(l, 2))->land,
-			   fmtx_buf(&fx));
-	fmtx_final(&fx);
+			   zos_buf(&os));
+	zos_final(&os);
 	ymd_pop(l, 3);
 }
 
@@ -73,7 +73,7 @@ static void yut_fail1(L, const char *expected,
                       const struct variable *arg0) {
 	struct call_info *up = l->info->chain;
 	struct func *fn = up->run;
-	struct fmtx fx = FMTX_INIT;
+	struct zostream os = ZOS_INIT;
 	ymd_printf(yYELLOW"[  XXX ] %s:%d Assert fail, expected"yEND
 	           yPURPLE"<%s>"yEND
 	           yYELLOW", unexpected"yEND
@@ -82,8 +82,8 @@ static void yut_fail1(L, const char *expected,
 			   fn->u.core->file->land,
 	           fn->u.core->line[up->pc - 1],
 	           expected,
-	           tostring(&fx, arg0));
-	fmtx_final(&fx);
+	           tostring(&os, arg0));
+	zos_final(&os);
 	yut_raise(l);
 }
 
@@ -103,14 +103,14 @@ static int libx_True(L) {
 	struct variable *arg0 = ymd_argv_get(l, 1);
 	if (is_nil(arg0))
 		yut_fail1(l, "not nil", arg0);
-	if (arg0->type == T_BOOL && !arg0->value.i)
+	if (arg0->type == T_BOOL && !arg0->u.i)
 		yut_fail1(l, "true or not nil", arg0);
 	return 0;
 }
 
 static int libx_False(L) {
 	struct variable *arg0 = ymd_argv_get(l, 1);
-	if (!is_nil(arg0) && (arg0->type == T_BOOL && arg0->value.i))
+	if (!is_nil(arg0) && (arg0->type == T_BOOL && arg0->u.i))
 		yut_fail1(l, "false or nil", arg0);
 	return 0;
 }
@@ -209,10 +209,10 @@ static int yut_test(struct ymd_mach *vm, const char *clazz,
 	struct ymd_context *l = ioslate(vm);
 	if (test->type != T_SKLS)
 		return 0;
-	setup    = yut_method(vm, test->value.ref, "setup");
-	teardown = yut_method(vm, test->value.ref, "teardown");
-	init     = yut_method(vm, test->value.ref, "init");
-	final    = yut_method(vm, test->value.ref, "final");
+	setup    = yut_method(vm, test->u.ref, "setup");
+	teardown = yut_method(vm, test->u.ref, "teardown");
+	init     = yut_method(vm, test->u.ref, "init");
+	final    = yut_method(vm, test->u.ref, "final");
 	if (setjmp(yut_jpt(l, vm_getg(vm, "Assert"))->jpt)) {
 		yut_fault(); // Print failed message
 		return -1; // Test Fail

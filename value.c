@@ -36,7 +36,7 @@ struct kstr *typeof_kstr(struct ymd_mach *vm, unsigned tt) {
 // Constant variable value:
 //-------------------------------------------------------------------------
 static struct variable knil_fake_var = {
-	.value = { .i = 0LL, },
+	.u = { .i = 0LL, },
 	.type = T_NIL,
 };
 struct variable *knil = &knil_fake_var;
@@ -47,13 +47,13 @@ struct variable *knil = &knil_fake_var;
 ymd_int_t int_of(struct ymd_context *l, const struct variable *var) {
 	if (var->type != T_INT)
 		ymd_panic(l, "Variable is not `int`");
-	return var->value.i;
+	return var->u.i;
 }
 
 ymd_int_t bool_of(struct ymd_context *l, const struct variable *var) {
 	if (var->type != T_BOOL)
 		ymd_panic(l, "Variable is not `bool`");
-	return var->value.i;
+	return var->u.i;
 }
 
 #define DEFINE_REFOF(name, tt)                   \
@@ -61,8 +61,8 @@ struct name *name##_of(struct ymd_context *l,      \
 		struct variable *var) {                  \
 	if (var->type != tt)                         \
 		ymd_panic(l, "Variable is not `"#name"`"); \
-	assert(var->value.ref != NULL);              \
-	return (struct name *)var->value.ref;        \
+	assert(var->u.ref != NULL);              \
+	return (struct name *)var->u.ref;        \
 }
 DECL_TREF(DEFINE_REFOF)
 #undef DEFINE_REFOF
@@ -89,13 +89,13 @@ int equals(const struct variable *lhs, const struct variable *rhs) {
 		return 1;
 	case T_INT:
 	case T_BOOL:
-		return lhs->value.i == rhs->value.i;
+		return lhs->u.i == rhs->u.i;
 	case T_KSTR:
 		return kstr_equals(kstr_k(lhs), kstr_k(rhs));
 	case T_FUNC:
 		return func_k(lhs) == func_k(rhs); // FIXME:
 	case T_EXT:
-		return lhs->value.ext == rhs->value.ext;
+		return lhs->u.ext == rhs->u.ext;
 	case T_DYAY:
 		return dyay_equals(dyay_k(lhs), dyay_k(rhs));
 	case T_HMAP:
@@ -125,7 +125,7 @@ int compare(const struct variable *lhs, const struct variable *rhs) {
 		return 0; // Do not compare a nil value.
 	case T_INT:
 	case T_BOOL:
-		return safe_compare(lhs->value.i, rhs->value.i);
+		return safe_compare(lhs->u.i, rhs->u.i);
 	case T_KSTR:
 		return kstr_compare(kstr_k(lhs), kstr_k(rhs));
 	//case T_CLOSURE:
