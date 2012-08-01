@@ -121,12 +121,15 @@ int ymd_main(struct ymd_context *l, int argc, char *argv[]);
 //-----------------------------------------------------------------------------
 // Misc:
 // ----------------------------------------------------------------------------
-// Get/Put a container: hashmap/skiplist/array
+// Get/Put/Del a container: hashmap/skiplist/array
 struct variable *vm_put(struct ymd_mach *vm, struct variable *var,
                         const struct variable *key);
 
 struct variable *vm_get(struct ymd_mach *vm, struct variable *var,
                         const struct variable *key);
+
+void vm_del(struct ymd_mach *vm, struct variable *var,
+            const struct variable *key);
 
 // Get/Put global variable
 struct variable *vm_putg(struct ymd_mach *vm, const char *field);

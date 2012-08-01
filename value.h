@@ -182,6 +182,8 @@ void hmap_final(struct ymd_mach *vm, struct hmap *o);
 struct variable *hmap_put(struct ymd_mach *vm, struct hmap *o,
                           const struct variable *key);
 struct variable *hmap_get(struct hmap *o, const struct variable *k);
+int hmap_remove(struct ymd_mach *vm, struct hmap *o,
+                const struct variable *k);
 
 // Skip list: `skls` functions:
 struct skls *skls_new(struct ymd_mach *vm);
@@ -189,6 +191,8 @@ void skls_final(struct ymd_mach *vm, struct skls *o);
 struct variable *skls_put(struct ymd_mach *vm, struct skls *o,
                           const struct variable *k);
 struct variable *skls_get(struct skls *o, const struct variable *k);
+int skls_remove(struct ymd_mach *vm, struct skls *o,
+                const struct variable *k);
 
 // Dynamic array: `dyay` functions:
 struct dyay *dyay_new(struct ymd_mach *vm, int count);
@@ -197,6 +201,7 @@ struct variable *dyay_get(struct dyay *o, ymd_int_t i);
 struct variable *dyay_add(struct ymd_mach *vm, struct dyay *o);
 struct variable *dyay_insert(struct ymd_mach *vm, struct dyay *o,
 	                         ymd_int_t i);
+int dyay_remove(struct ymd_mach *vm, struct dyay *o, ymd_int_t i);
 
 // Managed data: `mand` functions:
 struct mand *mand_new(struct ymd_mach *vm, int size, ymd_final_t final);

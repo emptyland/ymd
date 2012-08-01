@@ -11,9 +11,9 @@
 #define KVI_NODE 2
 
 static size_t hash(const struct variable *v);
-static struct kvi *hindex(struct ymd_mach *vm, struct hmap *map,
-                          const struct variable *key);
-static void resize(struct ymd_mach *vm, struct hmap *map, int shift);
+static struct kvi *hindex(struct ymd_mach *vm, struct hmap *o,
+                          const struct variable *k);
+static void resize(struct ymd_mach *vm, struct hmap *o, int shift);
 
 static int log2x(int n) {
 	int i;
@@ -24,9 +24,9 @@ static int log2x(int n) {
 	return -1;
 }
 
-static inline struct kvi *position(const struct hmap *map,
+static inline struct kvi *position(const struct hmap *o,
                                    size_t h) {
-	return map->item + (((h - 1) | 1) % (1 << map->shift));
+	return o->item + (((h - 1) | 1) % (1 << o->shift));
 }
 
 
@@ -48,33 +48,33 @@ static size_t hash_ext(void *p) {
 	return h;
 }
 
-static size_t hash_dyay(const struct dyay *arr) {
-	int i = arr->count;
+static size_t hash_dyay(const struct dyay *o) {
+	int i = o->count;
 	size_t h = i * i;
 	while (i--) {
 		if (i % 2)
-			h ^= hash(arr->elem + i);
+			h ^= hash(o->elem + i);
 		else
-			h += hash(arr->elem + i);
+			h += hash(o->elem + i);
 	}
 	return h;
 }
 
-static size_t hash_hmap(const struct hmap *map) {
-	int i = (1 << map->shift);
+static size_t hash_hmap(const struct hmap *o) {
+	int i = (1 << o->shift);
 	size_t h = 0;
 	while (i--) {
-		if (map->item[i].flag != KVI_FREE) {
-			h += hash(&map->item[i].k);
-			h ^= hash(&map->item[i].v);
+		if (o->item[i].flag != KVI_FREE) {
+			h += hash(&o->item[i].k);
+			h ^= hash(&o->item[i].v);
 		}
 	}
 	return h;
 }
 
-static size_t hash_skls(const struct skls *list) {
+static size_t hash_skls(const struct skls *o) {
 	size_t h = 0;
-	struct sknd *x = list->head;
+	struct sknd *x = o->head;
 	assert(x != NULL);
 	while ((x = x->fwd[0]) != NULL) {
 		h += hash(&x->k);
@@ -83,9 +83,9 @@ static size_t hash_skls(const struct skls *list) {
 	return h;
 }
 
-static inline size_t hash_mand(const struct mand *pm) {
-	size_t h = hash_ext((void *)pm->final);
-	return h ^ kz_hash((const char *)pm->land, pm->len);
+static inline size_t hash_mand(const struct mand *o) {
+	size_t h = hash_ext((void *)o->final);
+	return h ^ kz_hash((const char *)o->land, o->len);
 }
 
 // Lazy hash:
@@ -123,14 +123,14 @@ static size_t hash(const struct variable *v) {
 	return 0;
 }
 
-static struct variable *hfind(const struct hmap *map,
-                              const struct variable *key) {
-	size_t h = hash(key);
-	struct kvi *i, *slot = position(map, h);
+static struct variable *hfind(const struct hmap *o,
+                              const struct variable *k) {
+	size_t h = hash(k);
+	struct kvi *i, *slot = position(o, h);
 	switch (slot->flag) {
 	case KVI_SLOT:
 		for (i = slot; i != NULL; i = i->next) {
-			if (i->hash == h && equals(&i->k, key))
+			if (i->hash == h && equals(&i->k, k))
 				return &i->v;
 		}
 		break;
@@ -157,26 +157,26 @@ struct hmap *hmap_new(struct ymd_mach *vm, int count) {
 	return x;
 }
 
-static int hmap_count(const struct hmap *map) {
-	int rv = 0, i = (1 << map->shift);
+static int hmap_count(const struct hmap *o) {
+	int rv = 0, i = (1 << o->shift);
 	while (i--) {
-		if (map->item[i].flag != KVI_FREE)
+		if (o->item[i].flag != KVI_FREE)
 			++rv;
 	}
 	return rv;
 }
 
-int hmap_equals(const struct hmap *map, const struct hmap *rhs) {
+int hmap_equals(const struct hmap *o, const struct hmap *rhs) {
 	int i, rhs_count, count = 0;
-	if (map == rhs)
+	if (o == rhs)
 		return 1;
-	i = (1 << map->shift);
+	i = (1 << o->shift);
 	if (i != (1 << rhs->shift))
 		return 0;
 	rhs_count = hmap_count(rhs);
 	while (i--) {
-		if (map->item[i].flag != KVI_FREE) {
-			const struct kvi *it = map->item + i;
+		if (o->item[i].flag != KVI_FREE) {
+			const struct kvi *it = o->item + i;
 			if (!equals(&it->v, hfind(rhs, &it->k)))
 				return 0;
 			++count;
@@ -185,47 +185,47 @@ int hmap_equals(const struct hmap *map, const struct hmap *rhs) {
 	return count == rhs_count;
 }
 
-int hmap_compare(const struct hmap *map, const struct hmap *rhs) {
+int hmap_compare(const struct hmap *o, const struct hmap *rhs) {
 	int i, rv = 0;
-	if (map == rhs)
+	if (o == rhs)
 		return 0;
-	i = (1 << map->shift);
+	i = (1 << o->shift);
 	while (i--) {
-		if (map->item[i].flag != KVI_FREE) {
-			const struct kvi *it = map->item + i;
+		if (o->item[i].flag != KVI_FREE) {
+			const struct kvi *it = o->item + i;
 			rv += compare(&it->v, hfind(rhs, &it->k));
 		}
 	}
 	return rv;
 }
 
-void hmap_final(struct ymd_mach *vm, struct hmap *map) {
-	mm_free(vm, map->item, 1 << map->shift, sizeof(*map->item));
+void hmap_final(struct ymd_mach *vm, struct hmap *o) {
+	mm_free(vm, o->item, 1 << o->shift, sizeof(*o->item));
 }
 
-static struct kvi *alloc_free(struct hmap *map) {
-	const struct kvi *first = map->item;
+static struct kvi *alloc_free(struct hmap *o) {
+	const struct kvi *first = o->item;
 	struct kvi *i;
-	for (i = map->free; i > first; --i)
+	for (i = o->free; i > first; --i)
 		if (i->flag == KVI_FREE)
 			return i;
 	return NULL;
 }
 
-struct kvi *index_if_head(struct ymd_mach *vm, struct hmap *map,
-                     const struct variable *key,
-                     struct kvi *slot, size_t h) {
+struct kvi *index_if_head(struct ymd_mach *vm, struct hmap *o,
+                          const struct variable *k,
+                          struct kvi *slot, size_t h) {
 	struct kvi *pos = slot;
 	struct kvi *i, *fnd;
 	for (i = slot; i != NULL; i = i->next) {
 		pos = i;
-		if (i->hash == h && equals(&i->k, key))
+		if (i->hash == h && equals(&i->k, k))
 			return i;
 	}
-	fnd = alloc_free(map);
+	fnd = alloc_free(o);
 	if (!fnd) {
-		resize(vm, map, map->shift + 1);
-		return hindex(vm, map, key);
+		resize(vm, o, o->shift + 1);
+		return hindex(vm, o, k);
 	}
 	assert(!pos->next);
 	fnd->hash = h;
@@ -235,44 +235,44 @@ struct kvi *index_if_head(struct ymd_mach *vm, struct hmap *map,
 	return fnd;
 }
 
-static void resize(struct ymd_mach *vm, struct hmap *map, int shift) {
+static void resize(struct ymd_mach *vm, struct hmap *o, int shift) {
 	struct kvi *bak;
 	const struct kvi *last, *i;
-	int total_count, old_count = 1 << map->shift;
-	assert(shift > map->shift);
+	int total_count, old_count = 1 << o->shift;
+	assert(shift > o->shift);
 	// Backup old data
-	bak = map->item;
-	total_count = map->shift == 0 ? 0 : (1 << map->shift);
+	bak = o->item;
+	total_count = o->shift == 0 ? 0 : (1 << o->shift);
 	last = bak + total_count;
 	// Allocate new slots
 	total_count = (1 << shift);
-	map->item = mm_zalloc(vm, total_count, sizeof(*map->item));
-	map->free = map->item + total_count - 1; // To last node!!
-	map->shift = shift;
+	o->item = mm_zalloc(vm, total_count, sizeof(*o->item));
+	o->free = o->item + total_count - 1; // To last node!!
+	o->shift = shift;
 	// Rehash
 	for (i = bak; i < last; ++i) {
 		if (i->flag != KVI_FREE) {
-			struct variable *pv = hmap_put(vm, map, &i->k);
+			struct variable *pv = hmap_put(vm, o, &i->k);
 			assert(pv != NULL);
 			//assert(is_nil(pv));
 			*pv = i->v;
 		}
 	}
-	mm_free(vm, bak, old_count, sizeof(*map->item));
+	mm_free(vm, bak, old_count, sizeof(*o->item));
 }
 
-struct kvi *index_if_node(struct ymd_mach *vm, struct hmap *map,
-                    const struct variable *key,
-                    struct kvi *slot, size_t h) {
-	struct kvi *fnd = alloc_free(map), *prev;
+struct kvi *index_if_node(struct ymd_mach *vm, struct hmap *o,
+                          const struct variable *k,
+                          struct kvi *slot, size_t h) {
+	struct kvi *fnd = alloc_free(o), *prev;
 	size_t slot_h;
 	if (!fnd) {
-		resize(vm, map, map->shift + 1);
-		return hindex(vm, map, key);
+		resize(vm, o, o->shift + 1);
+		return hindex(vm, o, k);
 	}
 	// Find real head node `prev`.
 	slot_h = hash(&slot->k);
-	prev = position(map, slot_h);
+	prev = position(o, slot_h);
 	while (prev->next != slot) {
 		prev = prev->next;
 		assert(prev);
@@ -292,19 +292,19 @@ struct kvi *index_if_node(struct ymd_mach *vm, struct hmap *map,
 	return slot;
 }
 
-static struct kvi *hindex(struct ymd_mach *vm, struct hmap *map,
-                          const struct variable *key) {
-	size_t h = hash(key);
-	struct kvi *slot = position(map, h);
+static struct kvi *hindex(struct ymd_mach *vm, struct hmap *o,
+                          const struct variable *k) {
+	size_t h = hash(k);
+	struct kvi *slot = position(o, h);
 	switch (slot->flag) {
 	case KVI_FREE:
 		slot->flag = KVI_SLOT;
 		slot->hash = h;
 		return slot;
 	case KVI_SLOT:
-		return index_if_head(vm, map, key, slot, h);
+		return index_if_head(vm, o, k, slot, h);
 	case KVI_NODE:
-		return index_if_node(vm, map, key, slot, h);
+		return index_if_node(vm, o, k, slot, h);
 	default:
 		assert(0);
 		break;
@@ -312,17 +312,38 @@ static struct kvi *hindex(struct ymd_mach *vm, struct hmap *map,
 	return NULL;
 }
 
-struct variable *hmap_put(struct ymd_mach *vm, struct hmap *map,
-                          const struct variable *key) {
+struct variable *hmap_put(struct ymd_mach *vm, struct hmap *o,
+                          const struct variable *k) {
 	struct kvi *x = NULL;
-	assert(!is_nil(key));
-	x = hindex(vm, map, key);
-	x->k = *key;
+	assert(!is_nil(k));
+	x = hindex(vm, o, k);
+	x->k = *k;
 	return &x->v;
 }
 
-struct variable *hmap_get(struct hmap *map, const struct variable *key) {
-	assert(!is_nil(key));
-	return hfind(map, key);
+struct variable *hmap_get(struct hmap *o, const struct variable *k) {
+	assert(!is_nil(k));
+	return hfind(o, k);
 }
 
+int hmap_remove(struct ymd_mach *vm, struct hmap *o,
+                const struct variable *k) {
+	size_t h = hash(k);
+	struct kvi dummy, *p, *i, *slot = position(o, h);
+	(void)vm;
+	if (slot->flag != KVI_SLOT)
+		return -1;
+	memset(&dummy, 0, sizeof(dummy));
+	dummy.next = slot;
+	p = &dummy;
+	for (i = slot; i != NULL; p = i, i = i->next) {
+		if (i->hash == h && equals(&i->k, k)) {
+			p->next = i->next;
+			memset(i, 0, sizeof(*i));
+			if (dummy.next && dummy.next != slot)
+				memcpy(slot, dummy.next, sizeof(*slot));
+			return 0;
+		}
+	}
+	return -1;
+}

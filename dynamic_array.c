@@ -16,23 +16,23 @@ struct dyay *dyay_new(struct ymd_mach *vm, int max) {
 	return x;
 }
 
-void dyay_final(struct ymd_mach *vm, struct dyay *arr) {
-	if (arr->elem) {
-		assert(arr->max > 0);
-		mm_free(vm, arr->elem, arr->max, sizeof(*arr->elem));
-		arr->elem  = NULL;
-		arr->count = 0;
-		arr->max   = 0;
+void dyay_final(struct ymd_mach *vm, struct dyay *o) {
+	if (o->elem) {
+		assert(o->max > 0);
+		mm_free(vm, o->elem, o->max, sizeof(*o->elem));
+		o->elem  = NULL;
+		o->count = 0;
+		o->max   = 0;
 	}
 }
 
-int dyay_equals(const struct dyay *arr, const struct dyay *rhs) {
-	if (arr == rhs)
+int dyay_equals(const struct dyay *o, const struct dyay *rhs) {
+	if (o == rhs)
 		return 1;
-	if (arr->count == rhs->count) {
-		int i = arr->count;
+	if (o->count == rhs->count) {
+		int i = o->count;
 		while (i--) {
-			if (!equals(arr->elem + i, rhs->elem + i))
+			if (!equals(o->elem + i, rhs->elem + i))
 				return 0;
 		}
 		return 1;
@@ -40,53 +40,65 @@ int dyay_equals(const struct dyay *arr, const struct dyay *rhs) {
 	return 0;
 }
 
-int dyay_compare(const struct dyay *arr, const struct dyay *rhs) {
+int dyay_compare(const struct dyay *o, const struct dyay *rhs) {
 	int i, k;
-	if (arr == rhs)
+	if (o == rhs)
 		return 0;
-	k = arr->count < rhs->count ? arr->count : rhs->count;
+	k = o->count < rhs->count ? o->count : rhs->count;
 	for (i = 0; i < k; ++i) {
-		if (compare(arr->elem + i, rhs->elem + i) < 0)
+		if (compare(o->elem + i, rhs->elem + i) < 0)
 			return -1;
-		else if (compare(arr->elem + i, rhs->elem + i) > 0)
+		else if (compare(o->elem + i, rhs->elem + i) > 0)
 			return 1;
 	}
-	if (arr->count < rhs->count)
+	if (o->count < rhs->count)
 		return -1;
-	else if (arr->count > rhs->count)
+	else if (o->count > rhs->count)
 		return 1;
 	return 0;
 }
 
-struct variable *dyay_get(struct dyay *arr, ymd_int_t i) {
+struct variable *dyay_get(struct dyay *o, ymd_int_t i) {
 	size_t pos = (size_t)i;
-	assert(i >= 0LL && i < (ymd_int_t)arr->count);
-	return arr->elem + pos;
+	assert(i >= 0LL && i < (ymd_int_t)o->count);
+	return o->elem + pos;
 }
 
-static inline void resize(struct ymd_mach *vm, struct dyay *arr) {
-	int old = arr->max;
-	arr->max = arr->count * 3 / 2 + MAX_ADD;
-	arr->elem = mm_realloc(vm, arr->elem, old, arr->max,
-	                       sizeof(*arr->elem));
+static inline void resize(struct ymd_mach *vm, struct dyay *o) {
+	int old = o->max;
+	o->max = o->count * 3 / 2 + MAX_ADD;
+	o->elem = mm_realloc(vm, o->elem, old, o->max,
+	                       sizeof(*o->elem));
 }
 
-struct variable *dyay_add(struct ymd_mach *vm, struct dyay *arr) {
-	if (arr->count >= arr->max) // Resize
-		resize(vm, arr);
-	memset(arr->elem + arr->count, 0, sizeof(*arr->elem));
-	return arr->elem + arr->count++;
+struct variable *dyay_add(struct ymd_mach *vm, struct dyay *o) {
+	if (o->count >= o->max) // Resize
+		resize(vm, o);
+	memset(o->elem + o->count, 0, sizeof(*o->elem));
+	return o->elem + o->count++;
 }
 
-struct variable *dyay_insert(struct ymd_mach *vm, struct dyay *arr, ymd_int_t i) {
+struct variable *dyay_insert(struct ymd_mach *vm, struct dyay *o, ymd_int_t i) {
 	int j;
-	if (arr->count >= arr->max) // Resize
-		resize(vm, arr);
+	if (o->count >= o->max) // Resize
+		resize(vm, o);
 	assert(i >= 0);
-	assert(i < arr->count);
-	j = arr->count;
+	assert(i < o->count);
+	j = o->count;
 	while (j-- > i)
-		arr->elem[j + 1] = arr->elem[j];
-	++arr->count;
-	return arr->elem + i;
+		o->elem[j + 1] = o->elem[j];
+	++o->count;
+	return o->elem + i;
+}
+
+int dyay_remove(struct ymd_mach *vm, struct dyay *o, ymd_int_t i) {
+	(void)vm;
+	assert(i >= 0);
+	if (i >= o->count)
+		return -1;
+	if (i < o->count - 1)
+		memmove(o->elem + i, o->elem + i + 1,
+		        (o->count - i - 1) * sizeof(*o->elem));
+	--o->count;
+	return 0;
 }

@@ -16,7 +16,7 @@ static int test_hmap_creation_1() {
 
 	rv = hmap_put(tvm, map, &k);
 	ASSERT_EQ(uint, rv->type, T_KSTR);
-	ASSERT_STREQ(kstr_of(tvm, rv)->land, "1024");
+	ASSERT_STREQ(kstr_of(ioslate(tvm), rv)->land, "1024");
 
 	k.type = T_KSTR;
 	k.u.ref = gcx(kstr_fetch(tvm, "1024", -1));
@@ -27,6 +27,10 @@ static int test_hmap_creation_1() {
 	rv = hmap_get(map, &k);
 	ASSERT_EQ(uint, rv->type, T_INT);
 	ASSERT_EQ(large, rv->u.i, 1024);
+
+	vset_int(&k, 1024);
+	hmap_remove(tvm, map, &k);
+	ASSERT_TRUE(knil == hmap_get(map, &k));
 	return 0;
 }
 
@@ -165,6 +169,35 @@ static int test_hmap_comparation() {
 	return 0;
 }
 
+static int test_hmap_removing () {
+	struct variable k;
+	vset_int(&k, 4);
+	vset_int(hmap_put(tvm, map, &k), 0);
+	vset_int(&k, 14);
+	vset_int(hmap_put(tvm, map, &k), 1);
+	vset_int(&k, 1024);
+	vset_int(hmap_put(tvm, map, &k), 3);
+
+	vset_int(&k, 4);
+	ASSERT_EQ(int, hmap_remove(tvm, map, &k), 0);
+	ASSERT_TRUE(knil == hmap_get(map, &k));
+	vset_int(&k, 1024);
+	ASSERT_EQ(int, hmap_remove(tvm, map, &k), 0);
+	ASSERT_TRUE(knil == hmap_get(map, &k));
+	vset_int(&k, 14);
+	ASSERT_EQ(int, hmap_remove(tvm, map, &k), 0);
+	ASSERT_TRUE(knil == hmap_get(map, &k));
+
+	vset_int(&k, 1024);
+	vset_int(hmap_put(tvm, map, &k), 1000);
+	ASSERT_EQ(uint,  hmap_get(map, &k)->type, T_INT);
+	ASSERT_EQ(large, hmap_get(map, &k)->u.i,  1000LL);
+
+	vset_int(&k, 14);
+	ASSERT_EQ(int, hmap_remove(tvm, map, &k), -1);
+	return 0;
+}
+
 static int hmap_setup() {
 	map = hmap_new(tvm, -1);
 	gc_active(tvm, GC_PAUSE);
@@ -183,5 +216,6 @@ TEST_BEGIN_WITH(hmap_setup, hmap_teardown)
 	TEST_ENTRY(hmap_search_1, benchmark)
 	TEST_ENTRY(hmap_search_2, benchmark)
 	TEST_ENTRY(hmap_comparation, benchmark)
+	TEST_ENTRY(hmap_removing, normal)
 TEST_END
 

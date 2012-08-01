@@ -21,7 +21,7 @@ static int test_skls_creation_1() {
 	rv = skls_get(ls, &k1);
 	ASSERT_NOTNULL(rv);
 	ASSERT_EQ(uint, rv->type, T_KSTR);
-	ASSERT_STREQ(kstr_of(tvm, rv)->land, "1024");
+	ASSERT_STREQ(kstr_of(ioslate(tvm), rv)->land, "1024");
 
 	rv = skls_get(ls, &k2);
 	ASSERT_NOTNULL(rv);
@@ -189,6 +189,40 @@ static int test_skls_search_2 () {
 	TIME_RECORD_END
 	return 0;
 }
+
+static int test_skls_removing () {
+	struct skls *map = skls_new(tvm);
+	struct variable k;
+	vset_int(&k, 4);
+	vset_int(skls_put(tvm, map, &k), 0);
+	vset_int(&k, 14);
+	vset_int(skls_put(tvm, map, &k), 1);
+	vset_int(&k, 1024);
+	vset_int(skls_put(tvm, map, &k), 3);
+
+	vset_int(&k, 4);
+	ASSERT_EQ(int, skls_remove(tvm, map, &k), 0);
+	ASSERT_TRUE(knil == skls_get(map, &k));
+	vset_int(&k, 1024);
+	ASSERT_EQ(int, skls_remove(tvm, map, &k), 0);
+	ASSERT_TRUE(knil == skls_get(map, &k));
+	vset_int(&k, 14);
+	ASSERT_EQ(int, skls_remove(tvm, map, &k), 0);
+	ASSERT_TRUE(knil == skls_get(map, &k));
+
+	vset_int(&k, 1024);
+	vset_int(skls_put(tvm, map, &k), 1000);
+	ASSERT_EQ(uint,  skls_get(map, &k)->type, T_INT);
+	ASSERT_EQ(large, skls_get(map, &k)->u.i,  1000LL);
+	vset_int(&k, 14);
+	vset_int(skls_put(tvm, map, &k), 10);
+	ASSERT_EQ(uint,  skls_get(map, &k)->type, T_INT);
+	ASSERT_EQ(large, skls_get(map, &k)->u.i,  10LL);
+	vset_int(&k, 4);
+	ASSERT_EQ(int, skls_remove(tvm, map, &k), -1);
+	return 0;
+}
+
 static int skls_setup() {
 	gc_active(tvm, GC_PAUSE);
 	return 0;
@@ -207,5 +241,6 @@ TEST_BEGIN_WITH(skls_setup, skls_teardown)
 	TEST_ENTRY(skls_comparation, normal)
 	TEST_ENTRY(skls_search_1, benchmark)
 	TEST_ENTRY(skls_search_2, benchmark)
+	TEST_ENTRY(skls_removing, normal)
 TEST_END
 
