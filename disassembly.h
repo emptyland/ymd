@@ -1,11 +1,8 @@
 #ifndef YMD_DISASSEMBLY_H
 #define YMD_DISASSEMBLY_H
 
-#include "assembly.h"
-#include "value.h"
-#include "value_inl.h"
+#include "builtin.h"
 #include <stdio.h>
-
 
 int dis_inst(FILE *fp, const struct func *fn, uint_t inst);
 

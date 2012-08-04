@@ -201,13 +201,13 @@ static int test_skls_removing () {
 	vset_int(skls_put(tvm, map, &k), 3);
 
 	vset_int(&k, 4);
-	ASSERT_EQ(int, skls_remove(tvm, map, &k), 0);
+	ASSERT_TRUE(skls_remove(tvm, map, &k));
 	ASSERT_TRUE(knil == skls_get(map, &k));
 	vset_int(&k, 1024);
-	ASSERT_EQ(int, skls_remove(tvm, map, &k), 0);
+	ASSERT_TRUE(skls_remove(tvm, map, &k));
 	ASSERT_TRUE(knil == skls_get(map, &k));
 	vset_int(&k, 14);
-	ASSERT_EQ(int, skls_remove(tvm, map, &k), 0);
+	ASSERT_TRUE(skls_remove(tvm, map, &k));
 	ASSERT_TRUE(knil == skls_get(map, &k));
 
 	vset_int(&k, 1024);
@@ -219,7 +219,7 @@ static int test_skls_removing () {
 	ASSERT_EQ(uint,  skls_get(map, &k)->type, T_INT);
 	ASSERT_EQ(large, skls_get(map, &k)->u.i,  10LL);
 	vset_int(&k, 4);
-	ASSERT_EQ(int, skls_remove(tvm, map, &k), -1);
+	ASSERT_TRUE(skls_remove(tvm, map, &k));
 	return 0;
 }
 

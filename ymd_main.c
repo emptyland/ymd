@@ -34,6 +34,7 @@ static void die(const char *msg) {
 int main(int argc, char *argv[]) {
 	int i;
 	struct ymd_mach *vm;
+	struct ymd_context *l;
 	for (i = 1; i < argc; ++i) {
 		if (strcmp(argv[i], "-d") == 0) {
 			opt.debug = 1;
@@ -53,26 +54,23 @@ int main(int argc, char *argv[]) {
 		}
 	}
 	vm = ymd_init();
+	l = ioslate(vm);
 	if (opt.gc_logf)
 		ymd_log4gc(vm, opt.gc_logf);
 	if (!opt.input)
 		die("Null file!");
-	if (ymd_compilef(ioslate(vm), "__main__", opt.name, opt.input) < 0)
+	if (ymd_compilef(l, "__main__", opt.name, opt.input) < 0)
 		exit(1);
 	ymd_load_lib(vm, lbxBuiltin);
 	ymd_load_os(vm);
 	ymd_load_pickle(vm);
 	if (opt.test) ymd_load_ut(vm);
-	//if (opt.debug) {
-	//	printf("====[main]====\n");
-	//	dis_func(stdout, fn);
-	//}
+	if (opt.debug)
+		if (l->top > l->stk) dis_func(stdout, func_k(ymd_top(l, 0)));
 	if (opt.test)
-		i = ymd_test(ioslate(vm), argc - opt.argv_off,
-		             argv + opt.argv_off);
+		i = ymd_test(l, argc - opt.argv_off, argv + opt.argv_off);
 	else
-		i = ymd_main(ioslate(vm), argc - opt.argv_off,
-		             argv + opt.argv_off);
+		i = ymd_main(l, argc - opt.argv_off, argv + opt.argv_off);
 	if (opt.external)
 		fclose(opt.input);
 	if (opt.gc_logf)

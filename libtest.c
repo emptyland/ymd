@@ -266,11 +266,11 @@ int ymd_load_ut(struct ymd_mach *vm) {
 }
 
 int ymd_test(struct ymd_context *l, int argc, char *argv[]) {
-	struct kvi *i, *kend = l->vm->global->item +
-	                       (1 << l->vm->global->shift);
+	struct kvi *i, *k;
 	if (ymd_main(l, argc, argv) < 0)
 		return -1;
-	for (i = l->vm->global->item; i != kend; ++i) {
+	k = l->vm->global->item + (1 << l->vm->global->shift);
+	for (i = l->vm->global->item; i != k; ++i) {
 		const char *clazz;
 		if (!i->flag)
 			continue;
@@ -278,6 +278,7 @@ int ymd_test(struct ymd_context *l, int argc, char *argv[]) {
 		if (strstr(clazz, "Test")) {
 			if (yut_test(l->vm, clazz, &i->v) < 0)
 				return -1;
+			break;
 		}
 	}
 	return 0;

@@ -332,18 +332,21 @@ int hmap_remove(struct ymd_mach *vm, struct hmap *o,
 	struct kvi dummy, *p, *i, *slot = position(o, h);
 	(void)vm;
 	if (slot->flag != KVI_SLOT)
-		return -1;
+		return 0;
 	memset(&dummy, 0, sizeof(dummy));
 	dummy.next = slot;
 	p = &dummy;
-	for (i = slot; i != NULL; p = i, i = i->next) {
+	for (i = slot; i != NULL; i = i->next) {
 		if (i->hash == h && equals(&i->k, k)) {
 			p->next = i->next;
 			memset(i, 0, sizeof(*i));
-			if (dummy.next && dummy.next != slot)
+			if (dummy.next && dummy.next != slot) {
 				memcpy(slot, dummy.next, sizeof(*slot));
-			return 0;
+				slot->flag = KVI_SLOT;
+			}
+			return 1;
 		}
+		p = i;
 	}
-	return -1;
+	return 0;
 }

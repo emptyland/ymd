@@ -95,10 +95,10 @@ int dyay_remove(struct ymd_mach *vm, struct dyay *o, ymd_int_t i) {
 	(void)vm;
 	assert(i >= 0);
 	if (i >= o->count)
-		return -1;
+		return 0;
 	if (i < o->count - 1)
 		memmove(o->elem + i, o->elem + i + 1,
 		        (o->count - i - 1) * sizeof(*o->elem));
 	--o->count;
-	return 0;
+	return 1;
 }

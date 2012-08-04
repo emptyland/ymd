@@ -604,9 +604,12 @@ int ymd_xcall(struct ymd_context *l, int argc) {
 
 int ymd_main(struct ymd_context *l, int argc, char *argv[]) {
 	int i;
-	struct func *fn = func_of(l, ymd_top(l, 0));
+	struct func *fn;
 	struct call_jmpbuf jpt;
 	struct call_info scope;
+	if (l->top == l->stk)
+		return 0;
+	fn = func_of(l, ymd_top(l, 0));
 	call_root_init(l, &scope);
 	call_jenter(l, &jpt, 1);
 	for (i = 0; i < argc; ++i)

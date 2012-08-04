@@ -35,7 +35,7 @@ struct ymd_mach *ymd_init();
 
 void ymd_final(struct ymd_mach *vm);
 
-struct ymd_context *ioslate(struct ymd_mach *vm);
+#define ioslate(vm) ((vm)->curr)
 
 static inline void ymd_log4gc(struct ymd_mach *vm, FILE *logf) {
 	vm->gc.logf = logf;
@@ -83,10 +83,12 @@ struct ymd_context {
 	struct ymd_mach *vm;
 };
 
+#define L struct ymd_context *l
+
 //-----------------------------------------------------------------------------
 // For debug and testing:
 // ----------------------------------------------------------------------------
-struct call_info *vm_nearcall(struct ymd_context *l);
+struct call_info *vm_nearcall(L);
 
 static inline const char *vm_file(const struct call_info *i) {
 	assert(i != NULL);
@@ -103,20 +105,20 @@ int vm_reached(struct ymd_mach *vm, const char *name);
 //-----------------------------------------------------------------------------
 // Call and run:
 // ----------------------------------------------------------------------------
-void ymd_panic(struct ymd_context *l, const char *fmt, ...);
+void ymd_panic(L, const char *fmt, ...);
 
-void ymd_raise(struct ymd_context *l);
+void ymd_raise(L);
 
-int ymd_call(struct ymd_context *l, struct func *fn, int argc, int method);
+int ymd_call(L, struct func *fn, int argc, int method);
 
 // Internal protected call
-int ymd_pcall(struct ymd_context *l, struct func *fn, int argc);
+int ymd_pcall(L, struct func *fn, int argc);
 
 // External protected call
-int ymd_xcall(struct ymd_context *l, int argc);
+int ymd_xcall(L, int argc);
 
-int ymd_ncall(struct ymd_context *l, struct func *fn, int nret, int narg);
-int ymd_main(struct ymd_context *l, int argc, char *argv[]);
+int ymd_ncall(L, struct func *fn, int nret, int narg);
+int ymd_main(L, int argc, char *argv[]);
 
 //-----------------------------------------------------------------------------
 // Misc:
@@ -128,8 +130,8 @@ struct variable *vm_put(struct ymd_mach *vm, struct variable *var,
 struct variable *vm_get(struct ymd_mach *vm, struct variable *var,
                         const struct variable *key);
 
-void vm_del(struct ymd_mach *vm, struct variable *var,
-            const struct variable *key);
+int vm_remove(struct ymd_mach *vm, struct variable *var,
+              const struct variable *key);
 
 // Get/Put global variable
 struct variable *vm_putg(struct ymd_mach *vm, const char *field);
@@ -149,28 +151,28 @@ struct kstr *vm_strcat(struct ymd_mach *vm, const struct kstr *lhs,
 struct kstr *vm_format(struct ymd_mach *vm, const char *fmt, ...);
 
 // Runtime
-static inline struct func *ymd_called(struct ymd_context *l) {
+static inline struct func *ymd_called(L) {
 	assert(l->info);
 	assert(l->info->run);
 	return l->info->run;
 }
 
-static inline struct dyay *ymd_argv(struct ymd_context *l) {
+static inline struct dyay *ymd_argv(L) {
 	return ymd_called(l)->argv;
 }
 
-static inline struct dyay *ymd_argv_chk(struct ymd_context *l, int need) {
+static inline struct dyay *ymd_argv_chk(L, int need) {
 	if (need > 0 && (!ymd_argv(l) || ymd_argv(l)->count < need))
 		ymd_panic(l, "Bad argument, need > %d", need);
 	return ymd_argv(l);
 }
 
-static inline struct variable *ymd_argv_get(struct ymd_context *l, int i) {
+static inline struct variable *ymd_argv_get(L, int i) {
 	struct dyay *argv = ymd_argv_chk(l, i + 1);
 	return argv->elem + i;
 }
 
-static inline struct variable *ymd_bval(struct ymd_context *l, int i) {
+static inline struct variable *ymd_bval(L, int i) {
 	assert(i >= 0);
 	assert(i < ymd_called(l)->n_bind);
 	return ymd_called(l)->bind + i;
@@ -179,14 +181,14 @@ static inline struct variable *ymd_bval(struct ymd_context *l, int i) {
 //-----------------------------------------------------------------------------
 // Stack functions:
 // ----------------------------------------------------------------------------
-static inline struct variable *ymd_push(struct ymd_context *l) {
+static inline struct variable *ymd_push(L) {
 	if (l->top >= l->stk + MAX_STACK)
 		ymd_panic(l, "Stack overflow!");
 	++l->top;
 	return l->top - 1;
 }
 
-static inline struct variable *ymd_top(struct ymd_context *l, int i) {
+static inline struct variable *ymd_top(L, int i) {
 	if (l->top == l->stk)
 		ymd_panic(l, "Stack empty!");
 	if (i < 0 && 1 - i >= l->top - l->stk)
@@ -196,7 +198,7 @@ static inline struct variable *ymd_top(struct ymd_context *l, int i) {
 	return i < 0 ? l->stk + 1 - i : l->top - 1 - i;
 }
 
-static inline void ymd_move(struct ymd_context *l, int i) {
+static inline void ymd_move(L, int i) {
 	struct variable k, *p = ymd_top(l, i);
 	if (i == 0) return;
 	k = *p;
@@ -204,7 +206,7 @@ static inline void ymd_move(struct ymd_context *l, int i) {
 	*ymd_top(l, 0) = k;
 }
 
-static inline void ymd_pop(struct ymd_context *l, int n) {
+static inline void ymd_pop(L, int n) {
 	if (n > 0 && l->top == l->stk)
 		ymd_panic(l, "Stack empty!");
 	if (n > l->top - l->stk)
@@ -214,7 +216,7 @@ static inline void ymd_pop(struct ymd_context *l, int n) {
 }
 
 // Adjust return variables
-static inline int ymd_adjust(struct ymd_context *l, int adjust, int ret) {
+static inline int ymd_adjust(L, int adjust, int ret) {
 	if (adjust < ret) {
 		ymd_pop(l, ret - adjust);
 		return ret;
@@ -230,32 +232,32 @@ static inline int ymd_adjust(struct ymd_context *l, int adjust, int ret) {
 //-----------------------------------------------------------------------------
 // Fake stack functions:
 // ----------------------------------------------------------------------------
-static inline void ymd_dyay(struct ymd_context *l, int k) {
+static inline void ymd_dyay(L, int k) {
 	struct dyay *o = dyay_new(l->vm, k);
 	vset_dyay(ymd_push(l), o); 
 	gc_release(o);
 }
 
-static inline void ymd_add(struct ymd_context *l) {
+static inline void ymd_add(L) {
 	struct dyay *o = dyay_of(l, ymd_top(l, 1));
 	*dyay_add(l->vm, o) = *ymd_top(l, 0);
 	ymd_pop(l, 1);
 }
 
-static inline void ymd_hmap(struct ymd_context *l, int k) {
+static inline void ymd_hmap(L, int k) {
 	struct hmap *o = hmap_new(l->vm, k);
 	vset_hmap(ymd_push(l), o);
 	gc_release(o);
 }
 
-static inline void ymd_skls(struct ymd_context *l) {
+static inline void ymd_skls(L) {
 	struct skls *o = skls_new(l->vm);
 	vset_skls(ymd_push(l), o);
 	gc_release(o);
 }
 
-static inline void *ymd_mand(struct ymd_context *l, const char *tt,
-                             size_t size, ymd_final_t final) {
+static inline void *ymd_mand(L, const char *tt, size_t size,
+                             ymd_final_t final) {
 	struct mand *o = mand_new(l->vm, size, final);
 	o->tt = tt;
 	vset_mand(ymd_push(l), o);
@@ -263,67 +265,64 @@ static inline void *ymd_mand(struct ymd_context *l, const char *tt,
 	return o->land;
 }
 
-static inline void ymd_kstr(struct ymd_context *l, const char *z,
-	                        int len) {
+static inline void ymd_kstr(L, const char *z, int len) {
 	struct kstr *o = kstr_fetch(l->vm, z, len);
 	vset_kstr(ymd_push(l), o);
 	gc_release(o);
 }
 
-void ymd_format(struct ymd_context *l, const char *fmt, ... );
+void ymd_format(L, const char *fmt, ... );
 
-static inline void ymd_int(struct ymd_context *l, ymd_int_t i) {
+static inline void ymd_int(L, ymd_int_t i) {
 	vset_int(ymd_push(l), i);
 }
 
-static inline void ymd_ext(struct ymd_context *l, void *p) {
+static inline void ymd_ext(L, void *p) {
 	vset_ext(ymd_push(l), p);
 }
 
-static inline void ymd_bool(struct ymd_context *l, int b) {
+static inline void ymd_bool(L, int b) {
 	vset_bool(ymd_push(l), b);
 }
 
-static inline void ymd_nil(struct ymd_context *l) {
+static inline void ymd_nil(L) {
 	vset_nil(ymd_push(l));
 }
 
-static inline void ymd_nafn(struct ymd_context *l, ymd_nafn_t fn,
-                            const char *name, int nbind) {
+static inline void ymd_nafn(L, ymd_nafn_t fn, const char *name, int nbind) {
 	struct func *o = func_new_c(l->vm, fn, name);
 	o->n_bind = nbind;
 	vset_func(ymd_push(l), o);
 	gc_release(o);
 }
 
-static inline void ymd_func(struct ymd_context *l, struct chunk *blk,
-                            const char *name, int nbind) {
+static inline void ymd_func(L, struct chunk *blk, const char *name,
+                            int nbind) {
 	struct func *o = func_new(l->vm, blk, name);
 	o->n_bind = nbind;
 	vset_func(ymd_push(l), o);
 	gc_release(o);
 }
 
-static inline struct func *ymd_naked(struct ymd_context *l,
-	                                 struct chunk *blk) {
+static inline struct func *ymd_naked(L, struct chunk *blk) {
 	struct func *o = func_new(l->vm, blk, NULL);
 	vset_func(ymd_push(l), o);
 	gc_release(o);
 	return o;
 }
 
-static inline void ymd_getf(struct ymd_context *l) {
+static inline void ymd_getf(L) {
 	struct variable *v = vm_get(l->vm, ymd_top(l, 1), ymd_top(l, 0));
 	*ymd_top(l, 0) = *v;
 }
 
-static inline void ymd_putf(struct ymd_context *l) {
+static inline void ymd_putf(L) {
 	struct variable *v = vm_put(l->vm, ymd_top(l, 2), ymd_top(l, 1));
 	*v = *ymd_top(l, 0);
 	ymd_pop(l, 2);
 }
 
-static inline void ymd_mem(struct ymd_context *l, const char *field) {
+static inline void ymd_mem(L, const char *field) {
 	struct variable *v;
 	if (!is_ref(ymd_top(l, 0)))
 		ymd_panic(l, "object must be hashmap or skiplist");
@@ -331,36 +330,36 @@ static inline void ymd_mem(struct ymd_context *l, const char *field) {
 	*ymd_push(l) = *v;
 }
 
-static inline void ymd_def(struct ymd_context *l, const char *field) {
+static inline void ymd_def(L, const char *field) {
 	if (!is_ref(ymd_top(l, 1)))
 		ymd_panic(l, "object must be hashmap or skiplist");
 	*vm_def(l->vm, ymd_top(l, 1)->u.ref, field) = *ymd_top(l, 0);
 	ymd_pop(l, 1);
 }
 
-static inline void ymd_getg(struct ymd_context *l, const char *field) {
+static inline void ymd_getg(L, const char *field) {
 	*ymd_push(l) = *vm_getg(l->vm, field);
 }
 
-static inline void ymd_putg(struct ymd_context *l, const char *field) {
+static inline void ymd_putg(L, const char *field) {
 	*vm_putg(l->vm, field) = *ymd_top(l, 0);
 	ymd_pop(l, 1);
 }
 
-static inline void ymd_bind(struct ymd_context *l, int i) {
+static inline void ymd_bind(L, int i) {
 	struct func *o = func_of(l, ymd_top(l, 1));
 	*func_bval(l->vm, o, i) = *ymd_top(l, 0);
 	ymd_pop(l, 1);
 }
 
-static inline void ymd_insert(struct ymd_context *l) {
+static inline void ymd_insert(L) {
 	struct dyay *o = dyay_of(l, ymd_top(l, 2));
 	ymd_int_t i = int_of(l, ymd_top(l, 1));
 	*dyay_insert(l->vm, o, i) = *ymd_top(l, 0);
 	ymd_pop(l, 2);
 }
 
-static inline void ymd_setmetatable(struct ymd_context *l) {
+static inline void ymd_setmetatable(L) {
 	struct mand *o = mand_of(l, ymd_top(l, 1));
 	if (ymd_top(l, 0)->type != T_HMAP &&
 		ymd_top(l, 0)->type != T_SKLS) ymd_panic(l, "Not metatable type!");
@@ -369,7 +368,8 @@ static inline void ymd_setmetatable(struct ymd_context *l) {
 }
 
 // Push error info in stack! pcall() can use it.
-int ymd_error(struct ymd_context *l, const char *msg);
+int ymd_error(L, const char *msg);
 
+#undef L
 #endif // YMD_STATE_H
 

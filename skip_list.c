@@ -160,7 +160,7 @@ int skls_remove(struct ymd_mach *vm, struct skls *o,
 	struct sknd *update[MAX_LEVEL], *x = skposition(o, k, update);
 	int i;
 	if (!equals(&x->k, k))
-		return -1;
+		return 0;
 	for (i = 0; i < o->lv; ++i) {
 		if (update[i]->fwd[i] != x) break;
 		update[i]->fwd[i] = x->fwd[i];
@@ -169,5 +169,5 @@ int skls_remove(struct ymd_mach *vm, struct skls *o,
 			(x->n - 1) * sizeof(struct sknd *));
 	while (o->lv > 0 && o->head->fwd[o->lv - 1] == NULL)
 		--o->lv;
-	return 0;
+	return 1;
 }

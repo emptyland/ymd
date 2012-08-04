@@ -129,6 +129,15 @@ static int libx_append(L) {
 	return 0;
 }
 
+static int libx_remove(L) {
+	int i, count = 0;
+	struct variable *arg0 = ymd_argv_get(l, 0);
+	for (i = 1; i < ymd_argv_chk(l, 2)->count; ++i)
+		count += vm_remove(l->vm, arg0, ymd_argv(l)->elem + i);
+	ymd_int(l, count);
+	return 1;
+}
+
 // len(arg)
 // argument follow:
 // nil      : always be 0;
@@ -879,6 +888,7 @@ LIBC_BEGIN(Builtin)
 	LIBC_ENTRY(print)
 	LIBC_ENTRY(insert)
 	LIBC_ENTRY(append)
+	LIBC_ENTRY(remove)
 	LIBC_ENTRY(len)
 	LIBC_ENTRY(range)
 	LIBC_ENTRY(rank)

@@ -29,7 +29,7 @@ static int test_hmap_creation_1() {
 	ASSERT_EQ(large, rv->u.i, 1024);
 
 	vset_int(&k, 1024);
-	hmap_remove(tvm, map, &k);
+	ASSERT_TRUE(hmap_remove(tvm, map, &k));
 	ASSERT_TRUE(knil == hmap_get(map, &k));
 	return 0;
 }
@@ -179,13 +179,13 @@ static int test_hmap_removing () {
 	vset_int(hmap_put(tvm, map, &k), 3);
 
 	vset_int(&k, 4);
-	ASSERT_EQ(int, hmap_remove(tvm, map, &k), 0);
+	ASSERT_TRUE(hmap_remove(tvm, map, &k));
 	ASSERT_TRUE(knil == hmap_get(map, &k));
 	vset_int(&k, 1024);
-	ASSERT_EQ(int, hmap_remove(tvm, map, &k), 0);
+	ASSERT_TRUE(hmap_remove(tvm, map, &k));
 	ASSERT_TRUE(knil == hmap_get(map, &k));
 	vset_int(&k, 14);
-	ASSERT_EQ(int, hmap_remove(tvm, map, &k), 0);
+	ASSERT_TRUE(hmap_remove(tvm, map, &k));
 	ASSERT_TRUE(knil == hmap_get(map, &k));
 
 	vset_int(&k, 1024);
@@ -194,7 +194,7 @@ static int test_hmap_removing () {
 	ASSERT_EQ(large, hmap_get(map, &k)->u.i,  1000LL);
 
 	vset_int(&k, 14);
-	ASSERT_EQ(int, hmap_remove(tvm, map, &k), -1);
+	ASSERT_TRUE(hmap_remove(tvm, map, &k));
 	return 0;
 }
 

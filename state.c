@@ -28,11 +28,6 @@ static void default_free(struct ymd_mach *vm, void *chunk) {
 	free(chunk);
 }
 
-struct ymd_context *ioslate(struct ymd_mach *vm) {
-	assert(vm->curr != NULL);
-	return vm->curr;
-}
-
 static int vm_init_context(struct ymd_mach *vm) {
 	vm->curr = vm_zalloc(vm, sizeof(*vm->curr));
 	vm->curr->vm = vm;
@@ -114,7 +109,7 @@ static struct variable *vm_at(struct ymd_mach *vm, struct dyay *arr,
                               ymd_int_t i) {
 	if (i < 0 || i >= arr->count)
 		ymd_panic(ioslate(vm), "Array out of range, index:%d, count:%d", i,
-		       arr->count);
+		          arr->count);
 	return dyay_get(arr, i);
 }
 
@@ -142,7 +137,8 @@ struct variable *vm_get(struct ymd_mach *vm, struct variable *var,
 	return NULL;
 }
 
-struct kstr *vm_strcat(struct ymd_mach *vm, const struct kstr *lhs, const struct kstr *rhs) {
+struct kstr *vm_strcat(struct ymd_mach *vm, const struct kstr *lhs,
+                       const struct kstr *rhs) {
 	char *tmp = vm_zalloc(vm, lhs->len + rhs->len);
 	struct kstr *x;
 	memcpy(tmp, lhs->land, lhs->len);
@@ -208,6 +204,21 @@ struct variable *vm_putg(struct ymd_mach *vm, const char *field) {
 	return v;
 }
 
+int vm_remove(struct ymd_mach *vm, struct variable *var,
+              const struct variable *key) {
+	struct ymd_context *l = ioslate(vm);
+	switch (var->type) {
+	case T_DYAY:
+		return dyay_remove(vm, dyay_x(var), int_of(l, key));
+	case T_HMAP:
+		return hmap_remove(vm, hmap_x(var), key);
+	case T_SKLS:
+		return skls_remove(vm, skls_x(var), key);
+	}
+	ymd_panic(l, "Variable can not be remove");
+	return 0;
+}
+
 //-----------------------------------------------------------------------------
 // Function table:
 // ----------------------------------------------------------------------------
@@ -253,9 +264,12 @@ struct ymd_mach *ymd_init() {
 	// Init context
 	vm_init_context(vm);
 	// Load symbols
-	// `reached` variable: for all of loaded chunks
+	// `__reached__' variable: for all of loaded chunks
 	ymd_hmap(ioslate(vm), 1);
 	ymd_putg(ioslate(vm), "__reached__");
+	// `__g__' is global map
+	vset_hmap(ymd_push(ioslate(vm)), vm->global);
+	ymd_putg(ioslate(vm), "__g__");
 	return vm;
 }
 
