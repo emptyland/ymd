@@ -5,6 +5,69 @@
 
 #define zos_add(os) zos_advance(os, (int)strlen(zos_last(os)))
 
+static const char *dyay_tostring(struct zostream *os, const struct dyay *o) {
+	int i;
+	if (fg_self(o))
+		return zos_append(os, "..[self]..", 10);
+	zos_append(os, "[", 1);
+	fg_enter(gcx(o));
+	for (i = 0; i < o->count; ++i) {
+		if (i > 0) zos_append(os, ", ", 2);
+		tostring(os, o->elem + i);
+	}
+	fg_leave(gcx(o));
+	return zos_append(os, "]", 1);
+}
+
+static const char *hmap_tostring(struct zostream *os, const struct hmap *o) {
+	struct kvi *initial = o->item, *i = NULL,
+			   *k = initial + (1 << o->shift);
+	int f = 0;
+	if (fg_self(o))
+		return zos_append(os, "..{self}..", 10);
+	zos_append(os, "{", 1);
+	fg_enter(gcx(o));
+	for (i = initial; i != k; ++i) {
+		if (!i->flag) continue;
+		if (f++ > 0) zos_append(os, ", ", 2);
+		tostring(os, &i->k);
+		zos_append(os, " : ", 3);
+		tostring(os, &i->v);
+	}
+	fg_leave(gcx(o));
+	return zos_append(os, "}", 1);
+}
+
+static const char *skls_tostring(struct zostream *os, const struct skls *o) {
+	struct sknd *initial = o->head->fwd[0], *i = NULL;
+	int f = 0;
+	if (fg_self(o))
+		return zos_append(os, "..@{self}..", 11);
+	zos_append(os, "@{", 2);
+	fg_enter(gcx(o));
+	for (i = initial; i != NULL; i = i->fwd[0]) {
+		if (f++ > 0) zos_append(os, ", ", 2);
+		tostring(os, &i->k);
+		zos_append(os, " : ", 3);
+		tostring(os, &i->v);
+	}
+	fg_leave(gcx(o));
+	return zos_append(os, "}", 1);
+}
+
+static const char *mand_tostring(struct zostream *os, const struct mand *o) {
+	zos_append(os, "(", 1);
+	if (o->tt)
+		zos_append(os, o->tt, strlen(o->tt));
+	else
+		zos_append(os, "*", 1);
+	zos_append(os, ")", 1);
+	zos_reserved(os, 10 + 24 + 2);
+	snprintf(zos_last(os), zos_remain(os), "[%d@%p]", o->len, o->land);
+	zos_add(os);
+	return zos_buf(os);
+}
+
 const char *tostring(struct zostream *os, const struct variable *var) {
 	switch (var->type) {
 	case T_NIL:
@@ -32,67 +95,18 @@ const char *tostring(struct zostream *os, const struct variable *var) {
 	case T_FUNC:
 		zos_append(os, func_k(var)->proto->land, func_k(var)->proto->len);
 		break;
-	case T_DYAY: {
-		int i;
-		if (fg_self(var->u.ref))
-			return zos_append(os, "..[self]..", 10);
-		zos_append(os, "[", 1);
-		fg_enter(gcx(var->u.ref));
-		for (i = 0; i < dyay_k(var)->count; ++i) {
-			if (i > 0) zos_append(os, ", ", 2);
-			tostring(os, dyay_k(var)->elem + i);
-		}
-		fg_leave(gcx(var->u.ref));
-		zos_append(os, "]", 1);
-		} break;
-	case T_HMAP: {
-		struct kvi *initial = hmap_k(var)->item,
-				   *i = NULL,
-				   *k = initial + (1 << hmap_k(var)->shift);
-		int f = 0;
-		if (fg_self(var->u.ref))
-			return zos_append(os, "..{self}..", 10);
-		zos_append(os, "{", 1);
-		fg_enter(gcx(var->u.ref));
-		for (i = initial; i != k; ++i) {
-			if (!i->flag) continue;
-			if (f++ > 0) zos_append(os, ", ", 2);
-			tostring(os, &i->k);
-			zos_append(os, " : ", 3);
-			tostring(os, &i->v);
-		}
-		fg_leave(gcx(var->u.ref));
-		zos_append(os, "}", 1);
-		} break;
-	case T_SKLS: {
-		struct sknd *initial = skls_k(var)->head->fwd[0],
-				    *i = NULL;
-		int f = 0;
-		if (fg_self(var->u.ref))
-			return zos_append(os, "..@{self}..", 11);
-		zos_append(os, "@{", 2);
-		fg_enter(gcx(var->u.ref));
-		for (i = initial; i != NULL; i = i->fwd[0]) {
-			if (f++ > 0) zos_append(os, ", ", 2);
-			tostring(os, &i->k);
-			zos_append(os, " : ", 3);
-			tostring(os, &i->v);
-		}
-		fg_leave(gcx(var->u.ref));
-		zos_append(os, "}", 1);
-		} break;
-	case T_MAND: {
-		zos_append(os, "(", 1);
-		if (mand_k(var)->tt)
-			zos_append(os, mand_k(var)->tt, strlen(mand_k(var)->tt));
-		else
-			zos_append(os, "*", 1);
-		zos_append(os, ")", 1);
-		zos_reserved(os, 10 + 24 + 2);
-		snprintf(zos_last(os), zos_remain(os), "[%d@%p]",
-		         mand_k(var)->len, mand_k(var)->land);
-		zos_add(os);
-		} break;
+	case T_DYAY:
+		dyay_tostring(os, dyay_k(var));
+		break;
+	case T_HMAP:
+		hmap_tostring(os, hmap_k(var));
+		break;
+	case T_SKLS:
+		skls_tostring(os, skls_k(var));
+		break;
+	case T_MAND:
+		mand_tostring(os, mand_k(var));
+		break;
 	default:
 		assert(0);
 		return NULL;

@@ -301,5 +301,33 @@ BuiltinTest = @{
 		Assert:EQ(6, n)
 		n = eval("return " + build(2, 2, 2))
 		Assert:EQ(6, n)
+	},
+
+	kBenchCount: 1000,
+
+	remove_run : func (self, o) {
+		var rv, i
+		Assert:True((typeof o) == "hashmap" or (typeof o) == "skiplist")
+		for i in range(0, self.kBenchCount) {
+			append(o, [i, "#" + str(i)])
+		}
+		Assert:EQ(self.kBenchCount, len(o))
+		Assert:EQ("#998", o[998])
+		Assert:EQ("#0",   o[0])
+		// Remove all!
+		for i in range(0, self.kBenchCount) {
+			rv = remove(o, i)
+			if rv == 0 {
+				Assert:Fail("Assert remove fail! index: " + str(i))
+			}
+		}
+		Assert:EQ(0, len(o))
+		Assert:Nil(o[998])
+		Assert:Nil(o[0])
+	},
+
+	test13remove : func (self) {
+		self:remove_run({})
+		self:remove_run(@{})
 	}
 }

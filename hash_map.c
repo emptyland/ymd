@@ -342,6 +342,7 @@ int hmap_remove(struct ymd_mach *vm, struct hmap *o,
 			memset(i, 0, sizeof(*i));
 			if (dummy.next && dummy.next != slot) {
 				memcpy(slot, dummy.next, sizeof(*slot));
+				memset(dummy.next, 0, sizeof(*dummy.next));
 				slot->flag = KVI_SLOT;
 			}
 			return 1;
