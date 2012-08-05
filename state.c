@@ -59,7 +59,7 @@ static void vm_backtrace(struct ymd_context *l, int max) {
 
 struct call_info *vm_nearcall(struct ymd_context *l) {
 	struct call_info *i = l->info;
-	if (!i->run)
+	if (!i || !i->run)
 		return NULL;
 	while (i && i->run->is_c) {
 		i = i->chain;

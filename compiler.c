@@ -539,23 +539,28 @@ static const struct {
 	int left;
 	int right;
 } prio[] = {
-	{6, 6}, {6, 6}, {7, 7}, {7, 7}, {7, 7}, // + - * / %
-	{3, 3}, {3, 3}, {3, 3}, // == != ~=
-	{3, 3}, {3, 3}, {3, 3}, {3, 3}, // < <= > >=
+	{9, 9}, {9, 9}, {10, 10}, {10, 10}, {10, 10}, // + - * / %
+	{7, 7}, {7, 7}, {7, 7}, // << |> >>
+	{6, 6}, {6, 6}, {6, 6}, // == != ~=
+	{6, 6}, {6, 6}, {6, 6}, {6, 6}, // < <= > >=
+	{3, 3}, {4, 4}, {5, 5}, // | ^ &
 	{2, 2}, {1, 1}, // and or
 };
-#define PRIO_UNARY 8
+#define PRIO_UNARY 11
 
 enum ymd_op {
 	OP_ADD, OP_SUB, OP_MUL, OP_DIV, OP_MOD,
+	OP_LSHIFT, OP_RSHIFT_L, OP_RSHIFT_A,
 	OP_EQ, OP_NE, OP_MATCH,
 	OP_LT, OP_LE, OP_GT, OP_GE,
+	OP_ORB, OP_ANDB, OP_XORB,
 	OP_AND, OP_OR,
 	OP_NOT_BINARY,
 	OP_MINS,
 	OP_NOT,
 	OP_NOT_NIL,
 	OP_TYPEOF,
+	OP_INVB,
 	OP_NOT_UNARY,
 };
 
@@ -565,6 +570,7 @@ static int ymc_unary_op(struct ymd_parser *p) {
 	case NOT: return OP_NOT;
 	case '!': return OP_NOT_NIL;
 	case TYPEOF: return OP_TYPEOF;
+	case '~': return OP_INVB;
 	default: return OP_NOT_UNARY;
 	}
 	return 0;
@@ -586,6 +592,12 @@ static int ymc_binary_op(struct ymd_parser *p) {
 	case GE: return OP_GE;
 	case AND: return OP_AND;
 	case OR: return OP_OR;
+	case '|': return OP_ORB;
+	case '&': return OP_ANDB;
+	case '^': return OP_XORB;
+	case LSHIFT: return OP_LSHIFT;
+	case RSHIFT_A: return OP_RSHIFT_A;
+	case RSHIFT_L: return OP_RSHIFT_L;
 	default: return OP_NOT_BINARY;
 	}
 }
@@ -594,11 +606,14 @@ static void ymk_unary(struct ymd_parser *p, int op) {
 	(void)p;
 	switch (op) {
 	case OP_MINS:
-		ymk_emitO(p, I_INV);
+		ymk_emitOf(p, I_CALC, F_INV);
 		break;
 	case OP_NOT:
 	case OP_NOT_NIL:
-		ymk_emitO(p, I_NOT);
+		ymk_emitOf(p, I_CALC, F_NOT);
+		break;
+	case OP_INVB:
+		ymk_emitOf(p, I_CALC, F_INVB);
 		break;
 	case OP_TYPEOF:
 		ymk_emitO(p, I_TYPEOF);
@@ -624,19 +639,37 @@ static void ymk_binary(struct ymd_parser *p, int op, ushort_t ipos) {
 	(void)p;
 	switch (op) {
 	case OP_ADD:
-		ymk_emitO(p, I_ADD);
+		ymk_emitOf(p, I_CALC, F_ADD);
 		break;
 	case OP_SUB:
-		ymk_emitO(p, I_SUB);
+		ymk_emitOf(p, I_CALC, F_SUB);
 		break;
 	case OP_MUL:
-		ymk_emitO(p, I_MUL);
+		ymk_emitOf(p, I_CALC, F_MUL);
 		break;
 	case OP_DIV:
-		ymk_emitO(p, I_DIV);
+		ymk_emitOf(p, I_CALC, F_DIV);
 		break;
 	case OP_MOD:
-		ymk_emitO(p, I_MOD);
+		ymk_emitOf(p, I_CALC, F_MOD);
+		break;
+	case OP_ORB:
+		ymk_emitOf(p, I_CALC, F_ORB);
+		break;
+	case OP_ANDB:
+		ymk_emitOf(p, I_CALC, F_ANDB);
+		break;
+	case OP_XORB:
+		ymk_emitOf(p, I_CALC, F_XORB);
+		break;
+	case OP_LSHIFT:
+		ymk_emitOf(p, I_SHIFT, F_LEFT);
+		break;
+	case OP_RSHIFT_L:
+		ymk_emitOf(p, I_SHIFT, F_RIGHT_L);
+		break;
+	case OP_RSHIFT_A:
+		ymk_emitOf(p, I_SHIFT, F_RIGHT_A);
 		break;
 	case OP_EQ:
 		ymk_emitOf(p, I_TEST, F_EQ);

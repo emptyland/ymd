@@ -40,5 +40,32 @@ CalcTest = @{
 		Assert:EQ(m / n, n / m)
 		Assert:EQ(0, m % n)
 		Assert:EQ(m % n, n % m)
+	},
+
+	test03Bitwise : func (self) {
+		Assert:EQ(-1, ~0)
+		Assert:EQ(-2, ~1)
+		Assert:EQ(0, ~(-1))
+
+		Assert:EQ(0x0, 0x0 | 0x0)
+		Assert:EQ(0xF, 0x7 | 0x8)
+		Assert:EQ(0xABCD, 0xA0C0 | 0x0B0D)
+		Assert:EQ(0x0034, 0x01234 & 0x00FF)
+		Assert:EQ(0x0, 0x1 ^ 0x1)
+		Assert:EQ(0x01234, 0x01234 ^ 0xABCDE ^ 0xABCDE)
+
+		Assert:EQ(0x2, 1 << 1)
+		Assert:EQ(0x8000000000000000, 1 << 63)
+		Assert:EQ(1, 1 << 64)
+
+		Assert:EQ(-1, 0x8000000000000000 >> 63) // arithmetic shift right
+		Assert:EQ(1,  0x8000000000000000 |> 63) // logic shift right
+
+		Assert:EQ(0x7, 1 | 1 << 1 | 1 << 2)
+	},
+
+	test04Expr : func (self) {
+		var a = 0, b = 1
+		Assert:EQ(-7, 1 - b * 8 / b)
 	}
 }

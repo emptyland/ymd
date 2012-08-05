@@ -51,18 +51,22 @@ static void yut_fail2(L, const char *op,
 }
 
 static void yut_fail0(L) {
-	struct zostream os = ZOS_INIT;
-	// print backtrace info
-	struct dyay *ax = dyay_of(l, ymd_top(l, 0));
 	int i;
+	struct zostream os = ZOS_INIT;
+	struct dyay *ax;
+	if (l->top - l->stk < 3 || ymd_top(l, 0)->type != T_DYAY) {
+		return;
+	}
+	// print backtrace info
+	ax = dyay_of(l, ymd_top(l, 0));
 	for (i = 0; i < ax->count; ++i) {
 		zos_append(&os, "\t", 1);
 		tostring(&os, ax->elem + i);
 		zos_append(&os, "\n", 1);
 	}
 	ymd_printf(yYELLOW"[  XXX ] %s\n"yEND
-	           "Runtime error: %s\nBacktrace:\n%s",
-	           kstr_of(l, ymd_top(l, 1))->land,
+			   "Runtime error: %s\nBacktrace:\n%s",
+			   kstr_of(l, ymd_top(l, 1))->land,
 			   kstr_of(l, ymd_top(l, 2))->land,
 			   zos_buf(&os));
 	zos_final(&os);

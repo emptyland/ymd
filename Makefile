@@ -197,5 +197,5 @@ print_posix.o: print_posix.c print.h
 
 .PHONY: clean
 clean:
-	rm -f *.o *_test y.tab.c y.tab.h lex.yy.c ymd_main
+	rm -f *.o *_test ymd_main
 	cd 3rd && make clean

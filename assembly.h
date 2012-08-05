@@ -17,17 +17,8 @@
 #define I_JNT     50 // jnt label
 #define I_JNN     55 // jnn label
 #define I_TYPEOF  60 // typeof
-#define I_INV     65
-#define I_MUL     70
-#define I_DIV     75
-#define I_ADD     80
-#define I_SUB     85
-#define I_MOD     90
-#define I_POW     95
-#define I_ANDB    100
-#define I_ORB     105
-#define I_XORB    110
-#define I_INVB    115
+#define I_CALC    65 // calc inv|mul|div|add|sub|mod|andb|orb|xorb|invb
+// reserved 70~115
 #define I_SHIFT   120 // shift l|r, a|l
 #define I_CALL    125 // call a, n
 #define I_NEWMAP  130 // newmap n
@@ -36,7 +27,7 @@
 #define I_BIND    145 // bind n
 // 150 reserved
 #define I_GETF    155 // getf stack|fast
-#define I_NOT     160 // not
+//#define I_NOT     160 // not
 
 // jne/jmp
 #define F_FORWARD  0 // param: Number of instructions
@@ -52,13 +43,13 @@
 
 // test
 // param: Ignore all
-#define F_EQ 0
-#define F_NE 1
-#define F_GT 2
-#define F_GE 3
-#define F_LT 4
-#define F_LE 5
-#define F_MATCH 6
+#define F_EQ 0    // ==
+#define F_NE 1    // !=
+#define F_GT 2    // >
+#define F_GE 3    // >=
+#define F_LT 4    // <
+#define F_LE 5    // <=
+#define F_MATCH 6 // ~=
 
 // shift
 // param: Ignore all
@@ -69,6 +60,19 @@
 // setf/getf
 #define F_STACK 0 // param: number
 #define F_FAST  1 // param: `kz` offset
+
+// calc
+#define F_INV    1 // -x
+#define F_MUL    2 // a * b
+#define F_DIV    3 // a / b
+#define F_ADD    4 // a + b
+#define F_SUB    5 // a - b
+#define F_MOD    6 // a % b
+#define F_ANDB   7 // a & b
+#define F_ORB    8 // a | b
+#define F_XORB   9 // a ^ b
+#define F_INVB  10 // ~x
+#define F_NOT   11 // not x
 
 static inline uint_t asm_build(
 	uchar_t op,

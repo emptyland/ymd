@@ -14,6 +14,11 @@ static const char *kz_shift_op[] = {
 	"left", "right:l", "right:a",
 };
 
+static const char *kz_calc_op[] = {
+	"inv", "mul", "div", "add", "sub", "mod", "andb", "orb", "xorb",
+	"invb", "not",
+};
+
 static const char *fn_kz(const struct func *fn, int i) {
 	return kstr_k(fn->u.core->kval + i)->land;
 }
@@ -125,50 +130,17 @@ int dis_inst(FILE *fp, const struct func *fn, uint_t inst) {
 	case I_TEST:
 		rv = fprintf(fp, "test <%s>", kz_test_op[asm_flag(inst)]);
 		break;
-	case I_NOT:
-		rv = fprintf(fp, "not");
-		break;
 	case I_GETF:
 		rv = fprintf(fp, "getf %s", getf(fn, inst, BUF));
 		break;
 	case I_TYPEOF:
 		rv = fprintf(fp, "typeof");
 		break;
-	case I_INV:
-		rv = fprintf(fp, "inv");
-		break;
-	case I_MUL:
-		rv = fprintf(fp, "mul");
-		break;
-	case I_DIV:
-		rv = fprintf(fp, "div");
-		break;
-	case I_ADD:
-		rv = fprintf(fp, "add");
-		break;
-	case I_SUB:
-		rv = fprintf(fp, "sub");
-		break;
-	case I_MOD:
-		rv = fprintf(fp, "mod");
-		break;
-	case I_POW:
-		rv = fprintf(fp, "pow");
-		break;
-	case I_ANDB:
-		rv = fprintf(fp, "andb");
-		break;
-	case I_ORB:
-		rv = fprintf(fp, "orb");
-		break;
-	case I_XORB:
-		rv = fprintf(fp, "xorb");
-		break;
-	case I_INVB:
-		rv = fprintf(fp, "invb");
+	case I_CALC:
+		rv = fprintf(fp, "%s", kz_calc_op[asm_flag(inst)]);
 		break;
 	case I_SHIFT:
-		rv = fprintf(fp, "shift [%s]", kz_shift_op[asm_param(inst)]);
+		rv = fprintf(fp, "shift [%s]", kz_shift_op[asm_flag(inst)]);
 		break;
 	case I_CALL:
 		rv = fprintf(fp, "call %d, ret:%d", asm_argc(inst), asm_aret(inst));
