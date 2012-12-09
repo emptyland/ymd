@@ -8,7 +8,7 @@ OBJT=$(OBJS) $(OBJI)
 INCS=state.h value.h value_inl.h memory.h builtin.h core.h
 INCT=$(INCS) yut.h yut_rand.h
 
-LIB_REGEX=3rd/regex/libregex.a
+LIB_REGEX=third_party/regex/libregex.a
 XLIBS=$(LIB_REGEX)
 
 #-------------------------------------------------------------------------------
@@ -128,7 +128,7 @@ yut.o: yut.c yut.h
 #-------------------------------------------------------------------------------
 # 3rd party libs rules:
 $(LIB_REGEX):
-	cd 3rd && make regex
+	cd third_party && make regex
 
 #-------------------------------------------------------------------------------
 # Objects rules:
@@ -198,4 +198,4 @@ print_posix.o: print_posix.c print.h
 .PHONY: clean
 clean:
 	rm -f *.o *_test ymd_main
-	cd 3rd && make clean
+	cd third_party && make clean

@@ -1,8 +1,25 @@
 #include "yut_rand.h"
-#include "yut.h"
+#include "testing/yut_test.def"
 
-static int test_rand() {
+static void *setup() {
+	printf("Setup!\n");
+	return NULL;
+}
+
+static void teardown (void *p) {
+	(void)p;
+	printf("Teardown!\n");
+}
+
+static int test_sanity(void *p) {
+	(void)p;
+	printf("It's sanity!\n");
+	return 0;
+}
+
+static int test_rand(void *p) {
 	int i = 10000;
+	(void)p;
 	RAND_BEGIN(NORMAL)
 		while (i--) {
 			unsigned long long rv;
@@ -19,7 +36,8 @@ static int test_rand() {
 	return 0;
 }
 
-static int test_string() {
+static int test_string(void *p) {
+	(void)p;
 	EXPECT_STREQ("123", "123");
 	EXPECT_STRNE("123", "abc");
 	EXPECT_STREQ("123", "abc");
@@ -27,7 +45,8 @@ static int test_string() {
 	return 0;
 }
 
-static int test_condition() {
+static int test_condition(void *p) {
+	(void)p;
 	EXPECT_TRUE(0);
 	EXPECT_FALSE(1);
 	EXPECT_NULL((void *)1);
@@ -35,9 +54,10 @@ static int test_condition() {
 	return 0;
 }
 
-static int test_run() {
+static int test_run(void *p) {
 	int i = 0, j = 0;
 	unsigned long long ll = 0xff00000000000000, lj = 0x7f00000000000000;
+	(void)p;
 	EXPECT_EQ(uint, sizeof(long), 4);
 	EXPECT_EQ(int, i, j + 1);
 
@@ -45,21 +65,11 @@ static int test_run() {
 	return 0;
 }
 
-static int test_foo() {
+static int test_foo(void *p) {
+	(void)p;
 	EXPECT_EQ(int, -1, -1);
 	EXPECT_EQ(long, -1, -1);
 	EXPECT_EQ(uint, 1, 2);
 	return 0;
 }
 
-TEST_BEGIN
-	TEST_ENTRY(run, normal)
-	TEST_ENTRY(foo, normal)
-	TEST_ENTRY(condition, normal)
-	TEST_ENTRY(string, normal)
-	TEST_ENTRY(rand, benchmark)
-TEST_END
-
-int main(int argc, char *argv[]) {
-	return yut_run_all(argc, argv);
-}

@@ -1,12 +1,13 @@
 #include "encoding.h"
 #include "yut_rand.h"
-#include "yut.h"
+#include "testing/encoding_test.def"
 
 #define ASSERT_ATOL(x) \
 	ASSERT_EQ(large, x, xtoll(#x, &ok)); \
 	ASSERT_TRUE(ok)
-static int test_atol_hex() {
+static int test_atol_hex (void *p) {
 	int ok;
+	(void)p;
 	ASSERT_ATOL(0x1);
 	ASSERT_ATOL(0x0);
 	ASSERT_ATOL(0x000001);
@@ -25,8 +26,9 @@ static int test_atol_hex() {
 #define ASSERT_ATOL(x) \
 	ASSERT_EQ(large, x##LL, dtoll(#x, &ok)); \
 	ASSERT_TRUE(ok)
-static int test_atol_dec() {
+static int test_atol_dec (void *p) {
 	int ok;
+	(void)p;
 	ASSERT_ATOL(0);
 	ASSERT_ATOL(-1);
 	ASSERT_ATOL(-0);
@@ -39,8 +41,9 @@ static int test_atol_dec() {
 	ASSERT_EQ(int, stresc(rhs, &x), sizeof(lhs) - 1); \
 	ASSERT_STREQ(x, lhs); \
 	free(x)
-static int test_stresc() {
+static int test_stresc (void *p) {
 	char *x;
+	(void)p;
 	ASSERT_ESC("\\\"", "\"");
 	ASSERT_ESC("\\a", "\a");
 	ASSERT_ESC("\\b", "\b");
@@ -63,7 +66,8 @@ static int test_stresc() {
 	return 0;
 }
 #undef ASSERT_ESC
-static int test_encode() {
+static int test_encode (void *p) {
+	(void)p;
 	ASSERT_EQ(ularge, zigzag64encode(1), 2);
 	ASSERT_EQ(ularge, zigzag64encode(4500), 9000);
 	ASSERT_EQ(ularge, zigzag64encode(0), 0);
@@ -82,10 +86,11 @@ static int test_encode() {
 	return 0;
 }
 
-static int test_varint64 () {
+static int test_varint64 (void *p) {
 	ymd_byte_t bin[MAX_VARINT64_LEN];
 	int i = sint64encode(0, bin);
 	size_t k = 0;
+	(void)p;
 	ASSERT_EQ(int, i, 1);
 	ASSERT_EQ(uint, bin[0], 0);
 	ASSERT_EQ(large, sint64decode(bin, &k), 0);
@@ -136,10 +141,11 @@ static int test_varint64 () {
 	return 0;
 }
 
-static int test_varint32 () {
+static int test_varint32 (void *p) {
 	ymd_byte_t bin[MAX_VARINT32_LEN];
 	int i = uint32encode(0, bin);
 	size_t k = 0;
+	(void)p;
 	ASSERT_EQ(int, i, 1);
 	ASSERT_EQ(uint, bin[0], 0);
 	ASSERT_EQ(int, uint32decode(bin, &k), 0U);
@@ -164,11 +170,3 @@ static int test_varint32 () {
 	return 0;
 }
 
-TEST_BEGIN
-	TEST_ENTRY(atol_hex, normal)
-	TEST_ENTRY(atol_dec, normal)
-	TEST_ENTRY(stresc, normal)
-	TEST_ENTRY(encode, normal)
-	TEST_ENTRY(varint64, normal)
-	TEST_ENTRY(varint32, normal)
-TEST_END

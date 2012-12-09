@@ -209,42 +209,23 @@ int yut_time_log1(const char *file, int line);
 //--------------------------------------------------------------------------
 // Test case enter:
 //--------------------------------------------------------------------------
-typedef int (*yut_routine_t)();
-int yut_run_test(yut_routine_t fn, const char *name);
+#define YUT_MAX_CASE 48
+
+typedef void *(*yut_setup_t)(void);
+typedef void  (*yut_teardown_t)(void *);
+typedef int   (*yut_case_t)(void *);
+
+struct yut_case_def {
+	const char    *name;
+	yut_setup_t    setup;
+	yut_teardown_t teardown;
+	struct {
+		const char *name;
+		yut_case_t  func;
+	} caze[YUT_MAX_CASE];
+};
+
+int yut_run_test(yut_case_t func, void *context, const char *name);
 int yut_run_all(int argc, char *argv[]);
-
-#define RUN_TEST(fn, postfix) \
-	if (yut_run_test(test_##fn, #fn"."#postfix) < 0) \
-		return -1
-
-struct yut_ent {
-	yut_routine_t fn;
-	const char *name;
-};
-
-struct yut_env {
-	int (*setup)();
-	void (*teardown)();
-};
-
-#define TEST_BEGIN \
-struct yut_env yut_intl_env = { NULL, NULL, }; \
-struct yut_ent yut_intl_test[] = {
-
-#define TEST_BEGIN_WITH(setup, teardown) \
-struct yut_env yut_intl_env = { setup, teardown, }; \
-struct yut_ent yut_intl_test[] = {
-
-#define TEST_END \
-	{ .fn = NULL, .name = NULL, }, \
-};
-
-#define TEST_ENTRY(func, postfix) { \
-	.fn = test_##func, \
-	.name = #func"."#postfix, \
-},
-
-struct ymd_mach;
-extern struct ymd_mach *tvm;
 
 #endif //TEST_YUT_H

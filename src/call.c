@@ -2,7 +2,7 @@
 #include "core.h"
 #include "assembly.h"
 #include "encoding.h"
-#include "3rd/regex/regex.h"
+#include "third_party/regex/regex.h"
 #include <stdio.h>
 
 #define call_init(l, x) { \

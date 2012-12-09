@@ -1,4 +1,4 @@
-#include "3rd/regex/regex.h"
+#include "third_party/regex/regex.h"
 #include "tostring.h"
 #include "core.h"
 #include "compiler.h"

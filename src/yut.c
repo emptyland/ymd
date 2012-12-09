@@ -89,7 +89,7 @@ static const char *format_interval(
 	return buf;
 }
 
-int yut_run_test(yut_routine_t fn, const char *name) {
+int yut_run_test(yut_case_t func, void *context, const char *name) {
 	int err, rv;
 	struct timeval jiffx, start;
 	char itv[32];
@@ -99,7 +99,7 @@ int yut_run_test(yut_routine_t fn, const char *name) {
 	printf(yut_colored(GREEN)"[ RUN  ]"yut_colorless()
 	       " Running ...\n");
 	rv = gettimeofday(&start, NULL);
-	err = (*fn)();
+	err = (*func)(context);
 	rv = gettimeofday(&jiffx, NULL);
 	if (err)
 		printf(yut_colored(RED)"[FALIED]"yut_colorless()
@@ -146,23 +146,38 @@ int yut_time_log1(const char *file, int line) {
 	return rv;
 }
 
-
-extern struct yut_ent yut_intl_test[];
-extern struct yut_env yut_intl_env;
+// All tests
+extern const struct yut_case_def *yut_intl_test[];
 
 int yut_run_all(int argc, char *argv[]) {
-	struct yut_ent *i = yut_intl_test;
+	const struct yut_case_def **x = NULL;
 	(void)argc;
 	(void)argv;
-	while (i->fn) {
-		if (yut_intl_env.setup)
-			(*yut_intl_env.setup)();
-		int err = yut_run_test(i->fn, i->name);
-		if (yut_intl_env.teardown)
-			(*yut_intl_env.teardown)();
-		if (err)
-			return err;
-		++i;
+	for (x = yut_intl_test; *x != NULL; ++x) {
+		const struct yut_case_def *test = *x;
+		void *context = NULL;
+		int i = 0;
+
+		// Setup
+		printf(yut_colored(GREEN)"[======] "yut_colorless()
+				"%s setup\n", test->name);
+		if (test->setup)
+			context = (*test->setup)();
+		// Run defined test
+		for (i = 0; i < YUT_MAX_CASE; ++i) {
+			char full_name[128];
+			if (!test->caze[i].name || !test->caze[i].func)
+				break;
+			snprintf(full_name, sizeof(full_name), "%s.%s",
+					test->name, test->caze[i].name);
+			yut_run_test(test->caze[i].func, context, full_name);
+		}
+		// Teardown
+		if (test->teardown)
+			(*test->teardown)(context);
+		printf(yut_colored(GREEN)"[======] "yut_colorless()
+				"%s teardown\n\n", test->name);
 	}
 	return 0;
 }
+

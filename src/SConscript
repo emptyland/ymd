@@ -1,0 +1,86 @@
+from SCons.Script import *
+
+Import('env')
+
+env.Library('yamada',
+	'''
+	state.c
+	value.c
+	memory.c
+	dynamic_array.c
+	hash_map.c
+	skip_list.c
+	closure.c
+	call.c
+	libc.c
+	libtest.c
+	encoding.c
+	compiler.c
+	lex.c
+	tostring.c
+	string.c
+	libos_posix.c
+	pickle.c
+	libpickle.c
+	print_posix.c
+	disassembly.c
+	'''.split());
+
+yut_o = env.StaticObject('yut.c')
+yut_rand_o = env.StaticObject('yut_rand.c')
+test_main_o = env.StaticObject('test_main.c')
+
+env.Program('yamada', 'ymd_main.c',
+	LIBS='yamada regex pthread'.split());
+
+env.Depends('yamada', 'libyamada.a')
+
+def DefineTest(name, name_o):
+	dst_name = name + '_test'
+	src_name = name + '_test.c'
+	def_name = name + '_test.def'
+	env.Command('testing/' + def_name,
+		src_name,
+		'../bin/yut_scan.py ' + src_name + ' testing',
+		chdir='src')
+	env.Program(dst_name,
+		[name_o, yut_o, yut_rand_o, test_main_o],
+		LIBS='yamada regex pthread'.split(),
+		CPPFLAGS='-Isrc')
+	env.Depends(dst_name, 'testing/' + def_name)
+
+def AllTest(name):
+	cmd_src_name = []
+	cmd_lst_name = ''
+	units = []
+	for i in name:
+		src_name = i + '_test.c'
+		obj_name = i + '_test.o'
+		dst_name = i + '_test'
+		def_name = i + '_test.def'
+		# .o file rules
+		o = env.StaticObject(src_name, CPPFLAGS='-Isrc -DYUT_ALL_TEST')
+		units.append(o)
+		if len(cmd_lst_name) != 0:
+			cmd_lst_name = cmd_lst_name + ','
+		cmd_lst_name = cmd_lst_name + i
+		cmd_src_name.append(src_name)
+		# .def file rules
+		env.Command('testing/' + def_name,
+			src_name,
+			'../bin/yut_scan.py ' + src_name + ' testing',
+			chdir='src')
+		env.Depends(obj_name, 'testing/' + def_name)
+	# all_test program rules:
+	env.Command('testing/all_test.def',
+		cmd_src_name,
+		'../bin/yut_all.py \"' + cmd_lst_name + '\" testing',
+		chdir='src')
+	env.Program('all_test',
+		[units, yut_o, yut_rand_o, 'test_all_main.c'],
+		CPPFLAGS='-Isrc -DYUT_ALL_TEST',
+		LIBS='yamada regex pthread'.split())
+	env.Depends('all_test', 'testing/all_test.def')
+
+AllTest('yut skip_list dynamic_array encoding hash_map lex memory pickle'.split())
+

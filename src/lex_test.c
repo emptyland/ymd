@@ -1,15 +1,16 @@
 #include "lex.h"
-#include "yut.h"
+#include "testing/lex_test.def"
 
 #define ASSERT_TOKEN(act) \
 	rv = lex_next(&lex, &token); \
 	ASSERT_EQ(int, rv, act); \
 	ASSERT_EQ(int, rv, token.token)
 
-static int test_lex_punc_1() {
+static int test_lex_punc_1(void *p) {
 	struct ymd_lex lex;
 	struct ytoken token;
 	int rv;
+	(void)p;
 	lex_init(&lex, NULL, "->!~+-=<>/\n\t .%^*(){}[]:==>=<=!=~=>>|><<@{|&");
 	ASSERT_TOKEN(DICT);
 	ASSERT_TOKEN('!');
@@ -48,10 +49,11 @@ static int test_lex_punc_1() {
 #define ASSERT_DEC(num) \
 	ASSERT_TOKEN(DEC_LITERAL); \
 	ASSERT_EQ(int, 0, memcmp(#num, token.off, token.len))
-static int test_lex_num_literal_1() {
+static int test_lex_num_literal_1(void *p) {
 	struct ymd_lex lex;
 	struct ytoken token;
 	int rv;
+	(void)p;
 	lex_init(&lex, NULL, "0 -1 -0 0123456789 9 1 12 123 1234");
 	ASSERT_DEC(0);
 	ASSERT_DEC(-1);
@@ -69,10 +71,11 @@ static int test_lex_num_literal_1() {
 #define ASSERT_HEX(num) \
 	ASSERT_TOKEN(HEX_LITERAL); \
 	ASSERT_EQ(int, 0, memcmp(#num, token.off, token.len))
-static int test_lex_num_literal_2() {
+static int test_lex_num_literal_2(void *p) {
 	struct ymd_lex lex;
 	struct ytoken token;
 	int rv;
+	(void)p;
 	lex_init(&lex, NULL, "0x0\t0x1\t0x0123456789abcdefABCDEF");
 	ASSERT_HEX(0x0);
 	ASSERT_HEX(0x1);
@@ -83,10 +86,11 @@ static int test_lex_num_literal_2() {
 #define ASSERT_SYM(sym) \
 	ASSERT_TOKEN(SYMBOL); \
 	ASSERT_EQ(int, 0, memcmp(#sym, token.off, token.len))
-static int test_lex_sym_literal_1() {
+static int test_lex_sym_literal_1(void *p) {
 	struct ymd_lex lex;
 	struct ytoken token;
 	int rv;
+	(void)p;
 	lex_init(&lex, NULL, " a\nb\n\t__\t_1\t_1abcdef\n(ab)");
 	ASSERT_SYM(a);
 	ASSERT_SYM(b);
@@ -101,10 +105,11 @@ static int test_lex_sym_literal_1() {
 #define ASSERT_KWD(kwd, tok) \
 	ASSERT_TOKEN(tok); \
 	ASSERT_EQ(int, 0, memcmp(#kwd, token.off, token.len))
-static int test_lex_keyword() {
+static int test_lex_keyword(void *p) {
 	struct ymd_lex lex;
 	struct ytoken token;
 	int rv;
+	(void)p;
 	lex_init(&lex, NULL, "nil true false and or func var");
 	ASSERT_KWD(nil, NIL);
 	ASSERT_KWD(true, TRUE);
@@ -116,11 +121,3 @@ static int test_lex_keyword() {
 	return 0;
 }
 
-TEST_BEGIN
-	//TEST_ENTRY(lex_token_1, normal)
-	TEST_ENTRY(lex_punc_1, normal)
-	TEST_ENTRY(lex_num_literal_1, normal)
-	TEST_ENTRY(lex_num_literal_2, normal)
-	TEST_ENTRY(lex_sym_literal_1, normal)
-	TEST_ENTRY(lex_keyword, normal)
-TEST_END

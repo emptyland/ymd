@@ -1,18 +1,29 @@
 #include "core.h"
 #include "yut_rand.h"
-#include "yut.h"
+#include "testing/dynamic_array_test.def"
 
 #define gc(p) ((struct gc_node *)(p))
 
-static struct dyay *arr;
+//static struct dyay *arr;
+static struct ymd_mach *setup() {
+	struct ymd_mach *vm = ymd_init();
+	gc_active(vm, GC_PAUSE);
+	return vm;
+}
 
-static int test_dyay_creation_1() {
+static void teardown(struct ymd_mach *vm) {
+	gc_active(vm, GC_IDLE);
+	ymd_final(vm);
+}
+
+static int test_dyay_creation_1 (struct ymd_mach *vm) {
+	struct dyay *arr = dyay_new(vm, 0);
 	struct variable *rv;
 
 	ASSERT_EQ(uint, arr->count, 0);
 	ASSERT_EQ(uint, arr->max, 0);
 
-	rv = dyay_add(tvm, arr);
+	rv = dyay_add(vm, arr);
 	ASSERT_NOTNULL(rv);
 	ASSERT_FALSE(rv == knil);
 	ASSERT_EQ(uint, rv->type, T_NIL);
@@ -20,14 +31,15 @@ static int test_dyay_creation_1() {
 	ASSERT_EQ(uint, arr->count, 1);
 	ASSERT_EQ(uint, arr->max, 16);
 
-	arr = dyay_new(tvm, 13);
+	arr = dyay_new(vm, 13);
 	ASSERT_NOTNULL(arr);
 	ASSERT_EQ(uint, arr->count, 0);
 	ASSERT_EQ(uint, arr->max, 13);
 	return 0;
 }
 
-static int test_dyay_addition_1() {
+static int test_dyay_addition_1 (struct ymd_mach *vm) {
+	struct dyay *arr = dyay_new(vm, 0);
 	struct variable *rv;
 	static const int k = 41;
 	int i = k;
@@ -36,7 +48,7 @@ static int test_dyay_addition_1() {
 	ASSERT_EQ(uint, arr->max, 0);
 
 	while (i--) {
-		rv = dyay_add(tvm, arr);
+		rv = dyay_add(vm, arr);
 		ASSERT_NOTNULL(rv);
 		ASSERT_FALSE(rv == knil);
 		ASSERT_EQ(uint, rv->type, T_NIL);
@@ -58,12 +70,13 @@ static int test_dyay_addition_1() {
 
 #define BENCHMARK_COUNT 100000
 
-static int test_dyay_addition_2() {
+static int test_dyay_addition_2 (struct ymd_mach *vm) {
+	struct dyay *arr = dyay_new(vm, 0);
 	struct variable *rv;
 	int i = BENCHMARK_COUNT;
 	TIME_RECORD_BEGIN(addition)
 	while (i--) {
-		rv = dyay_add(tvm, arr);
+		rv = dyay_add(vm, arr);
 		rv->type = T_INT;
 		rv->u.i = BENCHMARK_COUNT - i - 1;
 	}
@@ -80,42 +93,43 @@ static int test_dyay_addition_2() {
 	return 0;
 }
 
-static int test_dyay_addition_3 () {
+static int test_dyay_addition_3 (struct ymd_mach *vm) {
 	int i = BENCHMARK_COUNT;
-
 
 	TIME_RECORD_BEGIN(addition3)
 	while (i--) {
 		int j = 16;
 		while (j--) {
-			struct dyay *x = dyay_new(tvm, 0);
-			vset_int(dyay_add(tvm, x), j);
+			struct dyay *x = dyay_new(vm, 0);
+			vset_int(dyay_add(vm, x), j);
 		}
 	}
 	TIME_RECORD_END
 	return 0;
 }
 
-static void add_int(struct dyay *dya, ymd_int_t i) {
-	struct variable *rv = dyay_add(tvm, dya);
+static void add_int (struct dyay *dya, ymd_int_t i,
+		struct ymd_mach *vm) {
+	struct variable *rv = dyay_add(vm, dya);
 	rv->type = T_INT;
 	rv->u.i = i;
 }
 
-static int test_dyay_comparation() {
-	struct dyay *rhs = dyay_new(tvm, 0);
+static int test_dyay_comparation (struct ymd_mach *vm) {
+	struct dyay *arr = dyay_new(vm, 0);
+	struct dyay *rhs = dyay_new(vm, 0);
 
-	add_int(arr, 0);
-	add_int(arr, 1);
-	add_int(rhs, 0);
+	add_int(arr, 0, vm);
+	add_int(arr, 1, vm);
+	add_int(rhs, 0, vm);
 	ASSERT_GT(int, dyay_compare(arr, rhs), 0);
 	ASSERT_FALSE(dyay_equals(arr, rhs));
 
-	add_int(rhs, 1);
+	add_int(rhs, 1, vm);
 	ASSERT_EQ(int, dyay_compare(arr, rhs), 0);
 	ASSERT_TRUE(dyay_equals(arr, rhs));
 
-	add_int(rhs, 0);
+	add_int(rhs, 0, vm);
 	ASSERT_LT(int, dyay_compare(arr, rhs), 0);
 	ASSERT_FALSE(dyay_equals(arr, rhs));
 
@@ -126,21 +140,3 @@ static int test_dyay_comparation() {
 	return 0;
 }
 
-static int test_dyay_setup() {
-	arr = dyay_new(tvm, 0);
-	gc_active(tvm, GC_PAUSE);
-	return 0;
-}
-
-static void test_dyay_teardown() {
-	arr = NULL;
-	gc_active(tvm, GC_IDLE);
-}
-
-TEST_BEGIN_WITH(test_dyay_setup, test_dyay_teardown)
-	TEST_ENTRY(dyay_creation_1, normal)
-	TEST_ENTRY(dyay_addition_1, normal)
-	TEST_ENTRY(dyay_addition_2, benchmark)
-	TEST_ENTRY(dyay_addition_3, benchmark)
-	TEST_ENTRY(dyay_comparation, normal)
-TEST_END

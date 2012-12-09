@@ -4,9 +4,13 @@ config.mk
 *_test
 *.swp
 *.log
+*.dblite
+*.def
+tags
 lex.yy.c
 y.tab.c
 y.tab.h
 foo.ymd
 foo.yut
+yamada
 ymd_main

@@ -2,14 +2,26 @@
 #include "core.h"
 #include "zstream.h"
 #include "assembly.h"
-#include "yut.h"
+#include "testing/pickle_test.def"
+
+static struct ymd_mach *setup() {
+	struct ymd_mach *vm = ymd_init();
+	gc_active(vm, GC_PAUSE);
+	return vm;
+}
+
+static void teardown(struct ymd_mach *vm) {
+	gc_active(vm, GC_IDLE);
+	ymd_final(vm);
+}
 
 #define CHECK_OK &ok); ASSERT_TRUE(ok
-static int test_dump_simple () {
+static int test_dump_simple (struct ymd_mach *vm) {
 	struct zostream os = ZOS_INIT;
 	struct zistream is = ZIS_INIT(NULL, NULL, 0);
 	struct variable k;
 	int i, ok = 1;
+	(void)vm;
 	vset_nil(&k);
 	i = ymd_serialize(&os, &k, CHECK_OK);
 	is.buf = os.kbuf;
@@ -37,12 +49,12 @@ static int test_dump_simple () {
 	return 0;
 }
 
-static int test_dump_kstr () {
+static int test_dump_kstr (struct ymd_mach *vm) {
 	struct zostream os = ZOS_INIT;
 	struct zistream is = ZIS_INIT(NULL, NULL, 0);
 	const char *z = "Sucking Star Big Law";
 	char buf[1024] = {0};
-	struct kstr *kz = kstr_fetch(tvm, z, -1);
+	struct kstr *kz = kstr_fetch(vm, z, -1);
 	int i = ymd_dump_kstr(&os, kz);
 
 	ASSERT_EQ(int, i, 1 + 1 + kz->len);
@@ -56,26 +68,26 @@ static int test_dump_kstr () {
 	return 0;
 }
 
-static int test_dump_func () {
+static int test_dump_func (struct ymd_mach *vm) {
 	struct zostream os = ZOS_INIT;
 	struct zistream is = ZIS_INIT(NULL, NULL, 0);
 	char z[1024] = {0};
 	int i, ok = 1;
-	struct chunk *x = mm_zalloc(tvm, 1, sizeof(*x));
-	struct func *o = func_new(tvm, x, "foo");
+	struct chunk *x = mm_zalloc(vm, 1, sizeof(*x));
+	struct func *o = func_new(vm, x, "foo");
 	o->n_bind = 2;
-	vset_int(func_bval(tvm, o, 0), 1LL);
-	vset_bool(func_bval(tvm, o, 1), 0LL);
-	blk_emit(tvm, x, emitAfP(PUSH, KVAL, 0), 0);
-	blk_emit(tvm, x, emitAP(RET, 1), 1);
-	blk_add_lz(tvm, x, "i");
-	blk_add_lz(tvm, x, "k");
-	blk_kz(tvm, x, "bar", 3);
-	blk_kz(tvm, x, "baz", 3);
-	blk_ki(tvm, x, 10028);
+	vset_int(func_bval(vm, o, 0), 1LL);
+	vset_bool(func_bval(vm, o, 1), 0LL);
+	blk_emit(vm, x, emitAfP(PUSH, KVAL, 0), 0);
+	blk_emit(vm, x, emitAP(RET, 1), 1);
+	blk_add_lz(vm, x, "i");
+	blk_add_lz(vm, x, "k");
+	blk_kz(vm, x, "bar", 3);
+	blk_kz(vm, x, "baz", 3);
+	blk_ki(vm, x, 10028);
 	x->kargs = 2;
-	x->file  = kstr_fetch(tvm, "foo.ymd", -1);
-	blk_shrink(tvm, x);
+	x->file  = kstr_fetch(vm, "foo.ymd", -1);
+	blk_shrink(vm, x);
 
 	i = ymd_dump_func(&os, o, CHECK_OK);
 	zis_pipe(&is, &os);
@@ -106,17 +118,17 @@ static int test_dump_func () {
 	return 0;
 }
 
-static int test_dump_dyay () {
+static int test_dump_dyay (struct ymd_mach *vm) {
 	struct zostream os = ZOS_INIT;
 	struct zistream is = ZIS_INIT(NULL, NULL, 0);
 	const char *z = "Hello, World!\n";
 	char buf[1024] = {0};
-	struct dyay *ax = dyay_new(tvm, 4);
+	struct dyay *ax = dyay_new(vm, 4);
 	int ok = 1;
-	vset_nil(dyay_add(tvm, ax));
-	vset_int(dyay_add(tvm, ax), 0x40);
-	vset_bool(dyay_add(tvm, ax), 0);
-	vset_kstr(dyay_add(tvm, ax), kstr_fetch(tvm, z, -1));
+	vset_nil(dyay_add(vm, ax));
+	vset_int(dyay_add(vm, ax), 0x40);
+	vset_bool(dyay_add(vm, ax), 0);
+	vset_kstr(dyay_add(vm, ax), kstr_fetch(vm, z, -1));
 
 	ymd_dump_dyay(&os, ax, CHECK_OK);
 	zis_pipe(&is, &os);
@@ -136,16 +148,16 @@ static int test_dump_dyay () {
 	return 0;
 }
 
-static int test_dump_o (void *o, unsigned tt) {
+static int dump_o (void *o, unsigned tt, struct ymd_mach *vm) {
 	struct zostream os = ZOS_INIT;
 	struct zistream is = ZIS_INIT(NULL, NULL, 0);
 	int i, ok = 1;
 	char z[1024] = {0};
-	vset_int(vm_def(tvm, o, "0-1st"), 1);
-	vset_bool(vm_def(tvm, o, "1-switch"), 1);
-	vset_kstr(vm_def(tvm, o, "2-name"), kstr_fetch(tvm, "John", -1));
-	vset_int(vm_def(tvm, o, "3-id"), 90048);
-	vset_bool(vm_def(tvm, o, "4-maybe"), 0);
+	vset_int(vm_def(vm, o, "0-1st"), 1);
+	vset_bool(vm_def(vm, o, "1-switch"), 1);
+	vset_kstr(vm_def(vm, o, "2-name"), kstr_fetch(vm, "John", -1));
+	vset_int(vm_def(vm, o, "3-id"), 90048);
+	vset_bool(vm_def(vm, o, "4-maybe"), 0);
 	if (tt == T_HMAP) {
 		i = ymd_dump_hmap(&os, o, CHECK_OK);
 	} else {
@@ -204,16 +216,16 @@ static int test_dump_o (void *o, unsigned tt) {
 	return 0;
 }
 
-static int test_dump_hmap () {
-	return test_dump_o (hmap_new(tvm, 0), T_HMAP);
+static int test_dump_hmap (struct ymd_mach *vm) {
+	return dump_o (hmap_new(vm, 0), T_HMAP, vm);
 }
 
-static int test_dump_skls () {
-	return test_dump_o (skls_new(tvm), T_SKLS);
+static int test_dump_skls (struct ymd_mach *vm) {
+	return dump_o (skls_new(vm), T_SKLS, vm);
 }
 
-static int test_load_simple () {
-	struct ymd_context *l = ioslate(tvm);
+static int test_load_simple (struct ymd_mach *vm) {
+	struct ymd_context *l = ioslate(vm);
 	struct zostream os = ZOS_INIT;
 	struct zistream is = ZIS_INIT(l, NULL, 0);
 	int i, ok = 1;
@@ -248,8 +260,8 @@ static int test_load_simple () {
 	return 0;
 }
 
-static int test_load_kstr () {
-	struct ymd_context *l = ioslate(tvm);
+static int test_load_kstr (struct ymd_mach *vm) {
+	struct ymd_context *l = ioslate(vm);
 	struct zostream os = ZOS_INIT;
 	struct zistream is = ZIS_INIT(l, NULL, 0);
 	int i, ok = 1;
@@ -270,8 +282,8 @@ static int test_load_kstr () {
 	return 0;
 }
 
-static int test_load_dyay () {
-	struct ymd_context *l = ioslate(tvm);
+static int test_load_dyay (struct ymd_mach *vm) {
+	struct ymd_context *l = ioslate(vm);
 	struct zostream os = ZOS_INIT;
 	struct zistream is = ZIS_INIT(l, NULL, 0);
 	int i, ok = 1;
@@ -312,8 +324,8 @@ static int test_load_dyay () {
 	return 0;
 }
 
-static int test_load_o (int tt) {
-	struct ymd_context *l = ioslate(tvm);
+static int load_o (int tt, struct ymd_mach *vm) {
+	struct ymd_context *l = ioslate(vm);
 	struct zostream os = ZOS_INIT;
 	struct zistream is = ZIS_INIT(l, NULL, 0);
 	int i, ok = 1;
@@ -360,34 +372,11 @@ static int test_load_o (int tt) {
 	return 0;
 }
 
-static int test_load_hmap () {
-	return test_load_o (T_HMAP);
+static int test_load_hmap (struct ymd_mach *vm) {
+	return load_o (T_HMAP, vm);
 }
 
-static int test_load_skls () {
-	return test_load_o (T_SKLS);
+static int test_load_skls (struct ymd_mach *vm) {
+	return load_o (T_SKLS, vm);
 }
-
-static int pickle_setup () {
-	gc_active(tvm, GC_PAUSE);
-	return 0;
-}
-
-static void pickle_teardown () {
-	gc_active(tvm, GC_IDLE);
-}
-
-TEST_BEGIN_WITH(pickle_setup, pickle_teardown)
-	TEST_ENTRY(dump_simple, normal)
-	TEST_ENTRY(dump_kstr, normal)
-	TEST_ENTRY(dump_func, normal)
-	TEST_ENTRY(dump_dyay, normal)
-	TEST_ENTRY(dump_hmap, normal)
-	TEST_ENTRY(dump_skls, normal)
-	TEST_ENTRY(load_simple, normal)
-	TEST_ENTRY(load_kstr, normal)
-	TEST_ENTRY(load_dyay, normal)
-	TEST_ENTRY(load_hmap, normal)
-	TEST_ENTRY(load_skls, normal)
-TEST_END
 
