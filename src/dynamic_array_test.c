@@ -101,7 +101,7 @@ static int test_dyay_addition_3 (struct ymd_mach *vm) {
 		int j = 16;
 		while (j--) {
 			struct dyay *x = dyay_new(vm, 0);
-			vset_int(dyay_add(vm, x), j);
+			setv_int(dyay_add(vm, x), j);
 		}
 	}
 	TIME_RECORD_END

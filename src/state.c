@@ -71,7 +71,7 @@ int vm_reached(struct ymd_mach *vm, const char *name) {
 	struct hmap *lib = hmap_of(ioslate(vm), vm_getg(vm, "__reached__"));
 	struct variable *count = vm_mem(vm, lib, name);
 	if (is_nil(count)) {
-		vset_int(vm_def(vm, lib, name), 0);
+		setv_int(vm_def(vm, lib, name), 0);
 		return 0;
 	}
 	++count->u.i;
@@ -152,12 +152,12 @@ struct variable *vm_def(struct ymd_mach *vm, void *o, const char *field) {
 	struct variable k, *v;
 	switch (gcx(o)->type) {
 	case T_HMAP:
-		vset_kstr(&k, kstr_fetch(vm, field, -1));
+		setv_kstr(&k, kstr_fetch(vm, field, -1));
 		v = hmap_put(vm, o, &k);
 		gc_release(k.u.ref);
 		break;
 	case T_SKLS:
-		vset_kstr(&k, kstr_fetch(vm, field, -1));
+		setv_kstr(&k, kstr_fetch(vm, field, -1));
 		v = skls_put(vm, o, &k);
 		gc_release(k.u.ref);
 		break;
@@ -172,12 +172,12 @@ struct variable *vm_mem(struct ymd_mach *vm, void *o, const char *field) {
 	struct variable k, *v = NULL;
 	switch (gcx(o)->type) {
 	case T_HMAP:
-		vset_kstr(&k, kstr_fetch(vm, field, -1));
+		setv_kstr(&k, kstr_fetch(vm, field, -1));
 		v = hmap_get(o, &k);
 		gc_release(k.u.ref);
 		break;
 	case T_SKLS:
-		vset_kstr(&k, kstr_fetch(vm, field, -1));
+		setv_kstr(&k, kstr_fetch(vm, field, -1));
 		v = skls_get(o, &k);
 		gc_release(k.u.ref);
 		break;
@@ -190,7 +190,7 @@ struct variable *vm_mem(struct ymd_mach *vm, void *o, const char *field) {
 
 struct variable *vm_getg(struct ymd_mach *vm, const char *field) {
 	struct variable k, *v;
-	vset_kstr(&k, kstr_fetch(vm, field, -1));
+	setv_kstr(&k, kstr_fetch(vm, field, -1));
 	v = hmap_get(vm->global, &k);
 	gc_release(k.u.ref);
 	return v;
@@ -198,7 +198,7 @@ struct variable *vm_getg(struct ymd_mach *vm, const char *field) {
 
 struct variable *vm_putg(struct ymd_mach *vm, const char *field) {
 	struct variable k, *v;
-	vset_kstr(&k, kstr_fetch(vm, field, -1));
+	setv_kstr(&k, kstr_fetch(vm, field, -1));
 	v = hmap_put(vm, vm->global, &k);
 	gc_release(k.u.ref);
 	return v;
@@ -241,7 +241,7 @@ void ymd_format(struct ymd_context *l, const char *fmt, ... ) {
 	rv = vsnprintf(buf, sizeof(buf), fmt, ap);
 	va_end(ap);
 	o = kstr_fetch(l->vm, buf, -1);
-	vset_kstr(ymd_push(l), o);
+	setv_kstr(ymd_push(l), o);
 	gc_release(o);
 }
 //-----------------------------------------------------------------------------
@@ -268,7 +268,7 @@ struct ymd_mach *ymd_init() {
 	ymd_hmap(ioslate(vm), 1);
 	ymd_putg(ioslate(vm), "__reached__");
 	// `__g__' is global map
-	vset_hmap(ymd_push(ioslate(vm)), vm->global);
+	setv_hmap(ymd_push(ioslate(vm)), vm->global);
 	ymd_putg(ioslate(vm), "__g__");
 	return vm;
 }

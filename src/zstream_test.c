@@ -1,16 +1,18 @@
 #include "zstream.h"
-#include "yut.h"
+#include "testing/zstream_test.def"
 
-static int test_zos_init () {
+static int test_zos_init (void *p) {
 	struct zostream os = ZOS_INIT;
+	(void)p;
 	ASSERT_EQ(int, os.last, 0);
 	ASSERT_EQ(int, os.max,  MAX_STATIC_LEN);
 	ASSERT_NULL(os.buf);
 	return 0;
 }
 
-static int test_zos_reserved () {
+static int test_zos_reserved (void *p) {
 	struct zostream os = ZOS_INIT;
+	(void)p;
 	zos_reserved(&os, MAX_STATIC_LEN);
 	ASSERT_NULL(os.buf);
 	ASSERT_EQ(int, os.last, 0);
@@ -24,8 +26,9 @@ static int test_zos_reserved () {
 	return 0;
 }
 
-static int test_zos_append () {
+static int test_zos_append (void *p) {
 	struct zostream os = ZOS_INIT;
+	(void)p;
 	ymd_u32_t  k = 0x0feedbadU;
 	ymd_u32_t k1 = 0xccccccccU;
 	ymd_u32_t k2 = 0xbadbadeeU;
@@ -62,9 +65,10 @@ static int test_zos_append () {
 	return 0;
 }
 
-static int test_zis_init () {
+static int test_zis_init (void *p) {
 	ymd_byte_t z[8] = {0};
 	struct zistream is = ZIS_INIT(NULL, z, sizeof(z));
+	(void)p;
 	ASSERT_EQ(int, is.last, 0);
 	ASSERT_EQ(int, is.max, 8);
 	ASSERT_NULL(is.err);
@@ -73,7 +77,7 @@ static int test_zis_init () {
 	return 0;
 }
 
-static int test_zis_fetch () {
+static int test_zis_fetch (void *p) {
 	ymd_byte_t z[] = {
 		0xef, 0xcd, 0xab, 0x12,
 		0xdf, 0xba, 0xdf, 0xba,
@@ -82,6 +86,7 @@ static int test_zis_fetch () {
 	};
 	ymd_u32_t k = 0;
 	struct zistream is = ZIS_INIT(NULL, z, sizeof(z));
+	(void)p;
 	zis_fetch(&is, &k, sizeof(k));
 	ASSERT_EQ(uint, k, 0x12abcdefU);
 	zis_fetch(&is, &k, sizeof(k));
@@ -93,10 +98,11 @@ static int test_zis_fetch () {
 	return 0;
 }
 
-static int test_zss_encoding () {
+static int test_zss_encoding (void *p) {
 	struct zostream os = ZOS_INIT;
 	struct zistream is = ZIS_INIT(NULL, NULL, 0);
 
+	(void)p;
 	zos_u32(&os, 0x10204080U);
 	zos_u64(&os, 0x80ULL);
 	zos_i64(&os, -1LL);
@@ -114,11 +120,3 @@ static int test_zss_encoding () {
 	return 0;
 }
 
-TEST_BEGIN
-	TEST_ENTRY(zos_init, normal)
-	TEST_ENTRY(zos_reserved, normal)
-	TEST_ENTRY(zos_append, normal)
-	TEST_ENTRY(zis_init, normal)
-	TEST_ENTRY(zis_fetch, normal)
-	TEST_ENTRY(zss_encoding, normal)
-TEST_END

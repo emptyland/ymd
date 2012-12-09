@@ -218,7 +218,7 @@ int vm_calc(struct ymd_context *l, unsigned op) {
 		} break;
 	case F_NOT: {
 		struct variable *opd = ymd_top(l, 0);
-		vset_bool(opd, !vm_bool(opd));
+		setv_bool(opd, !vm_bool(opd));
 		} break;
 	}
 	return 0;
@@ -402,7 +402,7 @@ retry:
 		case I_TYPEOF: {
 			const unsigned tt = ymd_top(l, 0)->type;
 			assert(tt < T_MAX);
-			vset_kstr(ymd_top(l, 0), typeof_kstr(vm, tt));
+			setv_kstr(ymd_top(l, 0), typeof_kstr(vm, tt));
 			} break;
 		case I_CALC:
 			vm_calc(l, asm_flag(inst));
@@ -449,7 +449,7 @@ retry:
 			for (i = 0; i < n; i += 2)
 				do_put(vm, gcx(map), ymd_top(l, i + 1), ymd_top(l, i));
 			ymd_pop(l, n);
-			vset_hmap(ymd_push(l), map);
+			setv_hmap(ymd_push(l), map);
 			gc_release(map);
 			} break;
 		case I_NEWSKL: {
@@ -458,7 +458,7 @@ retry:
 			for (i = 0; i < n; i += 2)
 				do_put(vm, gcx(map), ymd_top(l, i + 1), ymd_top(l, i));
 			ymd_pop(l, n);
-			vset_skls(ymd_push(l), map);
+			setv_skls(ymd_push(l), map);
 			gc_release(map);
 			} break;
 		case I_NEWDYA: {
@@ -467,7 +467,7 @@ retry:
 			while (i--)
 				do_put(vm, gcx(map), NULL, ymd_top(l, i));
 			ymd_pop(l, asm_param(inst));
-			vset_dyay(ymd_push(l), map);
+			setv_dyay(ymd_push(l), map);
 			gc_release(map);
 			} break;
 		case I_BIND: {
@@ -501,7 +501,7 @@ static void vm_copy_args(struct ymd_context *l, struct func *fn, int argc) {
 		struct chunk *core = fn->u.core;
 		const int k = core->kargs < argc ? core->kargs : argc;
 		argv = vm_find_local(l, fn, "argv");
-		vset_nil(argv);
+		setv_nil(argv);
 		i = k;
 		while (i--) // Copy to local variable
 			l->info->loc[k - i - 1] = *ymd_top(l, i);
@@ -511,7 +511,7 @@ static void vm_copy_args(struct ymd_context *l, struct func *fn, int argc) {
 		while (i--) // Copy to array: argv
 			*dyay_add(l->vm, fn->argv) = *ymd_top(l, i);
 		if (!fn->is_c)
-			vset_dyay(argv, fn->argv);
+			setv_dyay(argv, fn->argv);
 	}
 }
 

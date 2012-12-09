@@ -146,38 +146,134 @@ int yut_time_log1(const char *file, int line) {
 	return rv;
 }
 
+//-----------------------------------------------------------------------------
+// Args Parsing:
+//-----------------------------------------------------------------------------
+struct filter {
+	int negative; // Is Negatvie?
+	const char *test_pattern;
+	const char *case_pattern;
+};
+
+struct options {
+	struct filter filter;
+	int repeated;
+};
+
+// Filter: is any?
+static inline int fany(const char *z) {
+	return (!z || !z[0] || z[0] == '*');
+}
+
+static inline int fok(const char *pattern, const char *z) {
+	return fany(pattern) || strcmp(pattern, z) == 0;
+}
+
+static const char *prefix_filter   = "filter=";
+static const char *prefix_repeated = "repeated=";
+
+static int yut_parse_args(int argc, char *argv[], struct options *opt) {
+	int i;
+
+	memset(opt, 0, sizeof(*opt));
+	opt->repeated = 1;
+	for (i = 1; i < argc; ++i) {
+		const char *argz = argv[i];
+		if (strstr(argz, "--") != argz)
+			continue;
+
+		argz += 2; // Skip "--"
+		if (strstr(argz, prefix_filter) == argz) {
+			const char *p;
+			argz += strlen(prefix_filter); // Skip "filter="
+			if (!argz[0])
+				continue;
+			if (argz[0] == '-') {
+				++argz;
+				opt->filter.negative = 1;
+			}
+			// Split '.'
+			if ((p = strchr(argz, '.')) == NULL) {
+				opt->filter.test_pattern = strdup(argz);
+			} else {
+				opt->filter.test_pattern = strndup(argz, p - argz);
+				opt->filter.case_pattern = strdup(p + 1);
+			}
+		} else if (strstr(argz, prefix_repeated) == argz) {
+			argz += strlen(prefix_repeated);
+			opt->repeated = atoi(argz);
+			if (opt->repeated <= 0)
+				opt->repeated = 1;
+		}
+	}
+	return 0;
+}
+
+
 // All tests
 extern const struct yut_case_def *yut_intl_test[];
 
-int yut_run_all(int argc, char *argv[]) {
+static int yut_foreach_with(struct options *opt) {
 	const struct yut_case_def **x = NULL;
-	(void)argc;
-	(void)argv;
 	for (x = yut_intl_test; *x != NULL; ++x) {
 		const struct yut_case_def *test = *x;
 		void *context = NULL;
 		int i = 0;
 
+		// Do filter check for test:
+		if (opt->filter.negative) {
+			if ( fok(opt->filter.test_pattern, test->name))
+				continue;
+		} else {
+			if (!fok(opt->filter.test_pattern, test->name))
+				continue;
+		}
+
 		// Setup
 		printf(yut_colored(GREEN)"[======] "yut_colorless()
 				"%s setup\n", test->name);
-		if (test->setup)
-			context = (*test->setup)();
 		// Run defined test
 		for (i = 0; i < YUT_MAX_CASE; ++i) {
 			char full_name[128];
 			if (!test->caze[i].name || !test->caze[i].func)
 				break;
+			// Do filter check for test case:
+			if (opt->filter.negative) {
+				if (fok(opt->filter.test_pattern, test->name) &&
+						fok(opt->filter.case_pattern, test->caze[i].name))
+					continue;
+			} else {
+				if (fok(opt->filter.test_pattern, test->name) &&
+						!fok(opt->filter.case_pattern, test->caze[i].name))
+					continue;
+			}
 			snprintf(full_name, sizeof(full_name), "%s.%s",
 					test->name, test->caze[i].name);
+			// Setup
+			if (test->setup)
+				context = (*test->setup)();
 			yut_run_test(test->caze[i].func, context, full_name);
+			// Teardown
+			if (test->teardown)
+				(*test->teardown)(context);
 		}
-		// Teardown
-		if (test->teardown)
-			(*test->teardown)(context);
+		// Test Finalize
 		printf(yut_colored(GREEN)"[======] "yut_colorless()
 				"%s teardown\n\n", test->name);
 	}
+	return 0;
+}
+
+int yut_run_all(int argc, char *argv[]) {
+	int i;
+	struct options opt;
+
+	yut_parse_args(argc, argv, &opt);
+	for (i = 0; i < opt.repeated; ++i)
+		yut_foreach_with(&opt);
+
+	free((void*)opt.filter.test_pattern);
+	free((void*)opt.filter.case_pattern);
 	return 0;
 }
 

@@ -22,14 +22,14 @@ static int test_dump_simple (struct ymd_mach *vm) {
 	struct variable k;
 	int i, ok = 1;
 	(void)vm;
-	vset_nil(&k);
+	setv_nil(&k);
 	i = ymd_serialize(&os, &k, CHECK_OK);
 	is.buf = os.kbuf;
 	is.max = os.last;
 	ASSERT_EQ(int, i, 1);
 	ASSERT_EQ(uint, zis_u32(&is), T_NIL);
 
-	vset_int(&k, 0x40LL);
+	setv_int(&k, 0x40LL);
 	zos_final(&os);
 	i = ymd_serialize(&os, &k, CHECK_OK);
 	zis_pipe(&is, &os);
@@ -37,7 +37,7 @@ static int test_dump_simple (struct ymd_mach *vm) {
 	ASSERT_EQ(uint, zis_u32(&is), T_INT);
 	ASSERT_EQ(large, zis_i64(&is), 0x40LL);
 
-	vset_bool(&k, 1);
+	setv_bool(&k, 1);
 	zos_final(&os);
 	i = ymd_serialize(&os, &k, CHECK_OK);
 	zis_pipe(&is, &os);
@@ -76,8 +76,8 @@ static int test_dump_func (struct ymd_mach *vm) {
 	struct chunk *x = mm_zalloc(vm, 1, sizeof(*x));
 	struct func *o = func_new(vm, x, "foo");
 	o->n_bind = 2;
-	vset_int(func_bval(vm, o, 0), 1LL);
-	vset_bool(func_bval(vm, o, 1), 0LL);
+	setv_int(func_bval(vm, o, 0), 1LL);
+	setv_bool(func_bval(vm, o, 1), 0LL);
 	blk_emit(vm, x, emitAfP(PUSH, KVAL, 0), 0);
 	blk_emit(vm, x, emitAP(RET, 1), 1);
 	blk_add_lz(vm, x, "i");
@@ -125,10 +125,10 @@ static int test_dump_dyay (struct ymd_mach *vm) {
 	char buf[1024] = {0};
 	struct dyay *ax = dyay_new(vm, 4);
 	int ok = 1;
-	vset_nil(dyay_add(vm, ax));
-	vset_int(dyay_add(vm, ax), 0x40);
-	vset_bool(dyay_add(vm, ax), 0);
-	vset_kstr(dyay_add(vm, ax), kstr_fetch(vm, z, -1));
+	setv_nil(dyay_add(vm, ax));
+	setv_int(dyay_add(vm, ax), 0x40);
+	setv_bool(dyay_add(vm, ax), 0);
+	setv_kstr(dyay_add(vm, ax), kstr_fetch(vm, z, -1));
 
 	ymd_dump_dyay(&os, ax, CHECK_OK);
 	zis_pipe(&is, &os);
@@ -153,11 +153,11 @@ static int dump_o (void *o, unsigned tt, struct ymd_mach *vm) {
 	struct zistream is = ZIS_INIT(NULL, NULL, 0);
 	int i, ok = 1;
 	char z[1024] = {0};
-	vset_int(vm_def(vm, o, "0-1st"), 1);
-	vset_bool(vm_def(vm, o, "1-switch"), 1);
-	vset_kstr(vm_def(vm, o, "2-name"), kstr_fetch(vm, "John", -1));
-	vset_int(vm_def(vm, o, "3-id"), 90048);
-	vset_bool(vm_def(vm, o, "4-maybe"), 0);
+	setv_int(vm_def(vm, o, "0-1st"), 1);
+	setv_bool(vm_def(vm, o, "1-switch"), 1);
+	setv_kstr(vm_def(vm, o, "2-name"), kstr_fetch(vm, "John", -1));
+	setv_int(vm_def(vm, o, "3-id"), 90048);
+	setv_bool(vm_def(vm, o, "4-maybe"), 0);
 	if (tt == T_HMAP) {
 		i = ymd_dump_hmap(&os, o, CHECK_OK);
 	} else {

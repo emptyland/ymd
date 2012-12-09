@@ -27,22 +27,22 @@ DECL_TREF(DECL_REFOF)
 #define is_ref(v) ((v)->type >= T_REF)
 
 /*
-#define vset_nil(v) \
+#define setv_nil(v) \
 	{ (v)->type = T_NIL; (v)->u.i = 0; }
-#define vset_int(v, x) \
+#define setv_int(v, x) \
 	{ (v)->type = T_INT; (v)->u.i = (x); }
-#define vset_bool(v, x) \
+#define setv_bool(v, x) \
 	{ (v)->type = T_BOOL; (v)->u.i = (x); }
-#define vset_ext(v, x) \
+#define setv_ext(v, x) \
 	{ (v)->type = T_EXT; (v)->u.ext = (x); }
-#define vset_ref(v, x) \
+#define setv_ref(v, x) \
 	{ (v)->type = gcx(x)->type; (v)->u.ref = gcx(x); }
 */
-static inline void vset_nil (struct variable *v) {
+static inline void setv_nil (struct variable *v) {
 	v->type = T_NIL; v->u.i = 0;
 }
 #define VSET_DECL(name, arg1) \
-	static inline void vset_##name (struct variable *v, arg1 x)
+	static inline void setv_##name (struct variable *v, arg1 x)
 VSET_DECL(int, ymd_int_t) {
 	v->type = T_INT; v->u.i = x;
 }
@@ -57,7 +57,7 @@ VSET_DECL(ref, struct gc_node *) {
 }
 #undef VSET_DECL
 #define DEFINE_SETTER(name, tt) \
-static inline void vset_##name(struct variable *v, struct name *o) { \
+static inline void setv_##name(struct variable *v, struct name *o) { \
 	v->type = tt; \
 	v->u.ref = gcx(o); \
 }

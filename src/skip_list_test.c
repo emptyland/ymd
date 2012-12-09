@@ -126,9 +126,9 @@ static int test_skls_insertion_1 (struct ymd_mach *vm) {
 	TIME_RECORD_BEGIN(insertion)
 	while (i--) {
 		struct variable k;
-		vset_int(&k, i);
+		setv_int(&k, i);
 		rv = skls_put(vm, list, &k);
-		vset_int(rv, i);
+		setv_int(rv, i);
 	}
 	TIME_RECORD_END
 	return 0;
@@ -142,8 +142,8 @@ static int test_skls_insertion_2 (struct ymd_mach *vm) {
 		while (j--) {
 			struct skls *x = skls_new(vm);
 			struct variable k;
-			vset_int(&k, i);
-			vset_int(skls_put(vm, x, &k), i);
+			setv_int(&k, i);
+			setv_int(skls_put(vm, x, &k), i);
 		}
 	}
 	TIME_RECORD_END
@@ -185,15 +185,15 @@ static int test_skls_search_2 (struct ymd_mach *vm) {
 	struct variable k;
 	struct skls *map = skls_new(vm);
 	while (i--) {
-		vset_int(&k, i);
-		vset_int(skls_put(vm, map, &k), i);
+		setv_int(&k, i);
+		setv_int(skls_put(vm, map, &k), i);
 	}
 	i = BENCHMARK_COUNT;
 	TIME_RECORD_BEGIN(searching2)
 	while (i--) {
 		int j = 16;
 		while (j--) {
-			vset_int(&k, j);
+			setv_int(&k, j);
 			ASSERT_EQ(large, skls_get(map, &k)->u.i, j);
 		}
 	}
@@ -204,32 +204,32 @@ static int test_skls_search_2 (struct ymd_mach *vm) {
 static int test_skls_removing (struct ymd_mach *vm) {
 	struct skls *map = skls_new(vm);
 	struct variable k;
-	vset_int(&k, 4);
-	vset_int(skls_put(vm, map, &k), 0);
-	vset_int(&k, 14);
-	vset_int(skls_put(vm, map, &k), 1);
-	vset_int(&k, 1024);
-	vset_int(skls_put(vm, map, &k), 3);
+	setv_int(&k, 4);
+	setv_int(skls_put(vm, map, &k), 0);
+	setv_int(&k, 14);
+	setv_int(skls_put(vm, map, &k), 1);
+	setv_int(&k, 1024);
+	setv_int(skls_put(vm, map, &k), 3);
 
-	vset_int(&k, 4);
+	setv_int(&k, 4);
 	ASSERT_TRUE(skls_remove(vm, map, &k));
 	ASSERT_TRUE(knil == skls_get(map, &k));
-	vset_int(&k, 1024);
+	setv_int(&k, 1024);
 	ASSERT_TRUE(skls_remove(vm, map, &k));
 	ASSERT_TRUE(knil == skls_get(map, &k));
-	vset_int(&k, 14);
+	setv_int(&k, 14);
 	ASSERT_TRUE(skls_remove(vm, map, &k));
 	ASSERT_TRUE(knil == skls_get(map, &k));
 
-	vset_int(&k, 1024);
-	vset_int(skls_put(vm, map, &k), 1000);
+	setv_int(&k, 1024);
+	setv_int(skls_put(vm, map, &k), 1000);
 	ASSERT_EQ(uint,  skls_get(map, &k)->type, T_INT);
 	ASSERT_EQ(large, skls_get(map, &k)->u.i,  1000LL);
-	vset_int(&k, 14);
-	vset_int(skls_put(vm, map, &k), 10);
+	setv_int(&k, 14);
+	setv_int(skls_put(vm, map, &k), 10);
 	ASSERT_EQ(uint,  skls_get(map, &k)->type, T_INT);
 	ASSERT_EQ(large, skls_get(map, &k)->u.i,  10LL);
-	vset_int(&k, 4);
+	setv_int(&k, 4);
 	ASSERT_TRUE(skls_remove(vm, map, &k));
 	return 0;
 }

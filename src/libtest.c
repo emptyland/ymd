@@ -171,7 +171,7 @@ static int yut_call(struct ymd_context *l, struct variable *test,
 	int i;
 	if (!method)
 		return -1;
-	vset_func(ymd_push(l), method);
+	setv_func(ymd_push(l), method);
 	*ymd_push(l) = *test;
 	i = ymd_xcall(l, 1);
 	if (i < 0)

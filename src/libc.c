@@ -46,7 +46,7 @@ static void do_insert(L, struct dyay *self) {
 		elem = ymd_argv_get(l, 1);
 		if (is_nil(elem))
 			ymd_panic(l, "Element of array can not be `nil`");
-		vset_dyay(ymd_push(l), self);
+		setv_dyay(ymd_push(l), self);
 			*ymd_push(l) = *elem; ymd_add(l);
 		ymd_pop(l, 1);
 		break;
@@ -257,7 +257,7 @@ static int dyay_iter(L) {
 	case ITER_KEY: {
 		ymd_int_t idx = int_of(l, ymd_bval(l, 2));
 		ymd_int(l, idx);
-		vset_int(ymd_bval(l, 2), idx + 1);
+		setv_int(ymd_bval(l, 2), idx + 1);
 		} break;
 	case ITER_VALUE: {
 		*ymd_push(l) = *i;
@@ -269,13 +269,13 @@ static int dyay_iter(L) {
 		ymd_add(l);
 		*ymd_push(l) = *i;
 		ymd_add(l);
-		vset_int(ymd_bval(l, 2), idx + 1);
+		setv_int(ymd_bval(l, 2), idx + 1);
 		} break;
 	default:
 		assert(0);
 		break;
 	}
-	vset_ext(ymd_bval(l, 0), i + 1);
+	setv_ext(ymd_bval(l, 0), i + 1);
 	return 1;
 }
 
@@ -293,7 +293,7 @@ static int hmap_iter(L) {
 	struct kvi *i = ymd_bval(l, 0)->u.ext,
 			   *m = ymd_bval(l, 1)->u.ext;
 	if (i >= m) {
-		vset_nil(ymd_push(l));
+		setv_nil(ymd_push(l));
 		return 1;
 	}
 	switch (int_of(l, ymd_bval(l, 2))) {
@@ -312,7 +312,7 @@ static int hmap_iter(L) {
 		assert(0);
 		break;
 	}
-	vset_ext(ymd_bval(l, 0), move2valid(i + 1, m));
+	setv_ext(ymd_bval(l, 0), move2valid(i + 1, m));
 	return 1;
 }
 
@@ -322,7 +322,7 @@ static int hmap_iter(L) {
 static int skls_iter(L) {
 	struct sknd *i = ymd_bval(l, 0)->u.ext;
 	if (!i) {
-		vset_nil(ymd_push(l));
+		setv_nil(ymd_push(l));
 		return 1;
 	}
 	switch (int_of(l, ymd_bval(l, 1))) {
@@ -341,7 +341,7 @@ static int skls_iter(L) {
 		assert(0);
 		break;
 	}
-	vset_ext(ymd_bval(l, 0), i->fwd[0]);
+	setv_ext(ymd_bval(l, 0), i->fwd[0]);
 	return 1;
 }
 
@@ -357,7 +357,7 @@ static int new_contain_iter(L, const struct variable *obj, int flag) {
 		ymd_bind(l, 2);
 		ymd_int(l, flag);
 		ymd_bind(l, 3);
-		vset_ref(ymd_push(l), obj->u.ref);
+		setv_ref(ymd_push(l), obj->u.ref);
 		ymd_bind(l, 4);
 		return 1;
 	case T_HMAP: {
@@ -374,7 +374,7 @@ static int new_contain_iter(L, const struct variable *obj, int flag) {
 		ymd_bind(l, 1);
 		ymd_int(l, flag);
 		ymd_bind(l, 2);
-		vset_ref(ymd_push(l), obj->u.ref);
+		setv_ref(ymd_push(l), obj->u.ref);
 		ymd_bind(l, 3);
 		} return 1;
 	case T_SKLS: {
@@ -388,7 +388,7 @@ static int new_contain_iter(L, const struct variable *obj, int flag) {
 		ymd_bind(l, 0);
 		ymd_int(l, flag);
 		ymd_bind(l, 1);
-		vset_ref(ymd_push(l), obj->u.ref);
+		setv_ref(ymd_push(l), obj->u.ref);
 		ymd_bind(l, 2);
 		} return 1;
 	default:
@@ -740,11 +740,11 @@ static int libx_compile(L) {
 static int libx_env(L) {
 	struct kstr *which = kstr_of(l, ymd_argv_get(l, 0));
 	if (strcmp(which->land, "*global") == 0)
-		vset_hmap(ymd_push(l), l->vm->global);
+		setv_hmap(ymd_push(l), l->vm->global);
 	else if (strcmp(which->land, "*current") == 0)
-		vset_func(ymd_push(l), l->info->chain->run);
+		setv_func(ymd_push(l), l->info->chain->run);
 	else
-		vset_nil(ymd_push(l));
+		setv_nil(ymd_push(l));
 	return 1;
 }
 
@@ -828,9 +828,9 @@ static int libx_setmetatable(L) {
 static int libx_metatable(L) {
 	struct mand *o = mand_of(l, ymd_argv_get(l, 0));
 	if (mand_proto(o, NULL))
-		vset_ref(ymd_push(l), mand_proto(o, NULL));
+		setv_ref(ymd_push(l), mand_proto(o, NULL));
 	else
-		vset_nil(ymd_push(l));
+		setv_nil(ymd_push(l));
 	return 1;
 }
 
@@ -858,7 +858,7 @@ static int libx_pcall(L) {
 	struct dyay *argv = ymd_argv_chk(l, 1);
 	struct func *fn = func_of(l, argv->elem);
 	int i;
-	vset_func(ymd_push(l), fn);
+	setv_func(ymd_push(l), fn);
 	for (i = 1; i < argv->count; ++i)
 		*ymd_push(l) = argv->elem[i];
 	i = ymd_pcall(l, fn, argv->count - 1);

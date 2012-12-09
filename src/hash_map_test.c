@@ -37,7 +37,7 @@ static int test_hmap_creation_1 (struct ymd_mach *vm) {
 	ASSERT_EQ(uint, rv->type, T_INT);
 	ASSERT_EQ(large, rv->u.i, 1024);
 
-	vset_int(&k, 1024);
+	setv_int(&k, 1024);
 	ASSERT_TRUE(hmap_remove(vm, map, &k));
 	ASSERT_TRUE(knil == hmap_get(map, &k));
 	return 0;
@@ -68,8 +68,8 @@ static int test_hmap_insertion_1 (struct ymd_mach *vm) {
 	TIME_RECORD_BEGIN(insertion)
 	while (i--) {
 		struct variable k;
-		vset_int(&k, i);
-		vset_int(hmap_put(vm, map, &k), i);
+		setv_int(&k, i);
+		setv_int(hmap_put(vm, map, &k), i);
 	}
 	TIME_RECORD_END
 	return 0;
@@ -83,8 +83,8 @@ static int test_hmap_insertion_2 (struct ymd_mach *vm) {
 		while (j--) {
 			struct hmap *x = hmap_new(vm, 0);
 			struct variable k;
-			vset_int(&k, i);
-			vset_int(hmap_put(vm, x, &k), i);
+			setv_int(&k, i);
+			setv_int(hmap_put(vm, x, &k), i);
 		}
 	}
 	TIME_RECORD_END
@@ -126,15 +126,15 @@ static int test_hmap_search_2 (struct ymd_mach *vm) {
 	int i = 16;
 	struct variable k;
 	while (i--) {
-		vset_int(&k, i);
-		vset_int(hmap_put(vm, map, &k), i);
+		setv_int(&k, i);
+		setv_int(hmap_put(vm, map, &k), i);
 	}
 	i = BENCHMARK_COUNT;
 	TIME_RECORD_BEGIN(searching2)
 	while (i--) {
 		int j = 16;
 		while (j--) {
-			vset_int(&k, j);
+			setv_int(&k, j);
 			ASSERT_EQ(large, hmap_get(map, &k)->u.i, j);
 		}
 	}
@@ -186,29 +186,29 @@ static int test_hmap_comparation (struct ymd_mach *vm) {
 static int test_hmap_removing (struct ymd_mach *vm) {
 	struct hmap *map = hmap_new(vm, 0);
 	struct variable k;
-	vset_int(&k, 4);
-	vset_int(hmap_put(vm, map, &k), 0);
-	vset_int(&k, 14);
-	vset_int(hmap_put(vm, map, &k), 1);
-	vset_int(&k, 1024);
-	vset_int(hmap_put(vm, map, &k), 3);
+	setv_int(&k, 4);
+	setv_int(hmap_put(vm, map, &k), 0);
+	setv_int(&k, 14);
+	setv_int(hmap_put(vm, map, &k), 1);
+	setv_int(&k, 1024);
+	setv_int(hmap_put(vm, map, &k), 3);
 
-	vset_int(&k, 4);
+	setv_int(&k, 4);
 	ASSERT_TRUE(hmap_remove(vm, map, &k));
 	ASSERT_TRUE(knil == hmap_get(map, &k));
-	vset_int(&k, 1024);
+	setv_int(&k, 1024);
 	ASSERT_TRUE(hmap_remove(vm, map, &k));
 	ASSERT_TRUE(knil == hmap_get(map, &k));
-	vset_int(&k, 14);
+	setv_int(&k, 14);
 	ASSERT_TRUE(hmap_remove(vm, map, &k));
 	ASSERT_TRUE(knil == hmap_get(map, &k));
 
-	vset_int(&k, 1024);
-	vset_int(hmap_put(vm, map, &k), 1000);
+	setv_int(&k, 1024);
+	setv_int(hmap_put(vm, map, &k), 1000);
 	ASSERT_EQ(uint,  hmap_get(map, &k)->type, T_INT);
 	ASSERT_EQ(large, hmap_get(map, &k)->u.i,  1000LL);
 
-	vset_int(&k, 14);
+	setv_int(&k, 14);
 	ASSERT_TRUE(hmap_remove(vm, map, &k));
 	return 0;
 }

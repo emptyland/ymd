@@ -82,5 +82,14 @@ def AllTest(name):
 		LIBS='yamada regex pthread'.split())
 	env.Depends('all_test', 'testing/all_test.def')
 
-AllTest('yut skip_list dynamic_array encoding hash_map lex memory pickle'.split())
+AllTest('''
+	yut
+	skip_list
+	dynamic_array
+	encoding
+	hash_map
+	lex
+	memory
+	pickle
+	zstream'''.split())
 

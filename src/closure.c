@@ -49,7 +49,7 @@ int blk_kz(struct ymd_mach *vm, struct chunk *core, const char *z, int k) {
 			return i;
 	}
 	kz = kstr_fetch(vm, z, k);
-	vset_kstr(blk_klast(vm, core), kz);
+	setv_kstr(blk_klast(vm, core), kz);
 	gc_release(kz);
 	return core->kkval++;
 }
@@ -61,7 +61,7 @@ int blk_ki(struct ymd_mach *vm, struct chunk *core, ymd_int_t n) {
 			core->kval[i].u.i == n)
 			return i;
 	}
-	vset_int(blk_klast(vm, core), n);
+	setv_int(blk_klast(vm, core), n);
 	return core->kkval++;
 }
 
@@ -73,7 +73,7 @@ int blk_kf(struct ymd_mach *vm, struct chunk *core, void *p) {
 		    core->kval[i].u.ref == p)
 			return i;
 	}
-	vset_func(blk_klast(vm, core), fn);
+	setv_func(blk_klast(vm, core), fn);
 	gc_release(fn);
 	return core->kkval++;
 }

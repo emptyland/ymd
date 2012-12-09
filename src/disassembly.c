@@ -88,7 +88,7 @@ const char *method(const struct func *fn, uint_t inst) {
 	return fn_kz(fn, i);
 }
 
-int dis_inst(FILE *fp, const struct func *fn, uint_t inst) {
+int dasm_inst(FILE *fp, const struct func *fn, uint_t inst) {
 	char buf[128];
 	int rv;
 #define BUF buf, sizeof(buf)
@@ -165,19 +165,19 @@ int dis_inst(FILE *fp, const struct func *fn, uint_t inst) {
 	return rv;
 }
 
-int dis_func(FILE *fp, const struct func *fn) {
+int dasm_func(FILE *fp, const struct func *fn) {
 	int i, count = 0;
 	if (fn->is_c)
 		return -1;
 	fprintf(fp, "----<%s>:\n", fn->proto->land);
 	for (i = 0; i < fn->u.core->kinst; ++i) {
 		fprintf(fp, "[%03d] ", i);
-		count += dis_inst(fp, fn, fn->u.core->inst[i]);
+		count += dasm_inst(fp, fn, fn->u.core->inst[i]);
 		fprintf(fp, "\n");
 	}
 	for (i = 0; i < fn->u.core->kkval; ++i) {
 		if (fn->u.core->kval[i].type == T_FUNC)
-			count += dis_func(fp, func_k(fn->u.core->kval + i));
+			count += dasm_func(fp, func_k(fn->u.core->kval + i));
 	}
 	return count;
 }

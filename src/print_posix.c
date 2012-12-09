@@ -80,7 +80,7 @@ const char *ymd_print_paint(const char *priv) {
 }
 
 // Example:
-// ymd_print(yGREEN"[===]"yEND" %d", i);
+// ymd_printf(yGREEN"[===]"yEND" %d", i);
 int ymd_printf(const char *raw, ...) {
 	va_list ap;
 	int rv;
