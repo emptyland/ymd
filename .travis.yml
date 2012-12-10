@@ -1,5 +1,5 @@
 language: c
-script: scons -Q && src/all_test --filter=-hash_map_test
+script: scons -Q && src/all_test
 
 compiler:
     - clang
