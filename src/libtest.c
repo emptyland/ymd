@@ -2,6 +2,7 @@
 #include "core.h"
 #include "libc.h"
 #include "print.h"
+#include <sys/time.h>
 #include <setjmp.h>
 
 #define L struct ymd_context *l
@@ -11,7 +12,7 @@ struct yut_cookie {
 };
 
 static inline void yut_fault() {
-	ymd_printf("${[red][ FAIL ]}$ Test fail, stop all.\n");
+	ymd_printf("${[red][  FAILED  ]}$ Test fail, stop all.\n");
 }
 
 static inline struct yut_cookie *yut_jpt(L, struct variable *self) {
@@ -25,7 +26,7 @@ static inline void yut_raise(L) {
 	longjmp(cookie->jpt, 1);
 }
 
-// [  XXX ] Line:%d <%s> Assert fail.
+// [   INFO   ] Line:%d <%s> Assert fail.
 static void yut_fail2(L, const char *op,
                       const struct variable *arg0,
                       const struct variable *arg1) {
@@ -34,7 +35,7 @@ static void yut_fail2(L, const char *op,
 	struct zostream os0 = ZOS_INIT, os1 = ZOS_INIT;
 	tostring(&os0, arg0);
 	tostring(&os1, arg1);
-	ymd_printf("${[yellow][  XXX ] %s:%d Assert fail: }$"
+	ymd_printf("${[yellow][   INFO   ] %s:%d Assert fail:}$ "
 	           "(${[purple]%s}$) %s (${[purple]%s}$)\n"
 			   "Expected : <${[purple]%s}$>\n"
 			   "Actual   : <${[purple]%s}$>\n",
@@ -64,7 +65,7 @@ static void yut_fail0(L) {
 		tostring(&os, ax->elem + i);
 		zos_append(&os, "\n", 1);
 	}
-	ymd_printf("${[yellow][  XXX ] %s}$\n"
+	ymd_printf("${[yellow][   INFO   ] %s}$\n"
 			   "Runtime error: %s\nBacktrace:\n%s",
 			   kstr_of(l, ymd_top(l, 1))->land,
 			   kstr_of(l, ymd_top(l, 2))->land,
@@ -78,7 +79,7 @@ static void yut_fail1(L, const char *expected,
 	struct call_info *up = l->info->chain;
 	struct func *fn = up->run;
 	struct zostream os = ZOS_INIT;
-	ymd_printf("${[yellow][  XXX ] %s:%d Assert fail, expected}$"
+	ymd_printf("${[yellow][   INFO   ] %s:%d Assert fail, expected}$"
 	           "${[purple]<%s>, unexpected}$${[purple]<%s>}$;\n",
 			   fn->u.core->file->land,
 	           fn->u.core->line[up->pc - 1],
@@ -88,11 +89,23 @@ static void yut_fail1(L, const char *expected,
 	yut_raise(l);
 }
 
+static const char *format_interval(
+		const struct timeval *start,
+		const struct timeval *jiffx,
+		char buf[],
+		size_t len) {
+	unsigned long long 
+		jms = jiffx->tv_sec * 1000ULL + jiffx->tv_usec / 1000ULL,
+	    bms = start->tv_sec * 1000ULL + start->tv_usec / 1000ULL;
+	snprintf(buf, len, "%llu ms", jms - bms);
+	return buf;
+}
+
 static int libx_Fail(L) {
 	const struct kstr *arg0 = kstr_of(l, ymd_argv_get(l, 1));
 	struct call_info *up = l->info->chain;
 	struct func *fn = up->run;
-	ymd_printf("${[yellow][  XXX ] %s:%d Fail: %s}$\n",
+	ymd_printf("${[yellow][   INFO   ] %s:%d Fail: %s}$\n",
 	           fn->u.core->file->land,
 			   fn->u.core->line[up->pc - 1],
 	           arg0->land);
@@ -164,7 +177,7 @@ static struct func *yut_method(struct ymd_mach *vm, void *o,
 }
 
 static int yut_call(struct ymd_context *l, struct variable *test,
-                    struct func *method) {
+		struct func *method) {
 	int i;
 	if (!method)
 		return -1;
@@ -177,29 +190,31 @@ static int yut_call(struct ymd_context *l, struct variable *test,
 }
 
 static int yut_case(
-	struct ymd_context *l,
-	const char *clazz,
-	const char *caze,
-	struct variable *test,
-	struct func *setup,
-	struct func *teardown,
-	struct func *unit) {
-	char full_name[128];
+		struct ymd_context *l,
+		const char *clazz,
+		const char *caze,
+		struct variable *test,
+		struct func *setup,
+		struct func *teardown,
+		struct func *unit) {
+	char full_name[128], itv[32];
+	struct timeval jiffx, start;
+
 	strncpy(full_name, clazz, sizeof(full_name));
 	strcat(full_name, ".");
 	strcat(full_name, caze);
-	ymd_printf("${[green][======]}$ Test ${[purple]%s}$ setup.\n",
-			   full_name);
 	yut_call(l, test, setup);
-	ymd_printf("${[green][ RUN  ]}$ Running ...\n");
+	ymd_printf("${[!green][ RUN      ]}$ %s\n", full_name);
+	gettimeofday(&start, NULL);
 	if (yut_call(l, test, unit) < 0) {
 		yut_fail0(l);
 		yut_fault();
 		return -1;
 	}
-	ymd_printf("${[green][   OK ]}$ Passed!\n");
+	gettimeofday(&jiffx, NULL);
+	ymd_printf("${[!green][       OK ]}$ %s (%s)\n", full_name,
+			format_interval(&start, &jiffx, itv, sizeof(itv)));
 	yut_call(l, test, teardown);
-	ymd_printf("${[green][------]}$ Test teardown.\n");
 	return 0;
 }
 
@@ -219,6 +234,7 @@ static int yut_test(struct ymd_mach *vm, const char *clazz,
 		return -1; // Test Fail
 	}
 	yut_call(l, test, init); // ---- Initialize
+	ymd_printf("${[!green][----------]}$ %s setup\n", clazz);
 	for (i = skls_x(test)->head->fwd[0]; i != NULL; i = i->fwd[0]) {
 		const char *caze = kstr_of(l, &i->k)->land;
 		if (!strstr(caze, "test") || TYPEV(&i->v) != T_FUNC)
@@ -228,6 +244,7 @@ static int yut_test(struct ymd_mach *vm, const char *clazz,
 			break;
 	}
 	yut_call(l, test, final); // ---- Finalize
+	ymd_printf("${[!green][----------]}$ %s teardown\n\n", clazz);
 	return 0;
 }
 
@@ -278,7 +295,7 @@ int ymd_test(struct ymd_context *l, int argc, char *argv[]) {
 		clazz = kstr_of(l, &i->k)->land;
 		if (strstr(clazz, "Test")) {
 			if (yut_test(l->vm, clazz, &i->v) < 0)
-				return -1;
+				return 1;
 			break;
 		}
 	}
