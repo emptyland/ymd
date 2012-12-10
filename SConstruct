@@ -4,17 +4,20 @@ from SCons.Script import *
 conf = {
 	'CC': 'clang',
 	'CXX': 'clang++',
-	'CCFLAGS': '-fcolor-diagnostics -O0 -g3 -Wall -Wextra'
+	'CCFLAGS': '-O0 -g3 -Wall -Wextra'
 }
 
-#if not ARGUMENTS.get('debug', 0):
-#	conf['CCFLAGS'] = conf['CCFLAGS'] + ' -g'
+# Use environment vairable for configuration
 if os.environ.has_key('CC'):
 	conf['CC'] = os.environ['CC']
 if os.environ.has_key('CXX'):
 	conf['CXX'] = os.environ['CXX']
 if os.environ.has_key('CCFLAGS'):
 	conf['CCFLAGS'] = os.environ['CCFLAGS']
+
+if conf['CC'].startswith('clang') or conf['CXX'].startswith('clang'):
+	conf['CCFLAGS'] = conf['CCFLAGS'] + ' -fcolor-diagnostics'
+
 env = Environment(CC = conf['CC'],
 	CXX = conf['CXX'],
 	CCFLAGS = conf['CCFLAGS'],
