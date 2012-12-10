@@ -11,7 +11,7 @@ struct yut_cookie {
 };
 
 static inline void yut_fault() {
-	ymd_printf(yRED"[ FAIL ]"yEND" Test fail, stop all.\n");
+	ymd_printf("%{[red][ FAIL ]}% Test fail, stop all.\n");
 }
 
 static inline struct yut_cookie *yut_jpt(L, struct variable *self) {
@@ -34,10 +34,10 @@ static void yut_fail2(L, const char *op,
 	struct zostream os0 = ZOS_INIT, os1 = ZOS_INIT;
 	tostring(&os0, arg0);
 	tostring(&os1, arg1);
-	ymd_printf(yYELLOW"[  XXX ] %s:%d Assert fail: "yEND
-	           "("yPURPLE"%s"yEND") %s ("yPURPLE"%s"yEND")\n"
-			   "Expected : <"yPURPLE"%s"yEND">\n"
-			   "Actual   : <"yPURPLE"%s"yEND">\n",
+	ymd_printf("%{[yellow][  XXX ] %s:%d Assert fail: }%"
+	           "(%{[purple]%s}%) %s (%{[purple]%s}%)\n"
+			   "Expected : <%{[purple]%s}%>\n"
+			   "Actual   : <%{[purple]%s}%>\n",
 			   fn->u.core->file->land,
 			   fn->u.core->line[up->pc - 1],
 			   zos_buf(&os0),
@@ -64,7 +64,7 @@ static void yut_fail0(L) {
 		tostring(&os, ax->elem + i);
 		zos_append(&os, "\n", 1);
 	}
-	ymd_printf(yYELLOW"[  XXX ] %s\n"yEND
+	ymd_printf("%{[yellow][  XXX ] %s}%\n"
 			   "Runtime error: %s\nBacktrace:\n%s",
 			   kstr_of(l, ymd_top(l, 1))->land,
 			   kstr_of(l, ymd_top(l, 2))->land,
@@ -78,11 +78,8 @@ static void yut_fail1(L, const char *expected,
 	struct call_info *up = l->info->chain;
 	struct func *fn = up->run;
 	struct zostream os = ZOS_INIT;
-	ymd_printf(yYELLOW"[  XXX ] %s:%d Assert fail, expected"yEND
-	           yPURPLE"<%s>"yEND
-	           yYELLOW", unexpected"yEND
-	           yPURPLE"<%s>"yEND
-	           ";\n",
+	ymd_printf("%{[yellow][  XXX ] %s:%d Assert fail, expected}%"
+	           "%{[purple]<%s>, unexpected}%%{[purple]<%s>}%;\n",
 			   fn->u.core->file->land,
 	           fn->u.core->line[up->pc - 1],
 	           expected,
@@ -95,7 +92,7 @@ static int libx_Fail(L) {
 	const struct kstr *arg0 = kstr_of(l, ymd_argv_get(l, 1));
 	struct call_info *up = l->info->chain;
 	struct func *fn = up->run;
-	ymd_printf(yYELLOW"[  XXX ] %s:%d Fail: %s\n"yEND,
+	ymd_printf("%{[yellow][  XXX ] %s:%d Fail: %s}%\n",
 	           fn->u.core->file->land,
 			   fn->u.core->line[up->pc - 1],
 	           arg0->land);
@@ -191,18 +188,18 @@ static int yut_case(
 	strncpy(full_name, clazz, sizeof(full_name));
 	strcat(full_name, ".");
 	strcat(full_name, caze);
-	ymd_printf(yGREEN"[======]"yEND" Test "yPURPLE"%s"yEND" setup.\n",
+	ymd_printf("%{[green][======]}% Test %{[purple]%s}% setup.\n",
 			   full_name);
 	yut_call(l, test, setup);
-	ymd_printf(yGREEN"[ RUN  ]"yEND" Running ...\n");
+	ymd_printf("%{[green][ RUN  ]}% Running ...\n");
 	if (yut_call(l, test, unit) < 0) {
 		yut_fail0(l);
 		yut_fault();
 		return -1;
 	}
-	ymd_printf(yGREEN"[   OK ]"yEND" Passed!\n");
+	ymd_printf("%{[green][   OK ]}% Passed!\n");
 	yut_call(l, test, teardown);
-	ymd_printf(yGREEN"[------]"yEND" Test teardown.\n");
+	ymd_printf("%{[green][------]}% Test teardown.\n");
 	return 0;
 }
 

@@ -13,18 +13,6 @@ int ymd_set_colored(int on) {
 	return old;
 }
 
-static int ymd_kesc(const char *z) {
-	int rv;
-	if (!*z || *z++ != '{')
-		return -1;
-	if (!*z || *z < 'a' || *z > 'm')
-		return -1;
-	rv = *z++ - 'a';
-	if (!*z || *z != '}')
-		return -1;
-	return rv;
-}
-
 static const struct {
 	size_t n;
 	const char *z;
@@ -46,48 +34,124 @@ static const struct {
 #undef ENTRY
 };
 
-static size_t ymd_kesc_do(int i, char *buf) {
-	assert(i >= 0);
-	assert(i < (int)(sizeof(kesc)/sizeof(kesc[0])));
-	strcpy(buf, kesc[i].z);
-	return kesc[i].n;
-}
-
-const char *ymd_print_paint(const char *priv) {
-	int ki, i = 0;
-	char *fmt;
-	const char *p;
-	size_t len = strlen(priv);
-	if (len == 0)
-		return strdup("");
-	fmt = calloc(len * 2, 1);
-	for (p = priv; *p; ++p) {
-		switch (*p) {
-		case '%':
-			if ((ki = ymd_kesc(p + 1)) < 0)
-				goto raw;
-			p += 3; // skip "%{a}" string
-			if (colored)
-				i += ymd_kesc_do(ki, fmt + i);
-			break;
-		default:
-		raw:
-			fmt[i++] = *p;
-			break;
-		}
+static int startswith(const char *z, const char *prefix) {
+	while (*prefix) {
+		if (*z++ != *prefix++)
+			return 0;
 	}
-	return fmt;
+	return 1;
 }
 
-// Example:
-// ymd_printf(yGREEN"[===]"yEND" %d", i);
-int ymd_printf(const char *raw, ...) {
-	va_list ap;
-	int rv;
-	const char *fmt = ymd_print_paint(raw);
-	va_start(ap, raw);
-	rv = vprintf(fmt, ap);
-	va_end(ap);
-	free((char *)fmt);
+
+/*
+enum ymd_color_e {
+	0  cEND, 
+	1  cRED,
+	2  cGREEN,
+	3  cYELLOW,
+	4  cBLUE,
+	5  cPURPLE,
+	6  cAZURE,
+	7  dRED,
+	8  dGREEN,
+	9  dYELLOW,
+	10 dBLUE,
+	11 dPURPLE,
+	12 dAZURE,
+};
+*/
+static const char *lookup_escape(const char *z, int dark) {
+	int index = 0;
+	switch (*z) {
+	case 'e': case 'E':
+		index = 0;
+		break;
+	case 'r': case 'R':
+		index = 1;
+		break;
+	case 'g': case 'G':
+		index = 2;
+		break;
+	case 'y': case 'Y':
+		index = 3;
+		break;
+	case 'b': case 'B':
+		index = 4;
+		break;
+	case 'p': case 'P':
+		index = 5;
+		break;
+	case 'a': case 'A':
+		index = 6;
+		break;
+	default:
+		return NULL;
+	}
+	if (dark) index += 6;
+	return kesc[index].z;
+}
+
+static const char *colored_escape(const char *p) {
+	size_t len = strlen(p);
+	const char *k = p + len;
+	char *rv, *z;
+	if (!len)
+		return strdup("");
+	rv = calloc(len * 3, 1);
+	for (z = rv; p < k; ++p) {
+		if (startswith(p, "%{[")) {
+			const char *esc = NULL;
+			if (p[3] == '!') // Is %{[!red] prefix ?
+				esc = lookup_escape(p + 4, 1);
+			else
+				esc = lookup_escape(p + 3, 0);
+			if (esc) {
+				while (*esc)
+					*z++ = *esc++;
+				while (*p != ']') // Skip %{[red] prefix
+					p++;
+				continue;
+			}
+		}
+		if (startswith(p, "}%")) {
+			const char *esc = lookup_escape("end", 0);
+			if (esc) {
+				while (*esc)
+					*z++ = *esc++;
+				p += 1; // Skip "%}"
+				continue;
+			}
+		}
+		*z++ = *p;
+	}
 	return rv;
+}
+
+// "%{[!red] Read }%"
+int ymd_vfprintf(FILE *fp, const char *fmt, va_list ap) {
+	const char *rfmt = colored_escape(fmt);
+	int rv = vfprintf(fp, rfmt, ap);
+	free((void *)rfmt);
+	return rv;
+}
+
+int ymd_fprintf(FILE *fp, const char *fmt, ... ) {
+	int rv;
+	va_list ap;
+
+	va_start(ap, fmt);
+	rv = ymd_vfprintf(fp, fmt, ap);
+	va_end(ap);
+	return rv;
+}
+
+int ymd_printf(const char *fmt, ...) {
+	int rv;
+	va_list ap;
+
+	va_start(ap, fmt);
+	rv = ymd_vfprintf(stdout, fmt, ap);
+	va_end(ap);
+	return rv;
+
 }

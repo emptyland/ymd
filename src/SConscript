@@ -91,5 +91,6 @@ AllTest('''
 	lex
 	memory
 	pickle
-	zstream'''.split())
+	zstream
+	print'''.split())
 

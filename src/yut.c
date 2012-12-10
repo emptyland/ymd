@@ -1,3 +1,4 @@
+#include "print.h"
 #include "yut.h"
 #include <sys/time.h>
 #include <stdarg.h>
@@ -15,10 +16,10 @@ static int yut_fault_log2(
 	const char *s = asserted ? "Assertion" : "Expection";
 	char fmt[1024];
 	snprintf(fmt, sizeof(fmt), yut_colored(YELLOW) 
-		 "[ INFO ] %s:%d %s Failed!\n"
-		 "[   -- ] Notice: (%s) %s (%s)\n"
-		 "[   -- ] %s aka. %s\n"
-		 "[   -- ] %s aka. %s\n" yut_colorless(),
+		 "[   INFO   ] %s:%d %s Failed!\n"
+		 "[       -- ] Notice: (%s) %s (%s)\n"
+		 "[       -- ] %s aka. %s\n"
+		 "[       -- ] %s aka. %s\n" yut_colorless(),
 		 file, line, s, expected, desc, actual, expected, tag,
 		 actual, tag);
 	return vprintf(fmt, ap);
@@ -31,9 +32,8 @@ int yut_run_log1(
 	const char *desc,
 	const char *condition) {
 	const char *s = asserted ? "Assertion" : "Expection";
-	printf(yut_colored(YELLOW) 
-	       "[ INFO ] %s:%d %s Failed!\n"
-	       "[   -- ] Notice: (%s) %s\n" yut_colorless(),
+	ymd_printf("%{[yellow][   INFO   ] %s:%d %s Failed!\n"
+	       "[       -- ] Notice: (%s) %s}%\n",
 	       file, line, s, condition, desc);
 	return asserted ? -1 : 1;
 }
@@ -65,11 +65,10 @@ int yut_run_logz(
 	const char *lhs,
 	const char *rhs) {
 	const char *s = asserted ? "Assertion" : "Expection";
-	printf(yut_colored(YELLOW) 
-	       "[ INFO ] %s:%d %s Failed!\n"
-	       "[   -- ] Notice: (%s) %s (%s)\n"
-	       "[   -- ] %s aka. %s\n"
-	       "[   -- ] %s aka. %s\n" yut_colorless(),
+	ymd_printf("%{[yellow][   INFO   ] %s:%d %s Failed!\n"
+	       "[       -- ] Notice: (%s) %s (%s)\n"
+	       "[       -- ] %s aka. %s\n"
+	       "[       -- ] %s aka. %s}%\n",
 	       file, line, s, expected, desc, actual, expected, lhs,
 	       actual, rhs);
 	return asserted ? -1 : 1;
@@ -93,23 +92,16 @@ int yut_run_test(yut_case_t func, void *context, const char *name) {
 	int err, rv;
 	struct timeval jiffx, start;
 	char itv[32];
-	printf(yut_colored(GREEN)"[======]"yut_colorless()
-	       " Test "yut_colored(PURPLE)"%s"yut_colorless()" setup\n",
-		   name);
-	printf(yut_colored(GREEN)"[ RUN  ]"yut_colorless()
-	       " Running ...\n");
+	ymd_printf("%{[!green][ RUN      ]}% %s\n", name);
 	rv = gettimeofday(&start, NULL);
 	err = (*func)(context);
 	rv = gettimeofday(&jiffx, NULL);
 	if (err)
-		printf(yut_colored(RED)"[FALIED]"yut_colorless()
-		       " Run test error\n");
+		ymd_printf("%{[red][  FAILED  ]}% %s(%s)\n", name,
+				format_interval(&start, &jiffx, itv, sizeof(itv)));
 	else
-		printf(yut_colored(GREEN)"[   OK ]"yut_colorless()
-		       " Passed!\n");
-	printf(yut_colored(GREEN)"[------]"yut_colorless()
-	       " Test teardown, cast: %s\n",
-		   format_interval(&start, &jiffx, itv, sizeof(itv)));
+		ymd_printf("%{[!green][       OK ]}% %s(%s)\n", name,
+				format_interval(&start, &jiffx, itv, sizeof(itv)));
 	return err;
 }
 
@@ -136,11 +128,9 @@ int yut_time_log1(const char *file, int line) {
 	char itv[32];
 	assert(top != NULL);
 	rv = gettimeofday(&jiffx, NULL);
-	printf(yut_colored(GREEN)"[ COST ]"yut_colorless()
-	       " === %s:%d code: %s\n",
+	ymd_printf("%{[!green][   COST   ]}% === %s:%d code: %s\n",
 		   top->file, top->line, top->id);
-	printf(yut_colored(GREEN)"[   -- ]"yut_colorless()
-	       " --- %s:%d cost: %s\n",
+	ymd_printf("%{[!green][       -- ]}% --- %s:%d cost: %s\n",
 		   file, line,
 		   format_interval(&top->val, &jiffx, itv, sizeof(itv)));
 	return rv;
@@ -230,8 +220,7 @@ static int yut_foreach_with(struct options *opt) {
 		}
 
 		// Setup
-		printf(yut_colored(GREEN)"[======] "yut_colorless()
-				"%s setup\n", test->name);
+		ymd_printf("%{[!green][==========]}% %s setup\n", test->name);
 		// Run defined test
 		for (i = 0; i < YUT_MAX_CASE; ++i) {
 			char full_name[128];
@@ -258,8 +247,7 @@ static int yut_foreach_with(struct options *opt) {
 				(*test->teardown)(context);
 		}
 		// Test Finalize
-		printf(yut_colored(GREEN)"[======] "yut_colorless()
-				"%s teardown\n\n", test->name);
+		ymd_printf("%{[!green][==========]}% %s teardown\n\n", test->name);
 	}
 	return 0;
 }

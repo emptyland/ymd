@@ -1,16 +1,6 @@
 #include "yut_rand.h"
 #include "testing/yut_test.def"
 
-static void *setup() {
-	printf("Setup!\n");
-	return NULL;
-}
-
-static void teardown (void *p) {
-	(void)p;
-	printf("Teardown!\n");
-}
-
 static int test_sanity(void *p) {
 	(void)p;
 	printf("It's sanity!\n");
