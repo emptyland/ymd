@@ -18,7 +18,7 @@ syntax region ymdComment start="//" skip="\\$" end="$"
 syntax region ymdString start=+L\="+ skip=+\\\\\|\\"+ end=+"+
 
 syntax keyword ymdCondition if elif else
-syntax keyword ymdLoop for while break continue in
+syntax keyword ymdLoop for while break continue in fail
 syntax keyword ymdReturn return
 
 hi def link ymdCondition Statement

@@ -13,6 +13,7 @@
 #undef ERROR
 #endif
 
+// Define all tokens:
 #define DECL_TOKEN(v) \
 	v(NIL, "nil") \
 	v(TRUE, "true") \
@@ -20,6 +21,7 @@
 	v(STRING, "<raw>") \
 	v(HEX_LITERAL, "<hex>") \
 	v(DEC_LITERAL, "<dec>") \
+	v(FLOAT, "<float>") \
 	v(LE, "<") \
 	v(GE, "<=") \
 	v(NE, "!=") \
@@ -45,7 +47,8 @@
 	v(BREAK, "break") \
 	v(CONTINUE, "continue") \
 	v(TYPEOF, "typeof") \
-	v(IN, "in")
+	v(IN, "in") \
+	v(FAIL, "fail") \
 
 #define DEFINE_TOKEN(tok, literal) tok,
 enum ymd_token {

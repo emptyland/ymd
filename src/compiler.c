@@ -18,6 +18,7 @@ struct loop_info {
 	struct loop_info *chain;
 	ushort_t i_retry;
 	ushort_t i_jcond;
+	ushort_t i_fail;
 	uint_t jmt[128];  // jumping table
 	int njmt;
 	int death; // is death loop
@@ -232,6 +233,16 @@ static inline void ymk_hack_jmp(
 	ymk_hack(p, i, asm_build(op, bwd ? F_BACKWARD : F_FORWARD, off));
 }
 
+// Jmp to fail block
+static inline void ymk_fail_jmp(struct ymd_parser *p, ushort_t i_fail,
+		ushort_t i, uchar_t op) {
+	const struct chunk *core = p->blk;
+	ushort_t off = i_fail - i;
+	assert(core->kinst >= i);
+	ymk_hack(p, i, asm_build(op, F_FORWARD, off));
+}
+
+
 static inline void ymk_emit_func(
 	struct ymd_parser *p,
 	const struct func_decl_desc *desc,
@@ -273,12 +284,26 @@ static inline void ymk_loop_leave(struct ymd_parser *p) {
 	assert(p->loop->i_retry <= i_curr);
 	// Jump back
 	ymk_emit_jmp(p, p->loop->i_retry, 1);
+	// Has `fail' block?
+	if (ymc_peek(p) == FAIL) {
+		ymc_next(p); // Skip `fail'
+		p->loop->i_fail = ymk_ipos(p);
+		parse_block(p);
+	}
 	// Fillback breack statements
 	i = p->loop->njmt;
-	while (i--) {
-		const uint_t i_jpt = p->loop->jmt[i];
-		assert(i_jpt <= i_curr);
-		ymk_hack_jmp(p, i_jpt, I_JMP, 0);
+	if (p->loop->i_fail > 0) {
+		while (i--) {
+			const uint_t i_jpt = p->loop->jmt[i];
+			assert(i_jpt <= p->loop->i_fail);
+			ymk_fail_jmp(p, p->loop->i_fail, i_jpt, I_JMP);
+		}
+	} else {
+		while (i--) {
+			const uint_t i_jpt = p->loop->jmt[i];
+			assert(i_jpt <= i_curr);
+			ymk_hack_jmp(p, i_jpt, I_JMP, 0);
+		}
 	}
 	// Fillback foreach
 	if (!p->loop->death)

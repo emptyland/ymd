@@ -65,8 +65,10 @@ int main(int argc, char *argv[]) {
 	ymd_load_os(vm);
 	ymd_load_pickle(vm);
 	if (opt.test) ymd_load_ut(vm);
-	if (opt.debug)
+	if (opt.debug) {
 		if (l->top > l->stk) dasm_func(stdout, func_k(ymd_top(l, 0)));
+		return 0;
+	}
 	if (opt.test)
 		i = ymd_test(l, argc - opt.argv_off, argv + opt.argv_off);
 	else
