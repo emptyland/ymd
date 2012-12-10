@@ -1,13 +1,23 @@
 #ifndef YMD_VALUE_INL_H
 #define YMD_VALUE_INL_H
 
-#define DEFINE_REFCAST(name, tt) \
+//
+// Type getter
+//
+static inline int TYPEV(const struct variable *var) {
+	return (var)->tt == T_REF ? (var)->u.ref->type : (var)->tt;
+}
+
+//
+// Get referenced object for variable
+//
+#define DEFINE_REFCAST(name, ty) \
 static inline struct name *name##_x(struct variable *var) { \
-	assert(var->u.ref->type == tt); \
+	assert(var->u.ref->type == ty); \
 	return (struct name *)var->u.ref; \
 } \
 static inline const struct name *name##_k(const struct variable *var) { \
-	assert(var->u.ref->type == tt); \
+	assert(var->u.ref->type == ty); \
 	return (const struct name *)var->u.ref; \
 } \
 static inline struct name *name##_f(void *o) { \
@@ -16,49 +26,40 @@ static inline struct name *name##_f(void *o) { \
 DECL_TREF(DEFINE_REFCAST)
 #undef DEFINE_REFCAST
 
-#define DECL_REFOF(name, tt) \
-struct name *name##_of(struct ymd_context *l, struct variable *var);
+#define DECL_REFOF(name, ty) \
+	struct name *name##_of(struct ymd_context *l, struct variable *var);
 DECL_TREF(DECL_REFOF)
 #undef DECL_REFOF
 
-#define mand_cast(var, tt, type) ((type)mand_land(var, tt))
+#define mand_cast(var, ty, type) ((type)mand_land(var, ty))
 
-#define is_nil(v) ((v)->type == T_NIL)
-#define is_ref(v) ((v)->type >= T_REF)
+#define is_nil(v) ((v)->tt == T_NIL)
+#define is_ref(v) ((v)->tt == T_REF)
 
-/*
-#define setv_nil(v) \
-	{ (v)->type = T_NIL; (v)->u.i = 0; }
-#define setv_int(v, x) \
-	{ (v)->type = T_INT; (v)->u.i = (x); }
-#define setv_bool(v, x) \
-	{ (v)->type = T_BOOL; (v)->u.i = (x); }
-#define setv_ext(v, x) \
-	{ (v)->type = T_EXT; (v)->u.ext = (x); }
-#define setv_ref(v, x) \
-	{ (v)->type = gcx(x)->type; (v)->u.ref = gcx(x); }
-*/
+//
+// Variable setter:
+//
 static inline void setv_nil (struct variable *v) {
-	v->type = T_NIL; v->u.i = 0;
+	v->tt = T_NIL; v->u.i = 0;
 }
 #define VSET_DECL(name, arg1) \
 	static inline void setv_##name (struct variable *v, arg1 x)
 VSET_DECL(int, ymd_int_t) {
-	v->type = T_INT; v->u.i = x;
+	v->tt = T_INT; v->u.i = x;
 }
 VSET_DECL(bool, ymd_int_t) {
-	v->type = T_BOOL; v->u.i = x;
+	v->tt = T_BOOL; v->u.i = x;
 }
 VSET_DECL(ext, void *) {
-	v->type = T_EXT; v->u.ext = x;
+	v->tt = T_EXT; v->u.ext = x;
 }
 VSET_DECL(ref, struct gc_node *) {
-	v->type = gcx(x)->type; v->u.ref = gcx(x);
+	v->tt = T_REF; v->u.ref = gcx(x);
 }
 #undef VSET_DECL
-#define DEFINE_SETTER(name, tt) \
+#define DEFINE_SETTER(name, ty) \
 static inline void setv_##name(struct variable *v, struct name *o) { \
-	v->type = tt; \
+	v->tt = T_REF; \
 	v->u.ref = gcx(o); \
 }
 DECL_TREF(DEFINE_SETTER)

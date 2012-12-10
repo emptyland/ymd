@@ -26,7 +26,7 @@ static int test_dyay_creation_1 (struct ymd_mach *vm) {
 	rv = dyay_add(vm, arr);
 	ASSERT_NOTNULL(rv);
 	ASSERT_FALSE(rv == knil);
-	ASSERT_EQ(uint, rv->type, T_NIL);
+	ASSERT_EQ(int, TYPEV(rv), T_NIL);
 	ASSERT_EQ(large, rv->u.i, 0LL);
 	ASSERT_EQ(uint, arr->count, 1);
 	ASSERT_EQ(uint, arr->max, 16);
@@ -51,18 +51,18 @@ static int test_dyay_addition_1 (struct ymd_mach *vm) {
 		rv = dyay_add(vm, arr);
 		ASSERT_NOTNULL(rv);
 		ASSERT_FALSE(rv == knil);
-		ASSERT_EQ(uint, rv->type, T_NIL);
+		ASSERT_EQ(int, TYPEV(rv), T_NIL);
 		ASSERT_EQ(large, rv->u.i, 0LL);
 		ASSERT_EQ(uint, arr->count, k - i);
 
-		rv->type = T_INT;
+		rv->tt = T_INT;
 		rv->u.i = k - i - 1;
 	}
 	ASSERT_EQ(uint, arr->max, (arr->count - 1) * 3 / 2 + 16);
 	i = k;
 	while (i--) {
 		rv = dyay_get(arr, i);
-		ASSERT_EQ(uint, rv->type, T_INT);
+		ASSERT_EQ(int, TYPEV(rv), T_INT);
 		ASSERT_EQ(large, rv->u.i, i);
 	}
 	return 0;
@@ -77,7 +77,7 @@ static int test_dyay_addition_2 (struct ymd_mach *vm) {
 	TIME_RECORD_BEGIN(addition)
 	while (i--) {
 		rv = dyay_add(vm, arr);
-		rv->type = T_INT;
+		rv->tt = T_INT;
 		rv->u.i = BENCHMARK_COUNT - i - 1;
 	}
 	TIME_RECORD_END
@@ -86,7 +86,7 @@ static int test_dyay_addition_2 (struct ymd_mach *vm) {
 		while (i--) {
 			size_t index = RAND_RANGE(ularge, 0, BENCHMARK_COUNT);
 			rv = dyay_get(arr, index);
-			ASSERT_EQ(uint, rv->type, T_INT);
+			ASSERT_EQ(int, TYPEV(rv), T_INT);
 			ASSERT_EQ(large, rv->u.i, index);
 		}
 	RAND_END
@@ -111,7 +111,7 @@ static int test_dyay_addition_3 (struct ymd_mach *vm) {
 static void add_int (struct dyay *dya, ymd_int_t i,
 		struct ymd_mach *vm) {
 	struct variable *rv = dyay_add(vm, dya);
-	rv->type = T_INT;
+	rv->tt = T_INT;
 	rv->u.i = i;
 }
 

@@ -241,19 +241,19 @@ static int test_load_simple (struct ymd_mach *vm) {
 	zis_pipe(&is, &os);
 
 	i = ymd_parse(&is, CHECK_OK);
-	ASSERT_EQ(uint, ymd_top(l, 0)->type, T_NIL);
+	ASSERT_EQ(uint, ymd_top(l, 0)->tt, T_NIL);
 	ymd_pop(l, 1);
 
 	i = ymd_parse(&is, CHECK_OK);
-	ASSERT_EQ(uint,  ymd_top(l, 0)->type,    T_INT);
+	ASSERT_EQ(uint,  ymd_top(l, 0)->tt,    T_INT);
 	ASSERT_EQ(large, ymd_top(l, 0)->u.i, 0x8040);
 
 	i = ymd_parse(&is, CHECK_OK);
-	ASSERT_EQ(uint,  ymd_top(l, 0)->type,    T_BOOL);
+	ASSERT_EQ(uint,  ymd_top(l, 0)->tt,    T_BOOL);
 	ASSERT_EQ(large, ymd_top(l, 0)->u.i, 1);
 
 	i = ymd_parse(&is, CHECK_OK);
-	ASSERT_EQ(uint,  ymd_top(l, 0)->type,    T_BOOL);
+	ASSERT_EQ(uint,  ymd_top(l, 0)->tt,    T_BOOL);
 	ASSERT_EQ(large, ymd_top(l, 0)->u.i, 0);
 	zis_final(&is);
 	zos_final(&os);
@@ -273,7 +273,7 @@ static int test_load_kstr (struct ymd_mach *vm) {
 	zis_pipe(&is, &os);
 
 	i = ymd_parse(&is, CHECK_OK);
-	ASSERT_EQ(uint, ymd_top(l, 0)->type, T_KSTR);
+	ASSERT_EQ(int, TYPEV(ymd_top(l, 0)), T_KSTR);
 	ASSERT_STREQ(kstr_k(ymd_top(l, 0))->land, "01234567");
 	ymd_pop(l, 1);
 
@@ -305,17 +305,17 @@ static int test_load_dyay (struct ymd_mach *vm) {
 	zis_pipe(&is, &os);
 
 	i = ymd_parse(&is, CHECK_OK);
-	ASSERT_EQ(uint, ymd_top(l, 0)->type, T_DYAY);
+	ASSERT_EQ(int, TYPEV(ymd_top(l, 0)), T_DYAY);
 	ax = dyay_x(ymd_top(l, 0));
 	ASSERT_EQ(int,   ax->count, 3);
 
-	ASSERT_EQ(uint,  ax->elem[0].type, T_INT);
+	ASSERT_EQ(uint,  ax->elem[0].tt, T_INT);
 	ASSERT_EQ(large, ax->elem[0].u.i, 0x20108040LL);
 
-	ASSERT_EQ(uint,  ax->elem[1].type, T_BOOL);
+	ASSERT_EQ(uint,  ax->elem[1].tt, T_BOOL);
 	ASSERT_EQ(large, ax->elem[1].u.i, 1LL);
 
-	ASSERT_EQ(uint,  ax->elem[2].type, T_KSTR);
+	ASSERT_EQ(int,  TYPEV(&ax->elem[2]), T_KSTR);
 	ASSERT_STREQ(kstr_k(ax->elem + 2)->land, "01234567");
 	ymd_pop(l, 1);
 
@@ -354,16 +354,16 @@ static int load_o (int tt, struct ymd_mach *vm) {
 
 	zis_pipe(&is, &os);
 	i = ymd_parse(&is, CHECK_OK);
-	ASSERT_EQ(uint, ymd_top(l, 0)->type, tt);
+	ASSERT_EQ(int, TYPEV(ymd_top(l, 0)), tt);
 	o = ymd_top(l, 0)->u.ref;
 
-	ASSERT_EQ(uint,  vm_mem(l->vm, o, "1st")->type, T_INT);
+	ASSERT_EQ(int,  vm_mem(l->vm, o, "1st")->tt, T_INT);
 	ASSERT_EQ(large, vm_mem(l->vm, o, "1st")->u.i, 1LL);
 
-	ASSERT_EQ(uint,  vm_mem(l->vm, o, "2nd")->type, T_INT);
+	ASSERT_EQ(int,  vm_mem(l->vm, o, "2nd")->tt, T_INT);
 	ASSERT_EQ(large, vm_mem(l->vm, o, "2nd")->u.i, 2LL);
 
-	ASSERT_EQ(uint,  vm_mem(l->vm, o, "3rd")->type, T_INT);
+	ASSERT_EQ(int,  vm_mem(l->vm, o, "3rd")->tt, T_INT);
 	ASSERT_EQ(large, vm_mem(l->vm, o, "3rd")->u.i, 3LL);
 
 	ymd_pop(l, 1);

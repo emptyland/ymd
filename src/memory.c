@@ -26,7 +26,7 @@ static inline int track(struct gc_struct *gc, struct gc_node *x) {
 
 static int gc_mark_var(struct variable *var) {
 	struct gc_node *o = var->u.ref;
-	switch (var->type) {
+	switch (TYPEV(var)) {
 	case T_KSTR:
 		o->marked |= GC_BLACK_BIT0;
 		break;

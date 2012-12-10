@@ -59,7 +59,7 @@ static inline const struct variable *do_keyz(struct func *fn, int i,
 	struct chunk *core = fn->u.core;
 	assert(i >= 0);
 	assert(i < core->kkval);
-	assert(core->kval[i].type == T_KSTR);
+	assert(TYPEV(core->kval + i) == T_KSTR);
 	*key = core->kval[i];
 	return key;
 }
@@ -94,7 +94,7 @@ static inline int vm_match(struct ymd_mach *vm,
 }
 
 static inline int vm_bool(const struct variable *lhs) {
-	switch (lhs->type) {
+	switch (TYPEV(lhs)) {
 	case T_NIL:
 		return 0;
 	case T_BOOL:
@@ -164,7 +164,7 @@ int vm_calc(struct ymd_context *l, unsigned op) {
 	case F_ADD: {
 		struct variable *rhs = ymd_top(l, 1),
 						*lhs = ymd_top(l, 0);
-		switch (rhs->type) {
+		switch (TYPEV(rhs)) {
 		case T_INT:
 			rhs->u.i = rhs->u.i + int_of(l, lhs);
 			break;
@@ -337,11 +337,11 @@ retry:
 				var = *vm_local(l, fn, asm_param(inst));
 				break;
 			case F_BOOL:
-				var.type = T_BOOL;
+				var.tt = T_BOOL;
 				var.u.i = asm_param(inst);
 				break;
 			case F_NIL:
-				var.type = T_NIL;
+				var.tt = T_NIL;
 				var.u.i = 0;
 				break;
 			case F_OFF:
@@ -379,7 +379,7 @@ retry:
 				assert(0);
 				break;
 			}
-			rhs->type = T_BOOL;
+			rhs->tt = T_BOOL;
 			ymd_pop(l, 1);
 			} break;
 		case I_GETF: {
@@ -400,7 +400,7 @@ retry:
 			}
 			} break;
 		case I_TYPEOF: {
-			const unsigned tt = ymd_top(l, 0)->type;
+			const unsigned tt = TYPEV(ymd_top(l, 0));
 			assert(tt < T_MAX);
 			setv_kstr(ymd_top(l, 0), typeof_kstr(vm, tt));
 			} break;

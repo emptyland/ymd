@@ -37,12 +37,12 @@
 #define MAX_CHUNK_LEN 512
 
 struct variable {
+	unsigned char tt;
 	union {
 		struct gc_node *ref;
 		void *ext;
 		ymd_int_t i;
 	} u;
-	unsigned char type;
 };
 
 // Byte Function
@@ -141,8 +141,8 @@ void *mand_land(struct ymd_context *l, struct variable *var,
                 const char *tt);
 
 // Literal type strings
-const char *typeof_kz(unsigned tt);
-struct kstr *typeof_kstr(struct ymd_mach *vm, unsigned tt);
+const char *typeof_kz(int tt);
+struct kstr *typeof_kstr(struct ymd_mach *vm, int tt);
 
 // Generic comparing
 int equals(const struct variable *lhs, const struct variable *rhs);

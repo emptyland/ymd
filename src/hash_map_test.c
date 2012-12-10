@@ -17,24 +17,18 @@ static int test_hmap_creation_1 (struct ymd_mach *vm) {
 	struct hmap *map = hmap_new(vm, 0);
 	struct variable k, *rv;
 
-	k.type = T_INT;
-	k.u.i = 1024;
-	rv = hmap_put(vm, map, &k);
-	rv->type = T_KSTR;
-	rv->u.ref = gcx(kstr_fetch(vm, "1024", -1));
+	setv_int(&k, 1024);
+	setv_kstr(hmap_put(vm, map, &k), kstr_fetch(vm, "1024", -1));
 
 	rv = hmap_put(vm, map, &k);
-	ASSERT_EQ(uint, rv->type, T_KSTR);
+	ASSERT_EQ(int, TYPEV(rv), T_KSTR);
 	ASSERT_STREQ(kstr_of(ioslate(vm), rv)->land, "1024");
 
-	k.type = T_KSTR;
-	k.u.ref = gcx(kstr_fetch(vm, "1024", -1));
-	rv = hmap_put(vm, map, &k);
-	rv->type = T_INT;
-	rv->u.i = 1024;
+	setv_kstr(&k, kstr_fetch(vm, "1024", -1));
+	setv_int(hmap_put(vm, map, &k), 1024);
 
 	rv = hmap_get(map, &k);
-	ASSERT_EQ(uint, rv->type, T_INT);
+	ASSERT_EQ(int, TYPEV(rv), T_INT);
 	ASSERT_EQ(large, rv->u.i, 1024);
 
 	setv_int(&k, 1024);
@@ -47,16 +41,13 @@ static int test_hmap_creation_1 (struct ymd_mach *vm) {
 
 static int test_hmap_creation_2 (struct ymd_mach *vm) {
 	struct hmap *map = hmap_new(vm, 0);
-	struct variable k, *rv;
+	struct variable k;
 	int i = BENCHMARK_COUNT;
 	RAND_BEGIN(NORMAL)
 		while (i--) {
 			const struct yut_kstr *kz = RAND_STR();
-			k.type = T_KSTR;
-			k.u.ref = gcx(kstr_fetch(vm, kz->land, kz->len));
-			rv = hmap_put(vm, map, &k);
-			rv->type = T_INT;
-			rv->u.i = i;
+			setv_kstr(&k, kstr_fetch(vm, kz->land, kz->len));
+			setv_int(hmap_put(vm, map, &k), i);
 		}
 	RAND_END
 	return 0;
@@ -93,27 +84,24 @@ static int test_hmap_insertion_2 (struct ymd_mach *vm) {
 
 static int test_hmap_search_1 (struct ymd_mach *vm) {
 	struct hmap *map = hmap_new(vm, 0);
-	struct variable k, *rv;
+	struct variable k;
 	char buf[32];
 	int i = BENCHMARK_COUNT;
 	while (i--) {
 		snprintf(buf, sizeof(buf), "%d", i);
-		k.type = T_KSTR;
-		k.u.ref = gcx(kstr_fetch(vm, buf, -1));
-		rv = hmap_put(vm, map, &k);
-		rv->type = T_INT;
-		rv->u.i = i;
+		setv_kstr(&k, kstr_fetch(vm, buf, -1));
+		setv_int(hmap_put(vm, map, &k), i);
 	}
 	i = BENCHMARK_COUNT;
 	RAND_BEGIN(NORMAL)
 		TIME_RECORD_BEGIN(searching)
 		while (i--) {
+			struct variable *rv;
 			unsigned int index = RAND_RANGE(uint, 0, BENCHMARK_COUNT);
 			snprintf(buf, sizeof(buf), "%u", index);
-			k.type = T_KSTR;
-			k.u.ref = gcx(kstr_fetch(vm, buf, -1));
+			setv_kstr(&k, kstr_fetch(vm, buf, -1));
 			rv = hmap_get(map, &k);
-			ASSERT_EQ(uint, rv->type, T_INT);
+			ASSERT_EQ(int, TYPEV(rv), T_INT);
 			ASSERT_EQ(large, rv->u.i, index);
 		}
 		TIME_RECORD_END
@@ -145,12 +133,9 @@ static int test_hmap_search_2 (struct ymd_mach *vm) {
 static struct hmap *build_hmap(struct hmap *x, const int *raw, long i,
 		struct ymd_mach *vm) {
 	while (i--) {
-		struct variable k, *rv;
-		k.type = T_INT;
-		k.u.i = raw[i];
-		rv = hmap_put(vm, x, &k);
-		rv->type = T_INT;
-		rv->u.i = i;
+		struct variable k;
+		setv_int(&k, raw[i]);
+		setv_int(hmap_put(vm, x, &k), i);
 	}
 	return x;
 }
@@ -205,7 +190,7 @@ static int test_hmap_removing (struct ymd_mach *vm) {
 
 	setv_int(&k, 1024);
 	setv_int(hmap_put(vm, map, &k), 1000); // put 1024: 1000
-	ASSERT_EQ(uint,  hmap_get(map, &k)->type, T_INT);
+	ASSERT_EQ(uint,  hmap_get(map, &k)->tt, T_INT);
 	ASSERT_EQ(large, hmap_get(map, &k)->u.i,  1000LL);
 
 	setv_int(&k, 14);

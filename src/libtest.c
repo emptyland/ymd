@@ -54,7 +54,7 @@ static void yut_fail0(L) {
 	int i;
 	struct zostream os = ZOS_INIT;
 	struct dyay *ax;
-	if (l->top - l->stk < 3 || ymd_top(l, 0)->type != T_DYAY) {
+	if (l->top - l->stk < 3 || TYPEV(ymd_top(l, 0)) != T_DYAY) {
 		return;
 	}
 	// print backtrace info
@@ -104,14 +104,14 @@ static int libx_True(L) {
 	struct variable *arg0 = ymd_argv_get(l, 1);
 	if (is_nil(arg0))
 		yut_fail1(l, "not nil", arg0);
-	if (arg0->type == T_BOOL && !arg0->u.i)
+	if (TYPEV(arg0) == T_BOOL && !arg0->u.i)
 		yut_fail1(l, "true or not nil", arg0);
 	return 0;
 }
 
 static int libx_False(L) {
 	struct variable *arg0 = ymd_argv_get(l, 1);
-	if (!is_nil(arg0) && (arg0->type == T_BOOL && arg0->u.i))
+	if (!is_nil(arg0) && (TYPEV(arg0) == T_BOOL && arg0->u.i))
 		yut_fail1(l, "false or nil", arg0);
 	return 0;
 }
@@ -158,7 +158,7 @@ DEFINE_BIN_ASSERT(GE, compare, < 0 )
 static struct func *yut_method(struct ymd_mach *vm, void *o,
                                const char *field) {
 	struct variable *found = vm_mem(vm, o, field);
-	if (is_nil(found) || found->type != T_FUNC)
+	if (is_nil(found) || TYPEV(found) != T_FUNC)
 		return NULL;
 	return func_x(found);
 }
@@ -208,7 +208,7 @@ static int yut_test(struct ymd_mach *vm, const char *clazz,
 	struct sknd *i;
 	struct func *setup, *teardown, *init, *final;
 	struct ymd_context *l = ioslate(vm);
-	if (test->type != T_SKLS)
+	if (TYPEV(test) != T_SKLS)
 		return 0;
 	setup    = yut_method(vm, test->u.ref, "setup");
 	teardown = yut_method(vm, test->u.ref, "teardown");
@@ -221,7 +221,7 @@ static int yut_test(struct ymd_mach *vm, const char *clazz,
 	yut_call(l, test, init); // ---- Initialize
 	for (i = skls_x(test)->head->fwd[0]; i != NULL; i = i->fwd[0]) {
 		const char *caze = kstr_of(l, &i->k)->land;
-		if (!strstr(caze, "test") || i->v.type != T_FUNC)
+		if (!strstr(caze, "test") || TYPEV(&i->v) != T_FUNC)
 			continue;
 		if (yut_case(l, clazz, caze, test, setup, teardown,
 			         func_x(&i->v)) < 0)

@@ -22,13 +22,13 @@ static const struct typeof_z typeof_name[] = {
 	{ 7, "managed", },
 };
 
-const char *typeof_kz(unsigned tt) {
-	assert(tt < sizeof(typeof_name)/sizeof(typeof_name[0]));
+const char *typeof_kz(int tt) {
+	assert(tt < (int)ARRAY_SIZEOF(typeof_name));
 	return typeof_name[tt].name;
 }
 
-struct kstr *typeof_kstr(struct ymd_mach *vm, unsigned tt) {
-	assert(tt < sizeof(typeof_name)/sizeof(typeof_name[0]));
+struct kstr *typeof_kstr(struct ymd_mach *vm, int tt) {
+	assert(tt < (int)ARRAY_SIZEOF(typeof_name));
 	return kstr_fetch(vm, typeof_name[tt].name, typeof_name[tt].len);
 }
 
@@ -37,7 +37,7 @@ struct kstr *typeof_kstr(struct ymd_mach *vm, unsigned tt) {
 //-------------------------------------------------------------------------
 static struct variable knil_fake_var = {
 	.u = { .i = 0LL, },
-	.type = T_NIL,
+	.tt = T_NIL,
 };
 struct variable *knil = &knil_fake_var;
 
@@ -45,24 +45,24 @@ struct variable *knil = &knil_fake_var;
 // Type casting define:
 //-------------------------------------------------------------------------
 ymd_int_t int_of(struct ymd_context *l, const struct variable *var) {
-	if (var->type != T_INT)
+	if (var->tt != T_INT)
 		ymd_panic(l, "Variable is not `int`");
 	return var->u.i;
 }
 
 ymd_int_t bool_of(struct ymd_context *l, const struct variable *var) {
-	if (var->type != T_BOOL)
+	if (var->tt != T_BOOL)
 		ymd_panic(l, "Variable is not `bool`");
 	return var->u.i;
 }
 
-#define DEFINE_REFOF(name, tt)                   \
-struct name *name##_of(struct ymd_context *l,      \
-		struct variable *var) {                  \
-	if (var->type != tt)                         \
+#define DEFINE_REFOF(name, tt) \
+struct name *name##_of(struct ymd_context *l, \
+		struct variable *var) { \
+	if (TYPEV(var) != tt) \
 		ymd_panic(l, "Variable is not `"#name"`"); \
-	assert(var->u.ref != NULL);              \
-	return (struct name *)var->u.ref;        \
+	assert(var->u.ref != NULL); \
+	return (struct name *)var->u.ref; \
 }
 DECL_TREF(DEFINE_REFOF)
 #undef DEFINE_REFOF
@@ -82,9 +82,9 @@ void *mand_land(struct ymd_context *l, struct variable *var,
 int equals(const struct variable *lhs, const struct variable *rhs) {
 	if (lhs == rhs)
 		return 1;
-	if (lhs->type != rhs->type)
+	if (TYPEV(lhs) != TYPEV(rhs))
 		return 0;
-	switch (lhs->type) {
+	switch (TYPEV(lhs)) {
 	case T_NIL:
 		return 1;
 	case T_INT:
@@ -118,9 +118,9 @@ int equals(const struct variable *lhs, const struct variable *rhs) {
 int compare(const struct variable *lhs, const struct variable *rhs) {
 	if (lhs == rhs)
 		return 0;
-	if (lhs->type != rhs->type)
-		return safe_compare(lhs->type, rhs->type);
-	switch (lhs->type) {
+	if (TYPEV(lhs) != TYPEV(rhs))
+		return safe_compare(TYPEV(lhs), TYPEV(rhs));
+	switch (TYPEV(lhs)) {
 	case T_NIL:
 		return 0; // Do not compare a nil value.
 	case T_INT:

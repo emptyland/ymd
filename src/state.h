@@ -361,8 +361,8 @@ static inline void ymd_insert(L) {
 
 static inline void ymd_setmetatable(L) {
 	struct mand *o = mand_of(l, ymd_top(l, 1));
-	if (ymd_top(l, 0)->type != T_HMAP &&
-		ymd_top(l, 0)->type != T_SKLS) ymd_panic(l, "Not metatable type!");
+	if (TYPEV(ymd_top(l, 0)) != T_HMAP &&
+		TYPEV(ymd_top(l, 0)) != T_SKLS) ymd_panic(l, "Not metatable type!");
 	mand_proto(o, ymd_top(l, 0)->u.ref);
 	ymd_pop(l, 1);
 }

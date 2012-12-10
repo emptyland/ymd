@@ -126,7 +126,7 @@ int ymd_dump_func(struct zostream *os, const struct func *fn, int *ok) {
 int ymd_serialize(struct zostream *os, const struct variable *v,
 	              int *ok) {
 	int i = 0;
-	switch (v->type) {
+	switch (TYPEV(v)) {
 	case T_NIL:
 		i += zos_u32(os, T_NIL);
 		break;

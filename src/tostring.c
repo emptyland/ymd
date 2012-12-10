@@ -69,7 +69,7 @@ static const char *mand_tostring(struct zostream *os, const struct mand *o) {
 }
 
 const char *tostring(struct zostream *os, const struct variable *var) {
-	switch (var->type) {
+	switch (TYPEV(var)) {
 	case T_NIL:
 		zos_append(os, "nil", 3);
 		break;

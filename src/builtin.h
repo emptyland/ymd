@@ -32,4 +32,6 @@ typedef unsigned short     ushort_t;
 #define MAX_U16 0xFFFF
 #define MAX_U32 0xFFFFFFFF
 
+#define ARRAY_SIZEOF(arr) (sizeof(arr)/sizeof(arr[0]))
+
 #endif // YMD_BUILTIN_H

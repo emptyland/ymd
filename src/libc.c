@@ -70,7 +70,7 @@ static void checked_put(L, struct variable *arg0,
 						const struct variable *v) {
 	if (is_nil(k) || is_nil(v))
 		ymd_panic(l, "Value can not be `nil` in k-v pair");
-	switch (arg0->type) {
+	switch (TYPEV(arg0)) {
 	case T_HMAP:
 		*hmap_put(l->vm, hmap_x(arg0), k) = *v;
 		break;
@@ -78,7 +78,8 @@ static void checked_put(L, struct variable *arg0,
 		*skls_put(l->vm, skls_x(arg0), k) = *v;
 		break;
 	default:
-		ymd_panic(l, "This type: `%s` is not be support", typeof_kz(arg0->type));
+		ymd_panic(l, "This type: `%s` is not be support",
+				typeof_kz(TYPEV(arg0)));
 		break;
 	}
 }
@@ -91,7 +92,7 @@ static void checked_put(L, struct variable *arg0,
 //
 static int libx_insert(L) {
 	struct variable *arg0 = ymd_argv_get(l, 0);
-	switch (arg0->type) {
+	switch (TYPEV(arg0)) {
 	case T_DYAY:
 		do_insert(l, dyay_x(arg0));
 		break;
@@ -105,7 +106,7 @@ static int libx_insert(L) {
 static int libx_append(L) {
 	int i;
 	struct variable *arg0 = ymd_argv_get(l, 0);
-	switch (arg0->type) {
+	switch (TYPEV(arg0)) {
 	case T_DYAY:
 		for (i = 1; i < ymd_argv_chk(l, 2)->count; ++i)
 			*dyay_add(l->vm, dyay_x(arg0)) = ymd_argv(l)->elem[i];
@@ -123,7 +124,8 @@ static int libx_append(L) {
 		}
 		break;
 	default:
-		ymd_panic(l, "This type: `%s` is not be support", typeof_kz(arg0->type));
+		ymd_panic(l, "This type: `%s` is not be support",
+				typeof_kz(TYPEV(arg0)));
 		break;
 	}
 	return 0;
@@ -147,7 +149,7 @@ static int libx_remove(L) {
 // skiplist : number of k-v pairs;
 static int libx_len(L) {
 	const struct variable *arg0 = ymd_argv_get(l, 0);
-	switch (arg0->type) {
+	switch (TYPEV(arg0)) {
 	case T_NIL:
 		ymd_int(l, 0);
 		break;
@@ -174,7 +176,7 @@ static int libx_len(L) {
 	default:
 		ymd_panic(l, "This type: `%s` is not be support, "
 		       "need a container or string type",
-		       typeof_kz(arg0->type));
+		       typeof_kz(TYPEV(arg0)));
 		return 0;
 	}
 	return 1;
@@ -212,14 +214,11 @@ static int step_iter(L) {
 					*m = ymd_bval(l, 1),
 					*s = ymd_bval(l, 2),
 					rv;
-	rv.type = T_NIL;
-	rv.u.i = 0;
+	setv_nil(&rv);
 	if (s->u.i > 0 && i->u.i < m->u.i) {
-		rv.type = T_INT;
-		rv.u.i = i->u.i;
+		setv_int(&rv, i->u.i);
 	} else if (s->u.i < 0 && i->u.i > m->u.i) {
-		rv.type = T_INT;
-		rv.u.i = i->u.i;
+		setv_int(&rv, i->u.i);
 	}
 	i->u.i += s->u.i;
 	*ymd_push(l) = rv;
@@ -346,7 +345,7 @@ static int skls_iter(L) {
 }
 
 static int new_contain_iter(L, const struct variable *obj, int flag) {
-	switch (obj->type) {
+	switch (TYPEV(obj)) {
 	case T_DYAY:
 		ymd_nafn(l, dyay_iter, "__dyay_iter__", 5);
 		ymd_ext(l, dyay_k(obj)->elem);
@@ -542,7 +541,7 @@ static int libx_read(L) {
 	if (ymd_argv_chk(l, 1)->count == 1)
 		return ansic_file_readn(l, self, 128);
 	arg1 = ymd_argv_get(l, 1);
-	switch (arg1->type) {
+	switch (TYPEV(arg1)) {
 	case T_KSTR:
 		if (strcmp(kstr_k(arg1)->land, "*all") == 0)
 			return ansic_file_readall(l, self);
@@ -818,8 +817,8 @@ static int libx_gc(L) {
 
 static int libx_setmetatable(L) {
 	struct mand *o = mand_of(l, ymd_argv_get(l, 0));
-	if (ymd_argv_get(l, 1)->type != T_HMAP &&
-		ymd_argv_get(l, 1)->type != T_SKLS)
+	if (TYPEV(ymd_argv_get(l, 1)) != T_HMAP &&
+		TYPEV(ymd_argv_get(l, 1)) != T_SKLS)
 		ymd_panic(l, "Not metatable type!");
 	mand_proto(o, ymd_argv_get(l, 1)->u.ref);
 	return 0;

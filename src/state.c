@@ -87,7 +87,7 @@ struct variable *vm_put(struct ymd_mach *vm,
 	struct ymd_context *l = ioslate(vm);
 	if (is_nil(key))
 		ymd_panic(l, "No any key will be `nil`");
-	switch (var->type) {
+	switch (TYPEV(var)) {
 	case T_SKLS:
 		return skls_put(vm, skls_x(var), key);
 	case T_HMAP:
@@ -118,7 +118,7 @@ struct variable *vm_get(struct ymd_mach *vm, struct variable *var,
 	struct ymd_context *l = ioslate(vm);
 	if (is_nil(key))
 		ymd_panic(l, "No any key will be `nil`");
-	switch (var->type) {
+	switch (TYPEV(var)) {
 	case T_SKLS:
 		return skls_get(skls_x(var), key);
 	case T_HMAP:
@@ -207,7 +207,7 @@ struct variable *vm_putg(struct ymd_mach *vm, const char *field) {
 int vm_remove(struct ymd_mach *vm, struct variable *var,
               const struct variable *key) {
 	struct ymd_context *l = ioslate(vm);
-	switch (var->type) {
+	switch (TYPEV(var)) {
 	case T_DYAY:
 		return dyay_remove(vm, dyay_x(var), int_of(l, key));
 	case T_HMAP:

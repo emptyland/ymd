@@ -43,7 +43,7 @@ int blk_kz(struct ymd_mach *vm, struct chunk *core, const char *z, int k) {
 	int i = core->kkval;
 	struct kstr *kz;
 	while (i--) {
-		if (core->kval[i].type == T_KSTR &&
+		if (TYPEV(&core->kval[i]) == T_KSTR &&
 			kstr_k(core->kval + i)->len == k &&
 			memcmp(kstr_k(core->kval + i)->land, z, k) == 0)
 			return i;
@@ -57,7 +57,7 @@ int blk_kz(struct ymd_mach *vm, struct chunk *core, const char *z, int k) {
 int blk_ki(struct ymd_mach *vm, struct chunk *core, ymd_int_t n) {
 	int i = core->kkval;
 	while (i--) {
-		if (core->kval[i].type == T_INT &&
+		if (TYPEV(&core->kval[i]) == T_INT &&
 			core->kval[i].u.i == n)
 			return i;
 	}
@@ -69,7 +69,7 @@ int blk_kf(struct ymd_mach *vm, struct chunk *core, void *p) {
 	int i = core->kkval;
 	struct func *fn = p;
 	while (i--) {
-		if (core->kval[i].type == T_FUNC &&
+		if (TYPEV(&core->kval[i]) == T_FUNC &&
 		    core->kval[i].u.ref == p)
 			return i;
 	}

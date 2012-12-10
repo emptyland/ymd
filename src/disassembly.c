@@ -176,7 +176,7 @@ int dasm_func(FILE *fp, const struct func *fn) {
 		fprintf(fp, "\n");
 	}
 	for (i = 0; i < fn->u.core->kkval; ++i) {
-		if (fn->u.core->kval[i].type == T_FUNC)
+		if (TYPEV(&fn->u.core->kval[i]) == T_FUNC)
 			count += dasm_func(fp, func_k(fn->u.core->kval + i));
 	}
 	return count;
