@@ -99,26 +99,26 @@ static const char *colored_escape(const char *p) {
 		return strdup("");
 	rv = calloc(len * 3, 1);
 	for (z = rv; p < k; ++p) {
-		if (startswith(p, "%{[")) {
+		if (startswith(p, "${[")) {
 			const char *esc = NULL;
-			if (p[3] == '!') // Is %{[!red] prefix ?
+			if (p[3] == '!') // Is ${[!red] prefix ?
 				esc = lookup_escape(p + 4, 1);
 			else
 				esc = lookup_escape(p + 3, 0);
 			if (esc) {
 				while (*esc)
 					*z++ = *esc++;
-				while (*p != ']') // Skip %{[red] prefix
+				while (*p != ']') // Skip ${[red] prefix
 					p++;
 				continue;
 			}
 		}
-		if (startswith(p, "}%")) {
+		if (startswith(p, "}$")) {
 			const char *esc = lookup_escape("end", 0);
 			if (esc) {
 				while (*esc)
 					*z++ = *esc++;
-				p += 1; // Skip "%}"
+				p += 1; // Skip "$}"
 				continue;
 			}
 		}
@@ -127,7 +127,6 @@ static const char *colored_escape(const char *p) {
 	return rv;
 }
 
-// "%{[!red] Read }%"
 int ymd_vfprintf(FILE *fp, const char *fmt, va_list ap) {
 	const char *rfmt = colored_escape(fmt);
 	int rv = vfprintf(fp, rfmt, ap);

@@ -230,7 +230,7 @@ static int test_skls_removing (struct ymd_mach *vm) {
 	ASSERT_EQ(uint,  skls_get(map, &k)->type, T_INT);
 	ASSERT_EQ(large, skls_get(map, &k)->u.i,  10LL);
 	setv_int(&k, 4);
-	ASSERT_TRUE(skls_remove(vm, map, &k));
+	ASSERT_FALSE(skls_remove(vm, map, &k));
 	return 0;
 }
 

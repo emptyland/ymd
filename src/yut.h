@@ -189,24 +189,6 @@ int yut_time_record(const char *file, int line, const char *id,
 int yut_time_log1(const char *file, int line);
 
 //--------------------------------------------------------------------------
-// xterm color defines:
-//--------------------------------------------------------------------------
-#define YUT_COLOR_RED    "1;31"
-#define YUT_COLOR_GREEN  "1;32"
-#define YUT_COLOR_YELLOW "1;33"
-#define YUT_COLOR_BLUE   "1;34"
-#define YUT_COLOR_PURPLE "1;35"
-#define YUT_COLOR_AZURE  "1;36"
-
-#define yut_color(color)   YUT_COLOR_##color
-#define yut_colored(color) "\033[" YUT_COLOR_##color "m"
-#define yut_colorless()    "\033[0m"
-
-#define yut_paint_z(color) printf(yut_colored(color))
-#define yut_final_z() printf(yut_colorless())
-
-
-//--------------------------------------------------------------------------
 // Test case enter:
 //--------------------------------------------------------------------------
 #define YUT_MAX_CASE 48

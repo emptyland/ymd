@@ -23,8 +23,8 @@ enum ymd_color_e {
 
 // Colored printf
 // Example:
-// Red color :   "%{[red]The Red string}"
-// Green color : "%{[green]The Green string%}
+// Red color :   "${[red]The Red string}$"
+// Green color : "${[green]The Green string}$"
 int ymd_vfprintf(FILE *fp, const char *fmt, va_list ap);
 
 int ymd_fprintf(FILE *fp, const char *fmt, ...);

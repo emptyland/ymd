@@ -187,29 +187,29 @@ static int test_hmap_removing (struct ymd_mach *vm) {
 	struct hmap *map = hmap_new(vm, 0);
 	struct variable k;
 	setv_int(&k, 4);
-	setv_int(hmap_put(vm, map, &k), 0);
+	setv_int(hmap_put(vm, map, &k), 0); // put 4: 0
 	setv_int(&k, 14);
-	setv_int(hmap_put(vm, map, &k), 1);
+	setv_int(hmap_put(vm, map, &k), 1); // put 14: 1
 	setv_int(&k, 1024);
-	setv_int(hmap_put(vm, map, &k), 3);
+	setv_int(hmap_put(vm, map, &k), 3); // put 1024: 3
 
 	setv_int(&k, 4);
-	ASSERT_TRUE(hmap_remove(vm, map, &k));
+	ASSERT_TRUE(hmap_remove(vm, map, &k)); // rm 4
 	ASSERT_TRUE(knil == hmap_get(map, &k));
 	setv_int(&k, 1024);
-	ASSERT_TRUE(hmap_remove(vm, map, &k));
+	ASSERT_TRUE(hmap_remove(vm, map, &k)); // rm 1024
 	ASSERT_TRUE(knil == hmap_get(map, &k));
 	setv_int(&k, 14);
-	ASSERT_TRUE(hmap_remove(vm, map, &k));
+	ASSERT_TRUE(hmap_remove(vm, map, &k)); // rm 14
 	ASSERT_TRUE(knil == hmap_get(map, &k));
 
 	setv_int(&k, 1024);
-	setv_int(hmap_put(vm, map, &k), 1000);
+	setv_int(hmap_put(vm, map, &k), 1000); // put 1024: 1000
 	ASSERT_EQ(uint,  hmap_get(map, &k)->type, T_INT);
 	ASSERT_EQ(large, hmap_get(map, &k)->u.i,  1000LL);
 
 	setv_int(&k, 14);
-	ASSERT_TRUE(hmap_remove(vm, map, &k));
+	ASSERT_FALSE(hmap_remove(vm, map, &k)); // rm 14
 	return 0;
 }
 

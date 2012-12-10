@@ -15,14 +15,14 @@ static int yut_fault_log2(
 	va_list ap) {
 	const char *s = asserted ? "Assertion" : "Expection";
 	char fmt[1024];
-	snprintf(fmt, sizeof(fmt), yut_colored(YELLOW) 
-		 "[   INFO   ] %s:%d %s Failed!\n"
+	snprintf(fmt, sizeof(fmt),
+		 "${[yellow][   INFO   ] %s:%d %s Failed!\n"
 		 "[       -- ] Notice: (%s) %s (%s)\n"
 		 "[       -- ] %s aka. %s\n"
-		 "[       -- ] %s aka. %s\n" yut_colorless(),
+		 "[       -- ] %s aka. %s}$\n",
 		 file, line, s, expected, desc, actual, expected, tag,
 		 actual, tag);
-	return vprintf(fmt, ap);
+	return ymd_vfprintf(stdout, fmt, ap);
 }
 
 int yut_run_log1(
@@ -32,8 +32,8 @@ int yut_run_log1(
 	const char *desc,
 	const char *condition) {
 	const char *s = asserted ? "Assertion" : "Expection";
-	ymd_printf("%{[yellow][   INFO   ] %s:%d %s Failed!\n"
-	       "[       -- ] Notice: (%s) %s}%\n",
+	ymd_printf("${[yellow][   INFO   ] %s:%d %s Failed!\n"
+	       "[       -- ] Notice: (%s) %s}$\n",
 	       file, line, s, condition, desc);
 	return asserted ? -1 : 1;
 }
@@ -65,10 +65,10 @@ int yut_run_logz(
 	const char *lhs,
 	const char *rhs) {
 	const char *s = asserted ? "Assertion" : "Expection";
-	ymd_printf("%{[yellow][   INFO   ] %s:%d %s Failed!\n"
+	ymd_printf("${[yellow][   INFO   ] %s:%d %s Failed!\n"
 	       "[       -- ] Notice: (%s) %s (%s)\n"
 	       "[       -- ] %s aka. %s\n"
-	       "[       -- ] %s aka. %s}%\n",
+	       "[       -- ] %s aka. %s}$\n",
 	       file, line, s, expected, desc, actual, expected, lhs,
 	       actual, rhs);
 	return asserted ? -1 : 1;
@@ -92,15 +92,15 @@ int yut_run_test(yut_case_t func, void *context, const char *name) {
 	int err, rv;
 	struct timeval jiffx, start;
 	char itv[32];
-	ymd_printf("%{[!green][ RUN      ]}% %s\n", name);
+	ymd_printf("${[!green][ RUN      ]}$ %s\n", name);
 	rv = gettimeofday(&start, NULL);
 	err = (*func)(context);
 	rv = gettimeofday(&jiffx, NULL);
 	if (err)
-		ymd_printf("%{[red][  FAILED  ]}% %s(%s)\n", name,
+		ymd_printf("${[red][  FAILED  ]}$ %s(%s)\n", name,
 				format_interval(&start, &jiffx, itv, sizeof(itv)));
 	else
-		ymd_printf("%{[!green][       OK ]}% %s(%s)\n", name,
+		ymd_printf("${[!green][       OK ]}$ %s(%s)\n", name,
 				format_interval(&start, &jiffx, itv, sizeof(itv)));
 	return err;
 }
@@ -128,9 +128,9 @@ int yut_time_log1(const char *file, int line) {
 	char itv[32];
 	assert(top != NULL);
 	rv = gettimeofday(&jiffx, NULL);
-	ymd_printf("%{[!green][   COST   ]}% === %s:%d code: %s\n",
+	ymd_printf("${[!green][   COST   ]}$ === %s:%d code: %s\n",
 		   top->file, top->line, top->id);
-	ymd_printf("%{[!green][       -- ]}% --- %s:%d cost: %s\n",
+	ymd_printf("${[!green][       -- ]}$ --- %s:%d cost: %s\n",
 		   file, line,
 		   format_interval(&top->val, &jiffx, itv, sizeof(itv)));
 	return rv;
@@ -204,6 +204,7 @@ static int yut_parse_args(int argc, char *argv[], struct options *opt) {
 extern const struct yut_case_def *yut_intl_test[];
 
 static int yut_foreach_with(struct options *opt) {
+	int err = 0;
 	const struct yut_case_def **x = NULL;
 	for (x = yut_intl_test; *x != NULL; ++x) {
 		const struct yut_case_def *test = *x;
@@ -220,7 +221,7 @@ static int yut_foreach_with(struct options *opt) {
 		}
 
 		// Setup
-		ymd_printf("%{[!green][==========]}% %s setup\n", test->name);
+		ymd_printf("${[!green][==========]}$ %s setup\n", test->name);
 		// Run defined test
 		for (i = 0; i < YUT_MAX_CASE; ++i) {
 			char full_name[128];
@@ -241,27 +242,28 @@ static int yut_foreach_with(struct options *opt) {
 			// Setup
 			if (test->setup)
 				context = (*test->setup)();
-			yut_run_test(test->caze[i].func, context, full_name);
+			if (yut_run_test(test->caze[i].func, context, full_name) < 0)
+				++err;
 			// Teardown
 			if (test->teardown)
 				(*test->teardown)(context);
 		}
 		// Test Finalize
-		ymd_printf("%{[!green][==========]}% %s teardown\n\n", test->name);
+		ymd_printf("${[!green][==========]}$ %s teardown\n\n", test->name);
 	}
-	return 0;
+	return err;
 }
 
 int yut_run_all(int argc, char *argv[]) {
-	int i;
+	int i, err = 0;
 	struct options opt;
 
 	yut_parse_args(argc, argv, &opt);
 	for (i = 0; i < opt.repeated; ++i)
-		yut_foreach_with(&opt);
+		err += yut_foreach_with(&opt);
 
 	free((void*)opt.filter.test_pattern);
 	free((void*)opt.filter.case_pattern);
-	return 0;
+	return err;
 }
 
