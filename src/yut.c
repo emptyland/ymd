@@ -139,6 +139,12 @@ int yut_time_log1(const char *file, int line) {
 //-----------------------------------------------------------------------------
 // Args Parsing:
 //-----------------------------------------------------------------------------
+enum yut_cmd {
+	YUT_TEST, // Run test.
+	YUT_LIST, // List all test name.
+	YUT_HELP, // Show usage.
+};
+
 struct filter {
 	int negative; // Is Negatvie?
 	const char *test_pattern;
@@ -146,6 +152,7 @@ struct filter {
 };
 
 struct options {
+	enum yut_cmd cmd; // Which action should do?
 	struct filter filter;
 	int repeated;
 };
@@ -161,6 +168,8 @@ static inline int fok(const char *pattern, const char *z) {
 
 static const char *prefix_filter   = "filter=";
 static const char *prefix_repeated = "repeated=";
+static const char *prefix_list     = "list";
+static const char *prefix_help     = "help";
 
 static int yut_parse_args(int argc, char *argv[], struct options *opt) {
 	int i;
@@ -194,6 +203,10 @@ static int yut_parse_args(int argc, char *argv[], struct options *opt) {
 			opt->repeated = atoi(argz);
 			if (opt->repeated <= 0)
 				opt->repeated = 1;
+		} else if (strcmp(argz, prefix_list) == 0) {
+			opt->cmd = YUT_LIST;
+		} else if (strcmp(argz, prefix_help) == 0) {
+			opt->cmd = YUT_HELP;
 		}
 	}
 	return 0;
@@ -254,14 +267,46 @@ static int yut_foreach_with(struct options *opt) {
 	return err;
 }
 
+int yut_list_all() {
+	const struct yut_case_def **x = NULL;
+	ymd_printf("Current all tests:\n");
+	for (x = yut_intl_test; *x != NULL; ++x) {
+		int i;
+		const struct yut_case_def *test = *x;
+
+		ymd_printf("${[blue]%s}$\n", test->name);
+		for (i = 0; i < YUT_MAX_CASE; ++i) {
+			if (!test->caze[i].name)
+				break;
+			ymd_printf("    ${[!yellow]%s}$\n", test->caze[i].name);
+		}
+	}
+	return 0;
+}
+
 int yut_run_all(int argc, char *argv[]) {
 	int i, err = 0;
 	struct options opt;
 
 	yut_parse_args(argc, argv, &opt);
-	for (i = 0; i < opt.repeated; ++i)
+	switch (opt.cmd) {
+	case YUT_LIST:
+		yut_list_all();
+		goto final;
+	case YUT_HELP:
+		//yut_usage();
+		goto final;
+	case YUT_TEST:
+		break;
+	}
+	for (i = 0; i < opt.repeated; ++i) {
+		if (opt.repeated > 1)
+			ymd_printf("${[!yellow]Repeated test %d of %d ...\n",
+					i + 1, opt.repeated);
 		err += yut_foreach_with(&opt);
+	}
 
+final:
 	free((void*)opt.filter.test_pattern);
 	free((void*)opt.filter.case_pattern);
 	return err;

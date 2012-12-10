@@ -6,7 +6,7 @@
 	ASSERT_EQ(int, rv, act); \
 	ASSERT_EQ(int, rv, token.token)
 
-static int test_lex_punc_1(void *p) {
+static int test_sanity(void *p) {
 	struct ymd_lex lex;
 	struct ytoken token;
 	int rv;

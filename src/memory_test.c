@@ -31,7 +31,6 @@ static int test_vm_alloc(struct ymd_mach *vm) {
 	for (i = 0; i < 32; ++i)
 		ASSERT_EQ(int, buf[i], 0);
 	baz = vm_realloc(vm, buf, sizeof(int) * 4096);
-	ASSERT_TRUE(buf == baz);
 	for (i = 0; i < 32; ++i)
 		ASSERT_EQ(int, baz[i], 0);
 	
