@@ -1,5 +1,8 @@
 language: c
-script: scons -Q && src/all_test && bin/sanity.sh
+script: 
+    - scons -Q
+    - src/all_test
+    - bin/sanity.sh
 
 compiler:
     - clang
