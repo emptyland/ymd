@@ -15,7 +15,8 @@ if os.environ.has_key('CXX'):
 if os.environ.has_key('CCFLAGS'):
 	conf['CCFLAGS'] = os.environ['CCFLAGS']
 
-if conf['CC'].startswith('clang') or conf['CXX'].startswith('clang'):
+# Only clang compiler has color output
+if conf['CC'] == 'clang':
 	conf['CCFLAGS'] = conf['CCFLAGS'] + ' -fcolor-diagnostics'
 
 env = Environment(CC = conf['CC'],
