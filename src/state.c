@@ -224,21 +224,19 @@ int vm_remove(struct ymd_mach *vm, struct variable *var,
 // ----------------------------------------------------------------------------
 struct kstr *vm_format(struct ymd_mach *vm, const char *fmt, ...) {
 	va_list ap;
-	int rv;
 	char buf[MAX_MSG_LEN];
 	va_start(ap, fmt);
-	rv = vsnprintf(buf, sizeof(buf), fmt, ap);
+	vsnprintf(buf, sizeof(buf), fmt, ap);
 	va_end(ap);
 	return kstr_fetch(vm, buf, -1);
 }
 
 void ymd_format(struct ymd_context *l, const char *fmt, ... ) {
 	va_list ap;
-	int rv;
 	char buf[MAX_MSG_LEN];
 	struct kstr *o;
 	va_start(ap, fmt);
-	rv = vsnprintf(buf, sizeof(buf), fmt, ap);
+	vsnprintf(buf, sizeof(buf), fmt, ap);
 	va_end(ap);
 	o = kstr_fetch(l->vm, buf, -1);
 	setv_kstr(ymd_push(l), o);
@@ -300,10 +298,9 @@ static void do_panic(struct ymd_context *l, const char *msg) {
 
 void ymd_panic(struct ymd_context *l, const char *fmt, ...) {
 	va_list ap;
-	int rv;
 	char buf[MAX_MSG_LEN];
 	va_start(ap, fmt);
-	rv = vsnprintf(buf, sizeof(buf), fmt, ap);
+	vsnprintf(buf, sizeof(buf), fmt, ap);
 	va_end(ap);
 	return do_panic(l, buf);
 }
