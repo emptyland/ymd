@@ -1,0 +1,8 @@
+language: c
+script: scons -Q
+
+compiler:
+    - clang
+    - gcc
+
+
