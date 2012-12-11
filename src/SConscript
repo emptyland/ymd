@@ -2,6 +2,12 @@ from SCons.Script import *
 
 Import('env')
 
+env.Command('keywords.c',
+	'keywords.gperf',
+	'gperf -L ANSI-C -C -N lex_keyword -K z -t -c -n keywords.gperf | sed -e "s/{\\\"\\\"}/{\\\"\\\",0}/g" > keywords.c',
+	chdir='src')
+env.Depends('keywords.c', 'keywords.gperf')
+
 env.Library('yamada',
 	'''
 	state.c
@@ -24,7 +30,9 @@ env.Library('yamada',
 	libpickle.c
 	print_posix.c
 	disassembly.c
+	keywords.c
 	'''.split());
+env.Depends('libyamada.a', 'keywords.c')
 
 yut_o = env.StaticObject('yut.c')
 yut_rand_o = env.StaticObject('yut_rand.c')
@@ -32,7 +40,6 @@ test_main_o = env.StaticObject('test_main.c')
 
 env.Program('yamada', 'ymd_main.c',
 	LIBS='yamada regex pthread'.split());
-
 env.Depends('yamada', 'libyamada.a')
 
 def DefineTest(name, name_o):

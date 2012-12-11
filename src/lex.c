@@ -27,16 +27,23 @@ const struct {
 
 #define MAX_TOK ((int)(sizeof(tok_literal)/sizeof(tok_literal[0])))
 
+//
+// By gperf file generated:
+//
+struct keyword {
+	const char *z;
+	int token;
+};
+extern const struct keyword *
+lex_keyword (register const char *str, register unsigned int len);
+
 static int lex_token(const struct ytoken *tok) {
-	int i;
+	const struct keyword *rv = lex_keyword(tok->off, tok->len);
 	if (!tok->len)
 		return ERROR;
-	for (i = 0; i < MAX_TOK; ++i) {
-		if (tok->len == tok_literal[i].len &&
-			memcmp(tok->off, tok_literal[i].kz, tok->len) == 0)
-			return i + 128; // it's kewords
-	}
-	return SYMBOL;
+	if (!rv)
+		return SYMBOL;
+	return rv->token;
 }
 
 static inline int lex_peek(struct ymd_lex *lex) {

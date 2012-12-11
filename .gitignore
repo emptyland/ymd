@@ -7,9 +7,7 @@ config.mk
 *.dblite
 *.def
 tags
-lex.yy.c
-y.tab.c
-y.tab.h
+src/keywords.c
 foo.ymd
 foo.yut
 yamada

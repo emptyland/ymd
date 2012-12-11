@@ -1,0 +1,39 @@
+%{
+#include "lex.h"
+typedef struct keyword keyword;
+%}
+struct keyword {
+	const char *z;
+	int token;
+};
+%%
+nil, NIL
+true, TRUE
+false, FALSE
+<, LE
+<=, GE
+!=, NE
+~=, MATCH
+==, EQ
+@{, SKLS
+<<, LSHIFT
+>>, RSHIFT_A
+|>, RSHIFT_L
+->, DICT
+var, VAR
+func, FUNC
+and, AND
+or, OR
+not, NOT
+if, IF
+else, ELSE
+elif, ELIF
+with, WITH
+for, FOR
+return, RETURN
+break, BREAK
+continue, CONTINUE
+typeof, TYPEOF
+in, IN
+fail, FAIL
+let, LET
