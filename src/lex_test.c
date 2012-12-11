@@ -110,7 +110,7 @@ static int test_lex_keyword(void *p) {
 	struct ytoken token;
 	int rv;
 	(void)p;
-	lex_init(&lex, NULL, "nil true false and or func var");
+	lex_init(&lex, NULL, "nil true false and or func var let fail");
 	ASSERT_KWD(nil, NIL);
 	ASSERT_KWD(true, TRUE);
 	ASSERT_KWD(false, FALSE);
@@ -118,6 +118,8 @@ static int test_lex_keyword(void *p) {
 	ASSERT_KWD(or, OR);
 	ASSERT_KWD(func, FUNC);
 	ASSERT_KWD(var, VAR);
+	ASSERT_KWD(let, LET);
+	ASSERT_KWD(fail, FAIL);
 	return 0;
 }
 

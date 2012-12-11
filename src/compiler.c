@@ -1014,8 +1014,17 @@ static void parse_local(struct ymd_parser *p) {
 static void parse_if(struct ymd_parser *p) {
 	ushort_t jnxt, jout[128];
 	int i = 0, nsub = 0;
-	ymc_next(p); // `if` `expr` { `block` }
-	parse_expr(p, 0);
+	ymc_next(p); // Skip `if'
+	if (ymc_peek(p) == LET) {
+		ymc_next(p); // `if' `let' assign `;' cond
+		parse_expr_stat(p);
+		ymc_match(p, ';');
+	} else if (ymc_peek(p) == VAR) {
+		// Like `let' syntax
+		parse_local(p); // `if' `var' expr `;' cond
+		ymc_match(p, ';');
+	}
+	parse_expr(p, 0); // `if' expr
 	jnxt = ymk_hold(p);
 	parse_block(p);
 	while (ymc_peek(p) == ELIF) { // `elif` `expr` { `block` }

@@ -31,5 +31,13 @@ LoopTest = @{
 			Assert:Fail("Can not goto here.")
 		}
 		Assert:EQ(k, c)
+	},
+
+	test03fail_range_negative : func (self) {
+		for var i in range(0, 100) {
+
+		} fail {
+			Assert:Fail("Can not goto here, not fail.")
+		}
 	}
 }

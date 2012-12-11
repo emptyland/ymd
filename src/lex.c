@@ -34,9 +34,9 @@ static int lex_token(const struct ytoken *tok) {
 	for (i = 0; i < MAX_TOK; ++i) {
 		if (tok->len == tok_literal[i].len &&
 			memcmp(tok->off, tok_literal[i].kz, tok->len) == 0)
-			break;
+			return i + 128; // it's kewords
 	}
-	return i >= MAX_TOK ? SYMBOL : i + 128;
+	return SYMBOL;
 }
 
 static inline int lex_peek(struct ymd_lex *lex) {

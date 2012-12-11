@@ -93,5 +93,20 @@ ConditionTest = @{
 		// cond ? expr1 : expr2
 		Assert:EQ(1, nil and 0 or 1)
 		Assert:EQ(0, true and 0 or 1)
+	},
+
+	test05let_and_var_syntax: func (self) {
+		var i = 0
+		if let i = nil; typeof i == "nil" {
+			Assert:Nil(i)
+		} else {
+			Assert:Fail("Can not goto here!")
+		}
+
+		if var j = 100; j == 100 {
+			Assert:EQ(100, j)
+		} else {
+			Assert:Fail("Can not goto here!")
+		}
 	}
 }

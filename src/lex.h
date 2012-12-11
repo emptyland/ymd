@@ -49,6 +49,7 @@
 	v(TYPEOF, "typeof") \
 	v(IN, "in") \
 	v(FAIL, "fail") \
+	v(LET, "let")
 
 #define DEFINE_TOKEN(tok, literal) tok,
 enum ymd_token {
