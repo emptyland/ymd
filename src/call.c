@@ -40,9 +40,7 @@
 static inline struct variable *vm_local(struct ymd_context *l,
                                         struct func *fn, int i) {
 	assert(fn == l->info->run);
-	if (i < fn->n_bind)
-		return fn->bind + i;
-	return l->info->loc + i - fn->n_bind;
+	return l->info->loc + i;
 }
 
 static inline struct variable *vm_find_local(struct ymd_context *l,
@@ -140,6 +138,39 @@ static inline void vm_iput(struct ymd_mach *vm,
 //-----------------------------------------------------------------------------
 // Stack functions:
 // ----------------------------------------------------------------------------
+// Close function's upval, make it to closure:
+static int vm_close_upval(struct ymd_context *l, struct func *fn) {
+	struct call_info *ci = l->info;
+	struct chunk *core = fn->u.core;
+	int k, linked = 0;
+	assert (!fn->upval && "Can not close a function again.");
+	fn->upval = mm_zalloc(l->vm, core->kuz, sizeof(*fn->upval));
+	for (k = 0; k < core->kuz; ++k) {
+		while (ci) {
+			int i;
+			if (ci->run->is_c)
+				goto goon;
+			i = blk_find_lz(ci->run->u.core, core->uz[k]->land);
+			if (i >= 0) {
+				fn->upval[k] = ci->loc[i];
+				++linked;
+				break;
+			}
+			i = blk_find_uz(ci->run->u.core, core->uz[k]->land);
+			if (i >= 0) {
+				fn->upval[k] = ci->run->upval[i];
+				++linked;
+				break;
+			}
+		goon:
+			ci = ci->chain;
+		}
+	}
+	if (linked != core->kuz)
+		ymd_panic(l, "Upval no linked!");
+	return 0;
+}
+
 int vm_calc(struct ymd_context *l, unsigned op) {
 	switch (op) {
 	case F_INV: {
@@ -258,6 +289,9 @@ retry:
 			case F_LOCAL:
 				*vm_local(l, fn, asm_param(inst)) = *ymd_top(l, 0);
 				break;
+			case F_UP:
+				fn->upval[asm_param(inst)] = *ymd_top(l, 0);
+				break;
 			case F_OFF:
 				vm_iputg(vm, asm_param(inst), ymd_top(l, 0));
 				break;
@@ -337,18 +371,27 @@ retry:
 				var = *vm_local(l, fn, asm_param(inst));
 				break;
 			case F_BOOL:
-				var.tt = T_BOOL;
-				var.u.i = asm_param(inst);
+				setv_bool(&var, asm_param(inst));
 				break;
 			case F_NIL:
-				var.tt = T_NIL;
-				var.u.i = 0;
+				setv_nil(&var);
 				break;
 			case F_OFF:
 				var = *vm_igetg(vm, asm_param(inst));
 				break;
+			case F_UP: // Push Upval
+				var = fn->upval[asm_param(inst)];
+				break;
 			}
 			*ymd_push(l) = var;
+			} break;
+		case I_CLOSE: {
+			// TODO: like push instruction
+			struct variable *opd = &core->kval[asm_param(inst)];
+			struct func *copied = func_clone(vm, func_of(l, opd));
+			vm_close_upval(l, copied);
+			gc_release(copied);
+			setv_func(ymd_push(l), copied);
 			} break;
 		case I_TEST: {
 			struct variable *rhs = ymd_top(l, 1),
@@ -470,17 +513,6 @@ retry:
 			setv_dyay(ymd_push(l), map);
 			gc_release(map);
 			} break;
-		case I_BIND: {
-			struct variable *opd = ymd_top(l, asm_param(inst));
-			struct func *copied = func_clone(vm, func_of(l, opd));
-			int i = asm_param(inst);
-			assert(copied->n_bind == asm_param(inst));
-			while (i--)
-				func_bind(vm, copied, asm_param(inst) - i - 1, ymd_top(l, i));
-			opd->u.ref = gcx(copied); // Copy-on-wirte bind
-			ymd_pop(l, asm_param(inst));
-			gc_release(copied);
-			} break;
 		default:
 			assert(0);
 			break;
@@ -527,6 +559,7 @@ static int vm_call(struct ymd_context *l, struct call_info *ci,
 	vm_copy_args(l, fn, argc);
 	// Pop all args
 	ymd_pop(l, argc + (method ? 0 : 1));
+	// Run this function
 	if (fn->is_c) {
 		rv = (*fn->u.nafn)(l);
 		goto ret;

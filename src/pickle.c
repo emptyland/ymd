@@ -97,6 +97,10 @@ int ymd_dump_chunk(struct zostream *os, const struct chunk *bk, int *ok) {
 	zos_u32(os, bk->klz);
 	for (j = 0; j < (int)bk->klz; ++j)
 		i += ymd_dump_kstr(os, bk->lz[j]);
+	// :uz
+	zos_u32(os, bk->kuz);
+	for (j = 0; j < (int)bk->kuz; ++j)
+		i += ymd_dump_kstr(os, bk->uz[j]);
 	// :file
 	i += ymd_dump_kstr(os, bk->file);
 	// :kargs
@@ -111,10 +115,10 @@ int ymd_dump_func(struct zostream *os, const struct func *fn, int *ok) {
 	i += zos_u32(os, T_FUNC);
 	// :proto type desc
 	i += ymd_dump_kstr(os, fn->proto);
-	// :bind variable
-	i += zos_u32(os, fn->n_bind);
-	for (j = 0; j < fn->n_bind; ++j) {
-		i += ymd_serialize(os, fn->bind + j, CHECK_OK);
+	// :upval variable
+	i += zos_u32(os, fn->n_upval);
+	for (j = 0; j < fn->n_upval; ++j) {
+		i += ymd_serialize(os, fn->upval + j, CHECK_OK);
 	}
 	// :arguements
 	// Don't serialize arguements.
@@ -232,6 +236,19 @@ int ymd_load_chunk(struct zistream *is, struct chunk *x, int *ok) {
 		}
 		x->klz = k;
 	}
+	// :uz
+	k = zis_u32(is);
+	if (k > 0) {
+		pickle_assert(k < MAX_U16);
+		x->uz = mm_zalloc(l->vm, k, sizeof(*x->uz));
+		for (i = 0; i < k; ++i) {
+			pickle_assert(zis_u32(is) == T_KSTR);
+			ymd_load_kstr(is, CHECK_OK);
+			x->uz[i] = kstr_of(l, ymd_top(l, 0));
+			ymd_pop(l, 1);
+		}
+		x->kuz = k;
+	}
 	// :file
 	pickle_assert(zis_u32(is) == T_KSTR);
 	ymd_load_kstr(is, CHECK_OK);
@@ -253,9 +270,9 @@ int ymd_load_func(struct zistream *is, int *ok) {
 	ymd_load_kstr(is, CHECK_OK);
 	fn->proto = kstr_of(l, ymd_top(l, 0));
 	ymd_pop(l, 1);
-	// :bind
-	fn->n_bind = zis_u32(is);
-	for (i = 0; i < fn->n_bind; ++i) {
+	// :upval
+	fn->n_upval = zis_u32(is);
+	for (i = 0; i < fn->n_upval; ++i) {
 		ymd_parse(is, CHECK_OK);
 		ymd_bind(l, i);
 	}

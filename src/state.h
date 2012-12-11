@@ -174,8 +174,13 @@ static inline struct variable *ymd_argv_get(L, int i) {
 
 static inline struct variable *ymd_bval(L, int i) {
 	assert(i >= 0);
-	assert(i < ymd_called(l)->n_bind);
-	return ymd_called(l)->bind + i;
+#if !defined(NDEBUG)
+	if (ymd_called(l)->is_c)
+		assert(i < ymd_called(l)->n_upval);
+	else
+		assert(i < ymd_called(l)->u.core->kuz);
+#endif
+	return ymd_called(l)->upval + i;
 }
 
 //-----------------------------------------------------------------------------
@@ -291,15 +296,13 @@ static inline void ymd_nil(L) {
 
 static inline void ymd_nafn(L, ymd_nafn_t fn, const char *name, int nbind) {
 	struct func *o = func_new_c(l->vm, fn, name);
-	o->n_bind = nbind;
+	o->n_upval = nbind;
 	setv_func(ymd_push(l), o);
 	gc_release(o);
 }
 
-static inline void ymd_func(L, struct chunk *blk, const char *name,
-                            int nbind) {
+static inline void ymd_func(L, struct chunk *blk, const char *name) {
 	struct func *o = func_new(l->vm, blk, name);
-	o->n_bind = nbind;
 	setv_func(ymd_push(l), o);
 	gc_release(o);
 }

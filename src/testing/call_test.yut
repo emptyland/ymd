@@ -1,4 +1,3 @@
-
 func gfunc (a, b, c, d, e, f) {
 	var k = len(argv)
 	if k > 0 { Assert:EQ(a, argv[0]) }
@@ -24,7 +23,7 @@ var func lfunc (a, b, c, d, e, f) {
 CallTest = @{
 	test00argv : func (self) {
 		Assert:EQ("function", typeof gfunc)
-		Assert:Nil(lfunc)
+		Assert:EQ("function", typeof lfunc)
 		var k = "gfunc"
 		Assert:EQ(k, gfunc())
 		Assert:EQ(k, gfunc(1))
@@ -66,7 +65,7 @@ CallTest = @{
 
 	test03closure : func (self) {
 		var func build (i) {
-			return func [i] () {
+			return func () {
 				i = i + 1
 				return i
 			}

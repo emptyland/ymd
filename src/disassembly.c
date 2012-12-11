@@ -23,6 +23,10 @@ static const char *fn_kz(const struct func *fn, int i) {
 	return kstr_k(fn->u.core->kval + i)->land;
 }
 
+static const char *fn_uz(const struct func *fn, int i) {
+	return fn->u.core->uz[i]->land;
+}
+
 static const char *address(const struct func *fn, uint_t inst,
                            char *buf, size_t n) {
 	switch (asm_flag(inst)) {
@@ -43,6 +47,9 @@ static const char *address(const struct func *fn, uint_t inst,
 		break;
 	case F_OFF:
 		snprintf(buf, n, "[global]:@%s", fn_kz(fn, asm_param(inst)));
+		break;
+	case F_UP:
+		snprintf(buf, n, "[upval]:@%s", fn_uz(fn, asm_param(inst)));
 		break;
 	default:
 		assert(0);
@@ -127,6 +134,9 @@ int dasm_inst(FILE *fp, const struct func *fn, uint_t inst) {
 	case I_PUSH:
 		rv = fprintf(fp, "push %s", address(fn, inst, BUF));
 		break;
+	case I_CLOSE:
+		rv = fprintf(fp, "close %s", address(fn, inst, BUF));
+		break;
 	case I_TEST:
 		rv = fprintf(fp, "test <%s>", kz_test_op[asm_flag(inst)]);
 		break;
@@ -154,11 +164,8 @@ int dasm_inst(FILE *fp, const struct func *fn, uint_t inst) {
 	case I_NEWDYA:
 		rv = fprintf(fp, "newdya %d", asm_param(inst));
 		break;
-	case I_BIND:
-		rv = fprintf(fp, "bind %d", asm_param(inst));
-		break;
 	default:
-		assert(0);
+		assert(0 && "No reached.");
 		break;
 	}
 #undef BUF

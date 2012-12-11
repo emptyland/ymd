@@ -7,6 +7,7 @@
 #define INST_ALIGN 128
 #define KVAL_ALIGN 64
 #define LVAR_ALIGN 32
+#define UVAR_ALIGN 8
 
 static int kz_find(struct kstr **kz, int count, const char *z, int n) {
 	int i, lzn = (n >= 0) ? n : (int)strlen(z);
@@ -87,6 +88,8 @@ void blk_final(struct ymd_mach *vm, struct chunk *core) {
 		mm_free(vm, core->kval, core->kkval, sizeof(*core->kval));
 	if (core->lz)
 		mm_free(vm, core->lz, core->klz, sizeof(*core->lz));
+	if (core->uz)
+		mm_free(vm, core->uz, core->kuz, sizeof(*core->uz));
 }
 
 // Only find
@@ -108,6 +111,23 @@ int blk_add_lz(struct ymd_mach *vm, struct chunk *core, const char *z) {
 	return core->klz - 1;
 }
 
+int blk_find_uz(struct chunk *core, const char *z) {
+	int rv = kz_find(core->uz, core->kuz, z, -1);
+	return rv >= core->kuz ? -1 : rv;
+}
+
+int blk_add_uz(struct ymd_mach *vm, struct chunk *core, const char *z) {
+	int rv = blk_find_uz(core, z);
+	if (rv >= 0)
+		return -1;
+	core->uz = mm_need(vm, core->uz, core->kuz, UVAR_ALIGN,
+	                   sizeof(*core->uz));
+	core->uz[core->kuz] = kstr_fetch(vm, z, -1);
+	gc_release(core->uz[core->kuz]);
+	core->kuz++;
+	return core->kuz - 1;
+}
+
 void blk_shrink(struct ymd_mach *vm, struct chunk *core) {
 	if (core->inst)
 		core->inst = mm_shrink(vm, core->inst, core->kinst, INST_ALIGN,
@@ -121,6 +141,9 @@ void blk_shrink(struct ymd_mach *vm, struct chunk *core) {
 	if (core->lz)
 		core->lz = mm_shrink(vm, core->lz, core->klz, LVAR_ALIGN,
 		                     sizeof(*core->lz));
+	if (core->uz)
+		core->uz = mm_shrink(vm, core->uz, core->kuz, UVAR_ALIGN,
+		                     sizeof(*core->uz));
 }
 
 //-----------------------------------------------------------------------------
@@ -155,14 +178,15 @@ struct func *func_new(struct ymd_mach *vm, struct chunk *blk,
 	assert(blk);
 	mm_grab(blk);
 	x->u.core = blk;
+	x->n_upval = blk->kuz;
 	x->is_c = 0;
 	if (name) func_init(vm, x, name);
 	return x;
 }
 
 void func_final(struct ymd_mach *vm, struct func *fn) {
-	if (fn->bind)
-		mm_free(vm, fn->bind, fn->n_bind, sizeof(*fn->bind));
+	if (fn->upval)
+		mm_free(vm, fn->upval, fn->n_upval, sizeof(*fn->upval));
 	if (fn->is_c)
 		return;
 	if (fn->u.core->ref > 1) { // drop it!
@@ -176,10 +200,10 @@ void func_final(struct ymd_mach *vm, struct func *fn) {
 int func_bind(struct ymd_mach *vm, struct func *fn, int i,
               const struct variable *var) {
 	assert(i >= 0);
-	assert(i < fn->n_bind);
-	if (!fn->bind) // Lazy allocating
-		fn->bind = mm_zalloc(vm, fn->n_bind, sizeof(*fn->bind));
-	fn->bind[i] = *var;
+	assert(i < fn->n_upval);
+	if (!fn->upval) // Lazy allocating
+		fn->upval = mm_zalloc(vm, fn->n_upval, sizeof(*fn->upval));
+	fn->upval[i] = *var;
 	return i;
 }
 
@@ -204,7 +228,7 @@ struct func *func_clone(struct ymd_mach *vm, struct func *fn) {
 	assert(!fn->is_c);
 	x->proto = fn->proto;
 	x->is_c = fn->is_c;
-	x->n_bind = fn->n_bind;
+	x->n_upval = fn->n_upval;
 	x->u.core = mm_grab(fn->u.core);
 	return x;
 }

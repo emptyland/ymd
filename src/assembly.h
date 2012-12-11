@@ -6,18 +6,19 @@
 // Instructions:
 #define I_PANIC   0
 #define I_SELFCALL 5 // selfcall a, n, "string"
-#define I_STORE   10 // store local|off
+#define I_STORE   10 // store local|up|off
 #define I_RET     15 // ret n
 #define I_JNE     20 // jne label
 #define I_JMP     25 // jmp label
 #define I_FOREACH 30 // foreach label
 #define I_SETF    35 // setf stack|fast
-#define I_PUSH    40 // push kval|true|false|nil|local|off
+#define I_PUSH    40 // push kval|true|false|nil|local|up|off
 #define I_TEST    45 // test gt|ge|lt|le|eq|ne|match
 #define I_JNT     50 // jnt label
 #define I_JNN     55 // jnn label
 #define I_TYPEOF  60 // typeof
 #define I_CALC    65 // calc inv|mul|div|add|sub|mod|andb|orb|xorb|invb
+#define I_CLOSE   70 // close kval
 // reserved 70~115
 #define I_SHIFT   120 // shift l|r, a|l
 #define I_CALL    125 // call a, n
@@ -40,6 +41,7 @@
 #define F_BOOL    3 // param: 0 true other false
 #define F_NIL     4 // param: Ignore
 #define F_OFF     5 // param: `kz` offset
+#define F_UP      6 // param: `bind' offset closure's upval
 
 // test
 // param: Ignore all

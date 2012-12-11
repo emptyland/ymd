@@ -82,7 +82,7 @@ static inline void lex_init(struct ymd_lex *lex, const char *file,
 	lex->i_line = 1;
 }
 
-// Get current line to `buf`
+// Get current line to buf.
 const char *lex_line(struct ymd_lex *lex, char *buf, size_t n);
 int lex_next(struct ymd_lex *lex, struct ytoken *rv);
 

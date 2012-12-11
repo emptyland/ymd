@@ -74,14 +74,15 @@ struct gc_node *mand_proto(struct mand *x, struct gc_node *metatable) {
 }
 
 static inline int func_nlocal(const struct func *fn) {
-	return fn->is_c ? 0 : fn->u.core->klz - fn->n_bind;
+	return fn->is_c ? 0 : fn->u.core->klz;
 }
 
 static inline struct variable *func_bval(struct ymd_mach *vm,
                                          struct func *fn, int i) {
-	struct variable nil; memset(&nil, 0, sizeof(nil));
+	struct variable nil;
+	memset(&nil, 0, sizeof(nil));
 	func_bind(vm, fn, i, &nil);
-	return fn->bind + i;
+	return fn->upval + i;
 }
 
 #endif // YMD_VALUE_INL_H

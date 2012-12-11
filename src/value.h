@@ -54,19 +54,21 @@ struct chunk {
 	int kinst; // Number of instructions
 	struct variable *kval; // Constant values
 	struct kstr **lz; // Local variable mapping
+	struct kstr **uz; // Upval variable mapping
 	struct kstr *file; // File name in complied or null
 	unsigned short kkval;
 	unsigned short klz;
+	unsigned short kuz;
 	unsigned short kargs; // Prototype number of arguments
 };
 
 struct func {
 	GC_HEAD;
 	struct kstr *proto; // Prototype description
-	struct variable *bind; // Binded values
+	struct variable *upval; // Up values
 	struct dyay *argv;  // Arguments
 	unsigned short is_c;
-	unsigned short n_bind;
+	unsigned short n_upval; // Natvie function use it for upval;
 	union {
 		ymd_nafn_t nafn;  // Native function
 		struct chunk *core; // Byte code
@@ -221,6 +223,8 @@ int blk_ki(struct ymd_mach *vm, struct chunk *core, ymd_int_t i);
 int blk_kf(struct ymd_mach *vm, struct chunk *core, void *fn);
 int blk_find_lz(struct chunk *core, const char *z);
 int blk_add_lz(struct ymd_mach *vm, struct chunk *core, const char *z);
+int blk_find_uz(struct chunk *core, const char *z);
+int blk_add_uz(struct ymd_mach *vm, struct chunk *core, const char *z);
 void blk_shrink(struct ymd_mach *vm, struct chunk *core);
 
 // Closure functions:

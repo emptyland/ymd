@@ -52,10 +52,10 @@ static int gc_mark_func(struct func *o) {
 	if (o->argv && (o->argv->marked & GC_BLACK_BIT0) == 0) {
 		gc_mark_dyay(o->argv);
 	}
-	if (o->bind) {
-		for (i = 0; i < o->n_bind; ++i) {
-			if (!marked(o->bind + i, GC_BLACK_BIT0)) {
-				gc_mark_var(o->bind + i);
+	if (o->upval) {
+		for (i = 0; i < o->n_upval; ++i) {
+			if (!marked(o->upval + i, GC_BLACK_BIT0)) {
+				gc_mark_var(o->upval + i);
 			}
 		}
 	}
@@ -65,6 +65,8 @@ static int gc_mark_func(struct func *o) {
 	core->file->marked |= GC_BLACK_BIT0;
 	for (i = 0; i < core->klz; ++i)
 		core->lz[i]->marked |= GC_BLACK_BIT0;
+	for (i = 0; i < core->kuz; ++i)
+		core->uz[i]->marked |= GC_BLACK_BIT0;
 	for (i = 0; i < core->kkval; ++i) {
 		if (!marked(core->kval + i, GC_BLACK_BIT0))
 			gc_mark_var(core->kval + i);

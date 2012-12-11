@@ -30,7 +30,6 @@ struct func_decl_desc {
 	char name[260]; // func real name
 	ushort_t load_p; // load point
 	ushort_t id;
-	int n_bind;
 };
 
 static inline int ymc_peek(struct ymd_parser *p) {
@@ -140,24 +139,54 @@ static void ymk_emit_kz(
 
 static void ymk_emit_store(
 	struct ymd_parser *p, const char *symbol) {
+	// Storing way:
+	// 1. Local variable first
 	int i = blk_find_lz(p->blk, symbol);
-	if (i < 0) {
-		i = blk_kz(p->vm, p->blk, symbol, -1);
-		ymk_emitOfP(p, I_STORE, F_OFF, i);
-	} else {
+	if (i >= 0) {
 		ymk_emitOfP(p, I_STORE, F_LOCAL, i);
+		return;
 	}
+	// 2. Upval second
+	i = blk_find_uz(p->blk, symbol);
+	if (i >= 0) {
+		ymk_emitOfP(p, I_STORE, F_UP, i);
+		return;
+	}
+	// 3. Global third
+	i = blk_kz(p->vm, p->blk, symbol, -1);
+	ymk_emitOfP(p, I_STORE, F_OFF, i);
 }
 
 static void ymk_emit_push(
 	struct ymd_parser *p, const char *symbol) {
+	struct chunk *x = p->blk;
+	// Loading way:
+	// 1. Local variable first
 	int i = blk_find_lz(p->blk, symbol);
-	if (i < 0) {
-		i = blk_kz(p->vm, p->blk, symbol, -1);
-		ymk_emitOfP(p, I_PUSH, F_OFF, i);
-	} else {
+	if (i >= 0) {
 		ymk_emitOfP(p, I_PUSH, F_LOCAL, i);
+		return;
 	}
+	// 2. Upval second
+	i = blk_find_uz(p->blk, symbol);
+	if (i >= 0) {
+		ymk_emitOfP(p, I_PUSH, F_UP, i);
+		return;
+	}
+	// 2.5 Try find upval
+	while ((x = x->chain) != NULL) {
+		i = blk_find_lz(x, symbol); // upval is local?
+		if (i < 0)
+			i = blk_find_uz(x, symbol); // upval is upval?
+		if (i >= 0) {
+			i = blk_add_uz(p->vm, p->blk, symbol);
+			ymk_emitOfP(p, I_PUSH, F_UP, i);
+			return;
+		}
+	}
+	// 3. Global varialbe third
+	i = blk_kz(p->vm, p->blk, symbol, -1);
+	ymk_emitOfP(p, I_PUSH, F_OFF, i);
 }
 
 static void ymk_emit_pushz(
@@ -168,8 +197,11 @@ static void ymk_emit_pushz(
 
 static int ymk_new_locvar(
 	struct ymd_parser *p, const char *symbol) {
-	int i = blk_add_lz(p->vm, p->blk, symbol);
-	if (i < 0)
+	int i = blk_find_uz(p->blk, symbol);
+	if (i >= 0) // Find symbol in upval
+		ymc_fail(p, "Duplicate upval: %s", symbol);
+	i = blk_add_lz(p->vm, p->blk, symbol);
+	if (i < 0) // Duplicate symbol in local
 		ymc_fail(p, "Duplicate local varibale: `%s'", symbol);
 	return i;
 }
@@ -178,14 +210,6 @@ static void ymk_emit_end(struct ymd_parser *p) {
 	struct chunk *core = p->blk;
 	if (!core->kinst || asm_op(core->inst[core->kinst - 1]) != I_RET)
 		ymk_emitOP(p, I_RET, 0);
-}
-
-static void ymk_emit_bind(
-	struct ymd_parser *p, const char *symbol, struct chunk *core) {
-	int i = blk_add_lz(p->vm, core, symbol);
-	if (i < 0)
-		ymc_fail(p, "Duplicate local varibale: `%s'", symbol);
-	ymk_emit_push(p, symbol);
 }
 
 static void ymk_emit_setf(
@@ -248,9 +272,13 @@ static inline void ymk_emit_func(
 	struct ymd_parser *p,
 	const struct func_decl_desc *desc,
 	struct func *fn) {
-	fn->n_bind = desc->n_bind;
-	ymk_hack(p, desc->load_p,
-	         emitAfP(PUSH, KVAL, blk_kf(p->vm, p->blk, fn)));
+	int i = blk_kf(p->vm, p->blk, fn);
+	if (fn->u.core->kuz) {
+		fn->n_upval = fn->u.core->kuz;
+		ymk_hack(p, desc->load_p, emitAfP(CLOSE, KVAL, i));
+	} else {
+		ymk_hack(p, desc->load_p, emitAfP(PUSH, KVAL, i));
+	}
 }
 
 static inline char *ymk_literal(struct ymd_parser *p) {
@@ -862,30 +890,6 @@ static void parse_expr_stat(struct ymd_parser *p) {
 	}
 }
 
-static int parse_bind(struct ymd_parser *p, struct chunk *core) {
-	ushort_t nbind = 0;
-	ymc_next(p);
-	do {
-		switch (ymc_peek(p)) {
-		case ']':
-			goto out;
-		case SYMBOL:
-			ymk_emit_bind(p, ymk_symbol(p), core);
-			++nbind;
-			break;
-		default:
-			ymc_fail(p, "Bad bind declare.");
-			return 0;
-		}
-	} while (ymc_test(p, ','));
-out:
-	ymc_match(p, ']');
-	if (nbind == 0)
-		ymc_fail(p, "No variable be binded.");
-	ymk_emitOP(p, I_BIND, nbind);
-	return nbind;
-}
-
 static void parse_params(struct ymd_parser *p, int method) {
 	int nparam = 0;
 	ymc_match(p, '(');
@@ -957,7 +961,7 @@ static void parse_func(struct ymd_parser *p, int local) {
 	if (ymc_peek(p) != SYMBOL)
 		ymc_fail(p, "Function need a name.");
 	parse_func_decl(p, ymk_symbol(p), local, &desc);
-	ymd_func(l, ymk_chunk(p), desc.name, 0);
+	ymd_func(l, ymk_chunk(p), desc.name);
 	ymk_enter(p, fbk(l));
 		parse_params(p, desc.method);
 		ymk_chunk_reserved(p, fbk(l));
@@ -975,11 +979,7 @@ static void parse_closure(struct ymd_parser *p) {
 	desc.load_p = ymk_hold(p);
 	snprintf(desc.name, sizeof(desc.name), "__blk_xl%d__",
 	         p->lex.i_line);
-	ymd_func(l, ymk_chunk(p), desc.name, 0);
-	if (ymc_peek(p) == '[')
-		desc.n_bind = parse_bind(p, fbk(l));
-	else
-		desc.n_bind = 0;
+	ymd_func(l, ymk_chunk(p), desc.name);
 	ymk_enter(p, fbk(l));
 		parse_params(p, 0);
 		ymk_chunk_reserved(p, fbk(l));
@@ -1185,7 +1185,7 @@ int ymd_compile(struct ymd_context *l, const char *name,
 	p.vm = l->vm;
 	lex_init(&p.lex, file, code);
 	blk = ymk_chunk(&p);
-	ymd_func(l, blk, name, 0);
+	ymd_func(l, blk, name);
 	if ((rv = ymc_compile(&p, blk)) < 0)
 		ymd_pop(l, 1);
 	return rv;
