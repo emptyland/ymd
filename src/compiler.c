@@ -2,6 +2,7 @@
 #include "core.h"
 #include "assembly.h"
 #include "encoding.h"
+#include "print.h"
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -169,7 +170,7 @@ static int ymk_new_locvar(
 	struct ymd_parser *p, const char *symbol) {
 	int i = blk_add_lz(p->vm, p->blk, symbol);
 	if (i < 0)
-		ymc_fail(p, "Duplicate local varibale: `%s`", symbol);
+		ymc_fail(p, "Duplicate local varibale: `%s'", symbol);
 	return i;
 }
 
@@ -183,7 +184,7 @@ static void ymk_emit_bind(
 	struct ymd_parser *p, const char *symbol, struct chunk *core) {
 	int i = blk_add_lz(p->vm, core, symbol);
 	if (i < 0)
-		ymc_fail(p, "Duplicate local varibale: `%s`", symbol);
+		ymc_fail(p, "Duplicate local varibale: `%s'", symbol);
 	ymk_emit_push(p, symbol);
 }
 
@@ -340,35 +341,38 @@ static const char *ymc_ttoa(int token, char buf[2]) {
 	return kttoa[i].kz;
 }
 
-//static const char *kline_rule =
-//"[====] 0----+----1----+----2----+----3----+----4----+----5----+----6----+----7";
 
+// Error information like this:
+// foo.ymd:1:1: fatal: Unexpected symbol.
+// var i = j
+//         ^
+//
 static void ymc_fail(struct ymd_parser *p, const char *fmt, ...) {
 	va_list ap;
-	size_t off;
-	int i = p->lex.i_column;
+	int i = p->lex.i_column > 0 ? p->lex.i_column - 1 : 0;
 	char msg[1024];
-	snprintf(msg, sizeof(msg), "%s:%d:%d ", !p->lex.file ? "%% " : p->lex.file,
-	         p->lex.i_line, p->lex.i_column);
-	off = strlen(msg);
+	// Format error message.
 	va_start(ap, fmt);
-	vsnprintf(msg + off, sizeof(msg) - off, fmt, ap);
+	vsnprintf(msg, sizeof(msg), fmt, ap);
 	va_end(ap);
-	puts(msg);
-	//puts(kline_rule);
-	printf("[%04d] ", p->lex.i_line);
+	// Error output:
+	ymd_printf("%s:%d:%d: ${[red]fatal:}$ %s\n",
+			!p->lex.file ? "[none]" : p->lex.file,
+			p->lex.i_line,
+			p->lex.i_column,
+			msg);
+	// Show error position:
 	puts(lex_line(&p->lex, msg, sizeof(msg)));
-	printf("[----] ");
 	while (i--)
-		printf(" ");
-	puts("^");
+		putchar(' ');
+	ymd_printf("${[green]^}$\n");
 	longjmp(p->jpt, 1);
 }
 
 static int ymc_match(struct ymd_parser *p, int need) {
 	char exp[2], unexp[2];
 	if (need != p->lah.token)
-		ymc_fail(p, "Error token! unexpected `%s`, expected `%s`",
+		ymc_fail(p, "Error token! unexpected `%s', expected `%s'",
 		         ymc_ttoa(p->lah.token, exp),
 		         ymc_ttoa(need, unexp));
 	return lex_next(&p->lex, &p->lah);
@@ -1027,7 +1031,7 @@ static void parse_if(struct ymd_parser *p) {
 	parse_expr(p, 0); // `if' expr
 	jnxt = ymk_hold(p);
 	parse_block(p);
-	while (ymc_peek(p) == ELIF) { // `elif` `expr` { `block` }
+	while (ymc_peek(p) == ELIF) { // `elif' expr { `block' }
 		ymc_next(p);
 		jout[i++] = ymk_hold(p);
 		ymk_hack_jmp(p, jnxt, I_JNE, 0);
@@ -1036,7 +1040,7 @@ static void parse_if(struct ymd_parser *p) {
 		parse_block(p);
 		++nsub;
 	}
-	if (ymc_peek(p) == ELSE) { // `else` { `block` }
+	if (ymc_peek(p) == ELSE) { // `else' `{' block `}'
 		ymc_next(p);
 		jout[i++] = ymk_hold(p);
 		ymk_hack_jmp(p, jnxt, I_JNE, 0);
@@ -1051,7 +1055,7 @@ static void parse_for(struct ymd_parser *p) {
 	const char *tmp;
 	char iter[64];
 	struct loop_info scope;
-	ymc_next(p); // `for` `symbol` : `call`
+	ymc_next(p); // `for' `symbol' : `call'
 	ymk_loop_enter(p, &scope);
 	switch (ymc_peek(p)) {
 	case '{':
@@ -1081,7 +1085,7 @@ static void parse_for(struct ymd_parser *p) {
 	p->loop->i_jcond = ymk_hold(p); // set jcond foreach
 	ymk_emit_store(p, tmp); // store tmp
 done:
-	parse_block(p); // { `block` }
+	parse_block(p); // `{' block `}'
 	ymk_loop_leave(p);
 }
 
