@@ -4,4 +4,10 @@ compiler:
     - clang
     - gcc
 
-script: scons -Q && src/all_test && bin/sanity.sh
+before_script:
+    - apt-get install gperf
+
+script:
+    - scons -Q
+    - src/all_test
+    - bin/sanity.sh
