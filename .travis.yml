@@ -5,7 +5,7 @@ compiler:
     - gcc
 
 before_script:
-    - apt-get install gperf
+    - sudo apt-get install gperf
 
 script:
     - scons -Q
