@@ -1,4 +1,5 @@
 #include "core.h"
+#include "print.h"
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
@@ -45,16 +46,16 @@ static void vm_backtrace(struct ymd_context *l, int max) {
 	assert(max >= 0);
 	while (i && max--) {
 		if (i->run->is_c)
-			fprintf(stderr, " > %s\n", i->run->proto->land);
+			ymd_fprintf(stderr, " ${[green]>}$ %s\n", i->run->proto->land);
 		else
-			fprintf(stderr, " > %s:%d %s\n",
+			ymd_fprintf(stderr, " ${[green]>}$ %s:%d %s\n",
 			        i->run->u.core->file->land,
 					i->run->u.core->line[i->pc - 1],
 					i->run->proto->land);
 		i = i->chain;
 	}
 	if (i != NULL)
-		fprintf(stderr, " > ... more calls ...\n");
+		ymd_fprintf(stderr, " ${[green]>}$ ... more calls ...\n");
 }
 
 struct call_info *vm_nearcall(struct ymd_context *l) {
@@ -300,11 +301,11 @@ static void do_panic(struct ymd_context *l, const char *msg) {
 	if (!msg || !*msg)
 		msg = "Unknown!";
 	if (i)
-		fprintf(stderr, "== VM Panic!\n%s:%d %s\n",
+		ymd_fprintf(stderr, "%s:%d: ${[red]panic:}$ %s\n",
 				i->run->u.core->file->land,
 				i->run->u.core->line[i->pc - 1], msg);
 	else
-		fprintf(stderr, "== VM Panic!\n%%%% %s\n", msg);
+		ymd_fprintf(stderr, "[none] ${[red]panic:}$ %s\n", msg);
 	fprintf(stderr, "-- Back trace:\n");
 	vm_backtrace(l, 6);
 	assert(l->jpt);

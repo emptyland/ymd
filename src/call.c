@@ -140,12 +140,12 @@ static inline void vm_iput(struct ymd_mach *vm,
 // ----------------------------------------------------------------------------
 // Close function's upval, make it to closure:
 static int vm_close_upval(struct ymd_context *l, struct func *fn) {
-	struct call_info *ci = l->info;
 	struct chunk *core = fn->u.core;
 	int k, linked = 0;
 	assert (!fn->upval && "Can not close a function again.");
 	fn->upval = mm_zalloc(l->vm, core->kuz, sizeof(*fn->upval));
 	for (k = 0; k < core->kuz; ++k) {
+		struct call_info *ci = l->info;
 		while (ci) {
 			int i;
 			if (ci->run->is_c)

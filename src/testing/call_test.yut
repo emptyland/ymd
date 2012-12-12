@@ -84,5 +84,25 @@ CallTest = @{
 		for i in range (0, 100) {
 			Assert:EQ(i, f())
 		}
+	},
+
+	test04func_close : func (self) {
+		var func build(i) {
+			return (func () {
+				var j = 1
+				return (func () {
+					var k = 2
+					return (func () {
+						return [i, j, k];
+					}) ()
+				}) ()
+			}) ()
+		}
+		var f = build(0)
+		Assert:EQ("array", typeof f)
+		Assert:EQ(3, len(f))
+		Assert:EQ(0, f[0])
+		Assert:EQ(1, f[1])
+		Assert:EQ(2, f[2])
 	}
 }
