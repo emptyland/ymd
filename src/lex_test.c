@@ -11,8 +11,7 @@ static int test_sanity(void *p) {
 	struct ytoken token;
 	int rv;
 	(void)p;
-	lex_init(&lex, NULL, "->!~+-=<>/\n\t .%^*(){}[]:==>=<=!=~=>>|><<@{|&");
-	ASSERT_TOKEN(DICT);
+	lex_init(&lex, NULL, "!~+-=<>/\n\t .%^*(){}[]:==>=<=!=~=>>|><<@{|&");
 	ASSERT_TOKEN('!');
 	ASSERT_TOKEN('~');
 	ASSERT_TOKEN('+');
@@ -83,6 +82,26 @@ static int test_lex_num_literal_2(void *p) {
 	ASSERT_TOKEN(EOS);
 	return 0;
 }
+
+#define ASSERT_FOT(num) \
+	ASSERT_TOKEN(FLOAT); \
+	ASSERT_EQ(int, sizeof(num) - 1, token.len); \
+	ASSERT_EQ(int, 0, memcmp(num, token.off, token.len))
+static int test_lex_num_literal_3(void *p) {
+	struct ymd_lex lex;
+	struct ytoken token;
+	int rv;
+	(void)p;
+	lex_init(&lex, NULL, "0.1\t-0.1\t.1\t.001\t-.1\t3.1415927");
+	ASSERT_FOT("0.1");
+	ASSERT_FOT("-0.1");
+	ASSERT_FOT(".1");
+	ASSERT_FOT(".001");
+	ASSERT_FOT("-.1");
+	ASSERT_FOT("3.1415927");
+	return 0;
+}
+
 #define ASSERT_SYM(sym) \
 	ASSERT_TOKEN(SYMBOL); \
 	ASSERT_EQ(int, 0, memcmp(#sym, token.off, token.len))

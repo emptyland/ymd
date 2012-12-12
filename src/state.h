@@ -150,7 +150,24 @@ struct kstr *vm_strcat(struct ymd_mach *vm, const struct kstr *lhs,
 
 struct kstr *vm_format(struct ymd_mach *vm, const char *fmt, ...);
 
-// Runtime
+// Comparing:
+// lhs == rhs ?
+static inline int vm_equals(const struct variable *lhs,
+		const struct variable *rhs) {
+	return (is_num(lhs) && is_num(rhs)) ? num_compare(lhs, rhs) == 0 :
+		equals(lhs, rhs);
+}
+
+// Compare lhs and rhs
+static inline int vm_compare(const struct variable *lhs,
+		const struct variable *rhs) {
+	return (is_num(lhs) && is_num(rhs)) ? num_compare(lhs, rhs) :
+		compare(lhs, rhs);
+}
+
+//
+// Runtime:
+//
 static inline struct func *ymd_called(L) {
 	assert(l->info);
 	assert(l->info->run);
@@ -272,6 +289,10 @@ void ymd_format(L, const char *fmt, ... );
 
 static inline void ymd_int(L, ymd_int_t i) {
 	setv_int(ymd_push(l), i);
+}
+
+static inline void ymd_float(L, ymd_float_t f) {
+	setv_float(ymd_push(l), f);
 }
 
 static inline void ymd_ext(L, void *p) {

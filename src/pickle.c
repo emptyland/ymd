@@ -138,6 +138,10 @@ int ymd_serialize(struct zostream *os, const struct variable *v,
 		i += zos_u32(os, T_INT);
 		i += zos_i64(os, v->u.i);
 		break;
+	case T_FLOAT:
+		i += zos_u32(os, T_FLOAT);
+		i += zos_float(os, v->u.f);
+		break;
 	case T_BOOL:
 		i += zos_u32(os, T_BOOL);
 		i += zos_u64(os, v->u.i);
@@ -315,6 +319,9 @@ int ymd_parse(struct zistream *is, int *ok) {
 		break;
 	case T_INT:
 		ymd_int(l, zis_i64(is));
+		break;
+	case T_FLOAT:
+		ymd_float(l, zis_float(is));
 		break;
 	case T_BOOL:
 		ymd_bool(l, zis_u64(is));

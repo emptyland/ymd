@@ -19,7 +19,6 @@ false, FALSE
 <<, LSHIFT
 >>, RSHIFT_A
 |>, RSHIFT_L
-->, DICT
 var, VAR
 func, FUNC
 and, AND

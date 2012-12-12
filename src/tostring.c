@@ -78,6 +78,11 @@ const char *tostring(struct zostream *os, const struct variable *var) {
 		snprintf(zos_last(os), zos_remain(os), "%lld", var->u.i);
 		zos_add(os);
 		break;
+	case T_FLOAT:
+		zos_reserved(os, 24);
+		snprintf(zos_last(os), zos_remain(os), "%f", var->u.f);
+		zos_add(os);
+		break;
 	case T_BOOL:
 		if (var->u.i)
 			zos_append(os, "true", 4);

@@ -15,6 +15,8 @@ struct skls;
 
 typedef long long          ymd_int_t;
 typedef unsigned long long ymd_uint_t;
+typedef double             ymd_float_t;
+
 typedef int (*ymd_nafn_t)(struct ymd_context *);
 
 typedef unsigned char      ymd_byte_t;

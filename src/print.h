@@ -27,8 +27,10 @@ enum ymd_color_e {
 // Green color : "${[green]The Green string}$"
 int ymd_vfprintf(FILE *fp, const char *fmt, va_list ap);
 
-int ymd_fprintf(FILE *fp, const char *fmt, ...);
+int ymd_fprintf(FILE *fp, const char *fmt, ...)
+	__attribute__ ((__format__ (__printf__, 2, 3)));
 
-int ymd_printf(const char *fmt, ...);
+int ymd_printf(const char *fmt, ...)
+	__attribute__ ((__format__ (__printf__, 1, 2)));
 
 #endif // YMD_PRINT_H

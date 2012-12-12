@@ -12,19 +12,20 @@
 //-----------------------------------------------------------------------
 #define T_NIL     0
 #define T_INT     1
-#define T_BOOL    2
-#define T_EXT     3 // Naked pointer
+#define T_FLOAT   2
+#define T_BOOL    3
+#define T_EXT     4 // Naked pointer
 // -->
-#define T_REF     4 /* Flag the follow type are gc type: */
+#define T_REF     5 /* Flag the follow type are gc type: */
 // <--
-#define T_KSTR    4 // Constant string
-#define T_FUNC    5 // Closure
-#define T_DYAY    6 // Dynamic array
-#define T_HMAP    7 // Hash map
-#define T_SKLS    8 // Skip list
-#define T_MAND    9 // Managed data(from C/C++)
+#define T_KSTR    5 // Constant string
+#define T_FUNC    6 // Closure
+#define T_DYAY    7 // Dynamic array
+#define T_HMAP    8 // Hash map
+#define T_SKLS    9 // Skip list
+#define T_MAND   10 // Managed data(from C/C++)
 
-#define T_MAX    10
+#define T_MAX    11
 
 #define DECL_TREF(v) \
 	v(func, T_FUNC)  \
@@ -41,6 +42,7 @@ struct variable {
 	union {
 		struct gc_node *ref;
 		void *ext;
+		ymd_float_t f;
 		ymd_int_t i;
 	} u;
 };
@@ -138,9 +140,15 @@ extern struct variable *knil;
 
 // Safe casting
 ymd_int_t int_of(struct ymd_context *l, const struct variable *var);
+ymd_int_t int4of(struct ymd_context *l, const struct variable *var);
+ymd_float_t float_of(struct ymd_context *l, const struct variable *var);
+ymd_float_t float4(const struct variable *var);
+ymd_float_t float4of(struct ymd_context *l, const struct variable *var);
 ymd_int_t bool_of(struct ymd_context *l, const struct variable *var);
+
+// Safe get mand type's payload data pointer
 void *mand_land(struct ymd_context *l, struct variable *var,
-                const char *tt);
+		const char *tt);
 
 // Literal type strings
 const char *typeof_kz(int tt);
@@ -149,6 +157,9 @@ struct kstr *typeof_kstr(struct ymd_mach *vm, int tt);
 // Generic comparing
 int equals(const struct variable *lhs, const struct variable *rhs);
 int compare(const struct variable *lhs, const struct variable *rhs);
+
+// Number type comparing
+int num_compare(const struct variable *lhs, const struct variable *rhs);
 
 // Internal comparing
 int kstr_equals(const struct kstr *kz, const struct kstr *rhs);
@@ -217,10 +228,20 @@ struct variable *mand_put(struct ymd_mach *vm, struct mand *o,
 void blk_final(struct ymd_mach *vm, struct chunk *core);
 int blk_emit(struct ymd_mach *vm, struct chunk *core, ymd_inst_t inst,
              int line);
+
+// Find or get `string' in constant list
 int blk_kz(struct ymd_mach *vm, struct chunk *core, const char *z,
            int k);
+
+// Find or put `int' in constant list
 int blk_ki(struct ymd_mach *vm, struct chunk *core, ymd_int_t i);
+
+// Find or put `float' in constant list
+int blk_kd(struct ymd_mach *vm, struct chunk *core, ymd_float_t f);
+
+// Find or put `function' in constant list
 int blk_kf(struct ymd_mach *vm, struct chunk *core, void *fn);
+
 int blk_find_lz(struct chunk *core, const char *z);
 int blk_add_lz(struct ymd_mach *vm, struct chunk *core, const char *z);
 int blk_find_uz(struct chunk *core, const char *z);

@@ -122,6 +122,11 @@ static inline void ymk_emit_int(
 	ymk_emitOfP(p, I_PUSH, F_KVAL, blk_ki(p->vm, p->blk, imm));
 }
 
+static inline void ymk_emit_float(struct ymd_parser *p,
+		ymd_float_t imm) {
+	ymk_emitOfP(p, I_PUSH, F_KVAL, blk_kd(p->vm, p->blk, imm));
+}
+
 static void ymk_emit_kz(
 	struct ymd_parser *p, const char *raw) {
 	char *priv = NULL;
@@ -574,6 +579,11 @@ static void parse_simple(struct ymd_parser *p) {
 	case HEX_LITERAL: {
 		int ok = 1;
 		ymk_emit_int(p, xtoll(ymk_literal(p), &ok));
+		assert(ok);
+		} break;
+	case FLOAT: {
+		int ok = 1;
+		ymk_emit_float(p, ltof(ymk_literal(p), &ok));
 		assert(ok);
 		} break;
 	case STRING:

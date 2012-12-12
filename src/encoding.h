@@ -32,6 +32,7 @@ static inline ymd_i32_t zigzag32decode(ymd_u32_t u) {
 int stresc(const char *i, char **rv);
 ymd_int_t xtoll(const char *raw, int *ok);
 ymd_int_t dtoll(const char *raw, int *ok);
+ymd_float_t ltof(const char *raw, int *ok);
 
 // Unsigned int encoding:
 int uint64encode(ymd_uint_t x, ymd_byte_t *rv);

@@ -117,6 +117,11 @@ ymd_int_t dtoll(const char *raw, int *ok) {
 	return k ? -rv : rv;
 }
 
+ymd_float_t ltof(const char *raw, int *ok) {
+	*ok = 1;
+	return atof(raw);
+}
+
 #define TEST_OR_SET(c) \
 	by = ((x & 0x7fULL << (c*7)) >> (c*7))
 #define FILL_AND_TEST_OR_SET(c) \

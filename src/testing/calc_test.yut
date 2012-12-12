@@ -5,6 +5,8 @@ CalcTest = @{
 		Assert:EQ(-1, -1)
 		Assert:EQ(nil, nil)
 		Assert:EQ(true, true)
+		Assert:EQ(0, 0.0)
+		Assert:EQ(-0.1, -0.1)
 		Assert:EQ("", "")
 		Assert:EQ("hash", "hash")
 		Assert:NE("hash", " hash")
@@ -21,6 +23,8 @@ CalcTest = @{
 		Assert:EQ(2, m)
 		n = n + 100
 		Assert:EQ(200, n)
+		Assert:EQ(1.1, 0.1 + 1)
+		Assert:EQ(0.9, -0.1 + 1)
 	},
 
 	// Mul and Div:
@@ -40,6 +44,9 @@ CalcTest = @{
 		Assert:EQ(m / n, n / m)
 		Assert:EQ(0, m % n)
 		Assert:EQ(m % n, n % m)
+		//Assert:EQ(3.3, 1.1 * 3)
+		Assert:EQ(-4.4, 1.1 * -4)
+		Assert:EQ(1.1, 5.5 / 5)
 	},
 
 	test03Bitwise : func (self) {
@@ -67,5 +74,53 @@ CalcTest = @{
 	test04Expr : func (self) {
 		var a = 0, b = 1
 		Assert:EQ(-7, 1 - b * 8 / b)
+	},
+
+	test05Equals : func (self) {
+		Assert:True(0 == 0)
+		Assert:True(10000 == 10000)
+		Assert:True(99999 == 99999)
+		Assert:True(-65535 == -65535)
+		Assert:True(1.0 == 1)
+		Assert:True(1 == 1.0)
+		Assert:True(-1.0 == -1)
+
+		Assert:True(0 != 1)
+		Assert:True(-1 != 1)
+		Assert:True(0.1 != 0)
+		Assert:True(1.1 != 1)
+		Assert:True(-1.1 != -1)
+	},
+
+	test06Compare : func (self) {
+		Assert:True(0 < 1)
+		Assert:True(-1 < 0)
+		Assert:True(9999 < 10000)
+
+		Assert:True(0 <= 1)
+		Assert:True(0 <= 0)
+		Assert:True(-1 <= 0)
+		Assert:True(-1 <= -1)
+		Assert:True(9999 <= 10000)
+		Assert:True(9999 <= 9999)
+
+		Assert:True(0 < 0.1)
+		Assert:True(0 <= 0.1)
+		Assert:True(0.1 <= 0.1)
+
+		Assert:True(1 > 0)
+		Assert:True(0 > -1)
+		Assert:True(10000 > 9999)
+
+		Assert:True(1 >= 0)
+		Assert:True(0 >= 0)
+		Assert:True(0 >= -1)
+		Assert:True(-1 >= -1)
+		Assert:True(10000 >= 9999)
+		Assert:True(10000 >= 10000)
+
+		Assert:True(0.1 > 0)
+		Assert:True(0.1 >= 0)
+		Assert:True(0.1 >= 0.1)
 	}
 }

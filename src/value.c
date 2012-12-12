@@ -9,9 +9,10 @@ struct typeof_z {
 	int len;
 	const char *name;
 };
-static const struct typeof_z typeof_name[] = {
+static const struct typeof_z typeof_name[T_MAX] = {
 	{ 3, "nil", },
 	{ 3, "int", },
+	{ 5, "float", },
 	{ 4, "bool", },
 	{ 4, "lite", },
 	{ 6, "string", },
@@ -46,13 +47,58 @@ struct variable *knil = &knil_fake_var;
 //-------------------------------------------------------------------------
 ymd_int_t int_of(struct ymd_context *l, const struct variable *var) {
 	if (var->tt != T_INT)
-		ymd_panic(l, "Variable is not `int`");
+		ymd_panic(l, "Variable is not `int'");
 	return var->u.i;
+}
+
+ymd_int_t int4of(struct ymd_context *l, const struct variable *var) {
+	switch (TYPEV(var)) {
+	case T_INT:
+		return var->u.i;
+	case T_FLOAT:
+		return (ymd_int_t)var->u.f;
+	default:
+		ymd_panic(l, "Variable is not a number(int or float)");
+		break;
+	}
+	return 0;
+}
+
+ymd_float_t float_of(struct ymd_context *l, const struct variable *var) {
+	if (var->tt != T_FLOAT)
+		ymd_panic(l, "Variable is not `float'");
+	return var->u.f;
+}
+
+ymd_float_t float4(const struct variable *var) {
+	switch (TYPEV(var)) {
+	case T_INT:
+		return (ymd_float_t)var->u.i;
+	case T_FLOAT:
+		return var->u.f;
+	default:
+		assert (!"Operand is not a number.");
+		break;
+	}
+	return 0;
+}
+
+ymd_float_t float4of(struct ymd_context *l, const struct variable *var) {
+	switch (TYPEV(var)) {
+	case T_INT:
+		return (ymd_float_t)var->u.i;
+	case T_FLOAT:
+		return var->u.f;
+	default:
+		ymd_panic(l, "Variable is not a number(int or float)");
+		break;
+	}
+	return 0;
 }
 
 ymd_int_t bool_of(struct ymd_context *l, const struct variable *var) {
 	if (var->tt != T_BOOL)
-		ymd_panic(l, "Variable is not `bool`");
+		ymd_panic(l, "Variable is not `bool'");
 	return var->u.i;
 }
 
@@ -60,7 +106,7 @@ ymd_int_t bool_of(struct ymd_context *l, const struct variable *var) {
 struct name *name##_of(struct ymd_context *l, \
 		struct variable *var) { \
 	if (TYPEV(var) != tt) \
-		ymd_panic(l, "Variable is not `"#name"`"); \
+		ymd_panic(l, "Variable is not `"#name"'"); \
 	assert(var->u.ref != NULL); \
 	return (struct name *)var->u.ref; \
 }
@@ -90,6 +136,8 @@ int equals(const struct variable *lhs, const struct variable *rhs) {
 	case T_INT:
 	case T_BOOL:
 		return lhs->u.i == rhs->u.i;
+	case T_FLOAT:
+		return lhs->u.f == rhs->u.f; // FIXME:int and float can equals
 	case T_KSTR:
 		return kstr_equals(kstr_k(lhs), kstr_k(rhs));
 	case T_FUNC:
@@ -126,6 +174,8 @@ int compare(const struct variable *lhs, const struct variable *rhs) {
 	case T_INT:
 	case T_BOOL:
 		return safe_compare(lhs->u.i, rhs->u.i);
+	case T_FLOAT:
+		return safe_compare(lhs->u.f, rhs->u.f);
 	case T_KSTR:
 		return kstr_compare(kstr_k(lhs), kstr_k(rhs));
 	//case T_CLOSURE:
@@ -145,6 +195,13 @@ int compare(const struct variable *lhs, const struct variable *rhs) {
 		break;
 	}
 	return 0;
+}
+
+int num_compare(const struct variable *lhs, const struct variable *rhs) {
+	assert (is_num(lhs) && is_num(rhs) && "Comparing operands not number.");
+	if (floatize(lhs, rhs))
+		return safe_compare(float4(lhs), float4(rhs));
+	return safe_compare(lhs->u.i, rhs->u.i);
 }
 
 #undef safe_compare

@@ -159,12 +159,12 @@ static int libx_##name(L) { \
 	return 0; \
 }
 
-DEFINE_BIN_ASSERT(EQ, equals,  == 0)
-DEFINE_BIN_ASSERT(NE, equals,  != 0)
-DEFINE_BIN_ASSERT(LT, compare, >= 0)
-DEFINE_BIN_ASSERT(LE, compare, > 0 )
-DEFINE_BIN_ASSERT(GT, compare, <= 0)
-DEFINE_BIN_ASSERT(GE, compare, < 0 )
+DEFINE_BIN_ASSERT(EQ, vm_equals,  == 0)
+DEFINE_BIN_ASSERT(NE, vm_equals,  != 0)
+DEFINE_BIN_ASSERT(LT, vm_compare, >= 0)
+DEFINE_BIN_ASSERT(LE, vm_compare, >  0)
+DEFINE_BIN_ASSERT(GT, vm_compare, <= 0)
+DEFINE_BIN_ASSERT(GE, vm_compare, <  0)
 
 #undef DEFINE_BIN_ASSERT
 

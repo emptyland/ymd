@@ -97,10 +97,10 @@ int yut_run_test(yut_case_t func, void *context, const char *name) {
 	err = (*func)(context);
 	rv = gettimeofday(&jiffx, NULL);
 	if (err)
-		ymd_printf("${[red][  FAILED  ]}$ %s(%s)\n", name,
+		ymd_printf("${[red][  FAILED  ]}$ %s (%s)\n", name,
 				format_interval(&start, &jiffx, itv, sizeof(itv)));
 	else
-		ymd_printf("${[!green][       OK ]}$ %s(%s)\n", name,
+		ymd_printf("${[!green][       OK ]}$ %s (%s)\n", name,
 				format_interval(&start, &jiffx, itv, sizeof(itv)));
 	return err;
 }

@@ -32,7 +32,6 @@
 	v(LSHIFT, "<<") \
 	v(RSHIFT_A, ">>") \
 	v(RSHIFT_L, "|>") \
-	v(DICT, "->") \
 	v(VAR, "var") \
 	v(FUNC, "func") \
 	v(AND, "and") \

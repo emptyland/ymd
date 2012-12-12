@@ -34,6 +34,13 @@ static inline size_t hash_int(ymd_int_t i) {
 	return i;
 }
 
+static inline size_t hash_float(ymd_float_t f) {
+	size_t i;
+	memcpy(&i, &f, sizeof(i));
+	return i;
+}
+
+
 static inline size_t hash_bool(ymd_int_t i) {
 	return !i ? 2 : 3;
 }
@@ -100,6 +107,8 @@ static size_t hash(const struct variable *v) {
 		return 0;
 	case T_INT:
 		return hash_int(v->u.i);
+	case T_FLOAT:
+		return hash_float(v->u.f);
 	case T_BOOL:
 		return hash_bool(v->u.i);
 	case T_KSTR:

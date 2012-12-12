@@ -89,6 +89,13 @@ static inline ymd_int_t zis_i64(ZIS) {
 	return x;
 }
 
+static inline ymd_float_t zis_float(ZIS) {
+	ymd_float_t x;
+	memcpy(&x, zis_last(is), sizeof(x));
+	zis_advance(is, (int)sizeof(x));
+	return x;
+}
+
 #undef ZIS
 //------------------------------------------------------------------------
 // zostream:
@@ -159,6 +166,11 @@ static inline int zos_i64(ZOS, ymd_int_t x) {
 	i = sint64encode(x, zos_last(os));
 	zos_advance(os, i);
 	return i;
+}
+
+static inline int zos_float(ZOS, ymd_float_t x) {
+	zos_append(os, &x, sizeof(x));
+	return sizeof(x);
 }
 
 #undef ZOS

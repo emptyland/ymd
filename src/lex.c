@@ -10,7 +10,7 @@
 #define TERM_CHAR \
 	     '+': case '*': case '%': case '^': case ',': case ';': \
 	case '(': case ')': case '[': case ']': case '{': case '}': \
-	case ':': case '.': case '&'
+	case ':': case '&'
 #define PREX_CHAR \
 	     '-': case '<': case '>': case '=': case '!': case '~': \
 	case '@': case '|': case '/': case '\"': case '#'
@@ -115,6 +115,7 @@ static int lex_term(int ch) {
 	case EOS:
 	case TERM_CHAR:
 	case PREX_CHAR:
+	case '.':
 		return 1;
 	default:
 		if (isspace(ch)) return 1;
@@ -123,13 +124,30 @@ static int lex_term(int ch) {
 	return 0;
 }
 
+static int lex_read_float(struct ymd_lex *lex, int neg, struct ytoken *x) {
+	int ch;
+	++x->len; // Contain '.'
+	while (!lex_term(ch = lex_read(lex))) {
+		if (isdigit(ch))
+			++x->len;
+		else
+			return ERROR;
+	}
+	lex_back(lex);
+	x->token = !x->len ? ERROR : FLOAT;
+	x->len += neg;
+	return x->token;
+}
+
 static int lex_read_dec(struct ymd_lex *lex, int neg, struct ytoken *x) {
 	int ch;
 	x->off = lex->buf + lex->off - neg;
 	x->token = ERROR;
-	while (!lex_term(ch = lex_read(lex))) {
+	while ((ch = lex_read(lex)) == '.' || !lex_term(ch)) {
 		if (isdigit(ch))
 			++x->len;
+		else if (ch == '.')
+			return lex_read_float(lex, neg, x);
 		else
 			return ERROR;
 	}
@@ -233,12 +251,18 @@ int lex_next(struct ymd_lex *lex, struct ytoken *x) {
 			lex_move(lex);
 			if (isdigit(lex_peek(lex)))
 				return lex_read_dec(lex, 1, rv);
-			if (lex_peek(lex) == '>') {
-				rv->off = lex->buf + lex->off - 2;
-				rv->len = 2;
-				rv->token = DICT;
+			if (lex_peek(lex) == '.') {
 				lex_move(lex);
-				return rv->token;
+				rv->off = lex->buf + lex->off - 2;
+				return lex_read_float(lex, 1, rv);
+			}
+			lex_back(lex);
+			return lex_token_c(lex, rv);
+		case '.':
+			lex_move(lex);
+			if (isdigit(lex_peek(lex))) {
+				rv->off = lex->buf + lex->off - 1;
+				return lex_read_float(lex, 0, rv);
 			}
 			lex_back(lex);
 			return lex_token_c(lex, rv);

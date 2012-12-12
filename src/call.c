@@ -171,38 +171,61 @@ static int vm_close_upval(struct ymd_context *l, struct func *fn) {
 	return 0;
 }
 
-int vm_calc(struct ymd_context *l, unsigned op) {
+// Operand is zero?
+static inline int vm_zero(const struct variable *var) {
+	if (TYPEV(var) == T_INT)
+		return var->u.i == 0LL;
+	if (TYPEV(var) == T_FLOAT)
+		return var->u.f == 0.0f;
+	return 0;
+}
+
+static int vm_calc(struct ymd_context *l, unsigned op) {
 	switch (op) {
 	case F_INV: {
 		struct variable *opd = ymd_top(l, 0);
-		opd->u.i = -int_of(l, opd);
+		if (TYPEV(opd) == T_INT)
+			setv_int(opd, opd->u.i);
+		else
+			setv_float(opd, float4of(l, opd));
 		} break;
 	case F_MUL: {
-		struct variable *rhs = ymd_top(l, 1),
-						*lhs = ymd_top(l, 0);
-		rhs->u.i = int_of(l, rhs) * int_of(l, lhs);
+		struct variable *lhs = ymd_top(l, 1),
+						*rhs = ymd_top(l, 0);
+		if (floatize(lhs, rhs))
+			setv_float(lhs, float4of(l, lhs) * float4of(l, rhs));
+		else
+			lhs->u.i = int4of(l, lhs) * int4of(l, rhs);
 		ymd_pop(l, 1);
 		} break;
 	case F_DIV: {
-		struct variable *rhs = ymd_top(l, 1),
-						*lhs = ymd_top(l, 0);
-		ymd_int_t opd2 = int_of(l, lhs);
-		if (opd2 == 0LL)
-			ymd_panic(l, "Div to zero");
-		rhs->u.i = int_of(l, rhs) / opd2;
+		struct variable *lhs = ymd_top(l, 1),
+						*rhs = ymd_top(l, 0);
+		if (vm_zero(rhs))
+			ymd_panic(l, "Can not divide by zero.");
+		if (floatize(lhs, rhs))
+			setv_float(lhs, float4of(l, lhs) / float4of(l, rhs));
+		else
+			lhs->u.i = int4of(l, lhs) / int4of(l, rhs);
 		ymd_pop(l, 1);
 		} break;
 	case F_ADD: {
-		struct variable *rhs = ymd_top(l, 1),
-						*lhs = ymd_top(l, 0);
-		switch (TYPEV(rhs)) {
+		struct variable *lhs = ymd_top(l, 1),
+						*rhs = ymd_top(l, 0);
+		switch (TYPEV(lhs)) {
 		case T_INT:
-			rhs->u.i = rhs->u.i + int_of(l, lhs);
+			if (TYPEV(rhs) == T_FLOAT)
+				setv_float(lhs, float4of(l, lhs) + float4of(l, rhs));
+			else
+				lhs->u.i = int4of(l, lhs) + int4of(l, rhs);
+			break;
+		case T_FLOAT:
+			setv_float(lhs, lhs->u.f + float4of(l, rhs));
 			break;
 		case T_KSTR:
-			rhs->u.ref = gcx(vm_strcat(l->vm, kstr_of(l, rhs),
-			                           kstr_of(l, lhs)));
-			gc_release(rhs->u.ref);
+			lhs->u.ref = gcx(vm_strcat(l->vm, kstr_of(l, lhs),
+						kstr_of(l, rhs)));
+			gc_release(lhs->u.ref);
 			break;
 		default:
 			ymd_panic(l, "Operator + don't support this type");
@@ -211,9 +234,12 @@ int vm_calc(struct ymd_context *l, unsigned op) {
 		ymd_pop(l, 1);
 		} break;
 	case F_SUB: {
-		struct variable *rhs = ymd_top(l, 1),
-						*lhs = ymd_top(l, 0);
-		rhs->u.i = int_of(l, rhs) - int_of(l, lhs);
+		struct variable *lhs = ymd_top(l, 1),
+						*rhs = ymd_top(l, 0);
+		if (floatize(lhs, rhs))
+			setv_float(lhs, float4of(l, lhs) - float4of(l, rhs));
+		else
+			lhs->u.i = int4of(l, lhs) - int4of(l, rhs);
 		ymd_pop(l, 1);
 		} break;
 	case F_MOD: {
@@ -394,35 +420,35 @@ retry:
 			setv_func(ymd_push(l), copied);
 			} break;
 		case I_TEST: {
-			struct variable *rhs = ymd_top(l, 1),
-							*lhs = ymd_top(l, 0);
+			struct variable *lhs = ymd_top(l, 1),
+							*rhs = ymd_top(l, 0);
 			switch (asm_flag(inst)) {
 			case F_EQ:
-				rhs->u.i = equals(rhs, lhs);
+				lhs->u.i = vm_equals(lhs, rhs);
 				break;
 			case F_NE:
-				rhs->u.i = !equals(rhs, lhs);
+				lhs->u.i = !vm_equals(lhs, rhs);
 				break;
 			case F_GT:
-				rhs->u.i = compare(rhs, lhs) > 0;
+				lhs->u.i = vm_compare(lhs, rhs) > 0;
 				break;
 			case F_GE:
-				rhs->u.i = compare(rhs, lhs) >= 0;
+				lhs->u.i = vm_compare(lhs, rhs) >= 0;
 				break;
 			case F_LT:
-				rhs->u.i = compare(rhs, lhs) < 0;
+				lhs->u.i = vm_compare(lhs, rhs) < 0;
 				break;
 			case F_LE:
-				rhs->u.i = compare(rhs, lhs) <= 0;
+				lhs->u.i = vm_compare(lhs, rhs) <= 0;
 				break;
 			case F_MATCH:
-				rhs->u.i = vm_match(vm, kstr_of(l, rhs), kstr_of(l, lhs));
+				lhs->u.i = vm_match(vm, kstr_of(l, lhs), kstr_of(l, rhs));
 				break;
 			default:
 				assert(!"No reached.");
 				break;
 			}
-			rhs->tt = T_BOOL;
+			lhs->tt = T_BOOL;
 			ymd_pop(l, 1);
 			} break;
 		case I_GETF: {

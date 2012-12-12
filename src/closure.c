@@ -58,11 +58,20 @@ int blk_kz(struct ymd_mach *vm, struct chunk *core, const char *z, int k) {
 int blk_ki(struct ymd_mach *vm, struct chunk *core, ymd_int_t n) {
 	int i = core->kkval;
 	while (i--) {
-		if (TYPEV(&core->kval[i]) == T_INT &&
-			core->kval[i].u.i == n)
+		if (TYPEV(&core->kval[i]) == T_INT && core->kval[i].u.i == n)
 			return i;
 	}
 	setv_int(blk_klast(vm, core), n);
+	return core->kkval++;
+}
+
+int blk_kd(struct ymd_mach *vm, struct chunk *core, ymd_float_t f) {
+	int i = core->kkval;
+	while (i--) {
+		if (TYPEV(&core->kval[i]) == T_FLOAT && core->kval[i].u.f == f)
+			return i;
+	}
+	setv_float(blk_klast(vm, core), f);
 	return core->kkval++;
 }
 
@@ -70,8 +79,7 @@ int blk_kf(struct ymd_mach *vm, struct chunk *core, void *p) {
 	int i = core->kkval;
 	struct func *fn = p;
 	while (i--) {
-		if (TYPEV(&core->kval[i]) == T_FUNC &&
-		    core->kval[i].u.ref == p)
+		if (TYPEV(&core->kval[i]) == T_FUNC && core->kval[i].u.ref == p)
 			return i;
 	}
 	setv_func(blk_klast(vm, core), fn);

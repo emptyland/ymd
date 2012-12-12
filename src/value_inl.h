@@ -35,6 +35,7 @@ DECL_TREF(DECL_REFOF)
 
 #define is_nil(v) ((v)->tt == T_NIL)
 #define is_ref(v) ((v)->tt == T_REF)
+#define is_num(v) ((v)->tt == T_INT || (v)->tt == T_FLOAT)
 
 //
 // Variable setter:
@@ -46,6 +47,9 @@ static inline void setv_nil (struct variable *v) {
 	static inline void setv_##name (struct variable *v, arg1 x)
 VSET_DECL(int, ymd_int_t) {
 	v->tt = T_INT; v->u.i = x;
+}
+VSET_DECL(float, ymd_float_t) {
+	v->tt = T_FLOAT; v->u.f = x;
 }
 VSET_DECL(bool, ymd_int_t) {
 	v->tt = T_BOOL; v->u.i = x;
@@ -64,6 +68,12 @@ static inline void setv_##name(struct variable *v, struct name *o) { \
 }
 DECL_TREF(DEFINE_SETTER)
 #undef DEFINE_SETTER
+
+// Check lhs and rhs one of float type
+static inline int floatize(const struct variable *lhs,
+		const struct variable *rhs) {
+	return TYPEV(lhs) == T_FLOAT || TYPEV(rhs) == T_FLOAT;
+}
 
 static inline
 struct gc_node *mand_proto(struct mand *x, struct gc_node *metatable) {
