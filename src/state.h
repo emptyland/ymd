@@ -172,16 +172,8 @@ static inline struct variable *ymd_argv_get(L, int i) {
 	return argv->elem + i;
 }
 
-static inline struct variable *ymd_bval(L, int i) {
-	assert(i >= 0);
-#if !defined(NDEBUG)
-	if (ymd_called(l)->is_c)
-		assert(i < ymd_called(l)->n_upval);
-	else
-		assert(i < ymd_called(l)->u.core->kuz);
-#endif
-	return ymd_called(l)->upval + i;
-}
+// Get upval by index, in context.
+struct variable *ymd_upval(L, int i);
 
 //-----------------------------------------------------------------------------
 // Stack functions:
@@ -328,14 +320,14 @@ static inline void ymd_putf(L) {
 static inline void ymd_mem(L, const char *field) {
 	struct variable *v;
 	if (!is_ref(ymd_top(l, 0)))
-		ymd_panic(l, "object must be hashmap or skiplist");
+		ymd_panic(l, "Object must be hashmap or skiplist");
 	v = vm_mem(l->vm, ymd_top(l, 0)->u.ref, field);
 	*ymd_push(l) = *v;
 }
 
 static inline void ymd_def(L, const char *field) {
 	if (!is_ref(ymd_top(l, 1)))
-		ymd_panic(l, "object must be hashmap or skiplist");
+		ymd_panic(l, "Object must be hashmap or skiplist");
 	*vm_def(l->vm, ymd_top(l, 1)->u.ref, field) = *ymd_top(l, 0);
 	ymd_pop(l, 1);
 }
@@ -351,7 +343,10 @@ static inline void ymd_putg(L, const char *field) {
 
 static inline void ymd_bind(L, int i) {
 	struct func *o = func_of(l, ymd_top(l, 1));
-	*func_bval(l->vm, o, i) = *ymd_top(l, 0);
+	if (i < 0 || i >= o->n_upval)
+		ymd_panic(l, "Upval index out of range, %d vs. [%d, %d)",
+				i, 0, o->n_upval);
+	*func_bind(l->vm, o, i) = *ymd_top(l, 0);
 	ymd_pop(l, 1);
 }
 
@@ -364,8 +359,8 @@ static inline void ymd_insert(L) {
 
 static inline void ymd_setmetatable(L) {
 	struct mand *o = mand_of(l, ymd_top(l, 1));
-	if (TYPEV(ymd_top(l, 0)) != T_HMAP &&
-		TYPEV(ymd_top(l, 0)) != T_SKLS) ymd_panic(l, "Not metatable type!");
+	if (TYPEV(ymd_top(l, 0)) != T_HMAP && TYPEV(ymd_top(l, 0)) != T_SKLS)
+		ymd_panic(l, "Not metatable type!");
 	mand_proto(o, ymd_top(l, 0)->u.ref);
 	ymd_pop(l, 1);
 }

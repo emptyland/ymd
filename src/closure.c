@@ -197,14 +197,12 @@ void func_final(struct ymd_mach *vm, struct func *fn) {
 	mm_drop(vm, fn->u.core, sizeof(*fn->u.core));
 }
 
-int func_bind(struct ymd_mach *vm, struct func *fn, int i,
-              const struct variable *var) {
+struct variable *func_bind(struct ymd_mach *vm, struct func *fn, int i) {
 	assert(i >= 0);
 	assert(i < fn->n_upval);
 	if (!fn->upval) // Lazy allocating
 		fn->upval = mm_zalloc(vm, fn->n_upval, sizeof(*fn->upval));
-	fn->upval[i] = *var;
-	return i;
+	return fn->upval + i;
 }
 
 void func_dump(struct func *fn, FILE *fp) {

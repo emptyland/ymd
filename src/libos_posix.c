@@ -18,7 +18,7 @@ static int dirent_final(struct ymd_dirent *dir) {
 }
 
 static int readdir_iter(L) {
-	struct ymd_dirent *dir = mand_land(l, ymd_bval(l, 0), T_DIRENT);
+	struct ymd_dirent *dir = mand_land(l, ymd_upval(l, 0), T_DIRENT);
 	struct dirent ent, *rv = NULL;
 	memset(&ent, 0, sizeof(ent));
 	if (readdir_r(dir->core, &ent, &rv) < 0 || rv != &ent)

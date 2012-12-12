@@ -210,9 +210,9 @@ static int libx_end(L) {
 }
 
 static int step_iter(L) {
-	struct variable *i = ymd_bval(l, 0),
-					*m = ymd_bval(l, 1),
-					*s = ymd_bval(l, 2),
+	struct variable *i = ymd_upval(l, 0),
+					*m = ymd_upval(l, 1),
+					*s = ymd_upval(l, 2),
 					rv;
 	setv_nil(&rv);
 	if (s->u.i > 0 && i->u.i < m->u.i) {
@@ -248,33 +248,33 @@ static int new_step_iter(L, ymd_int_t i, ymd_int_t m, ymd_int_t s) {
 // bind[3]: iterator flag
 // bind[4]: dyay self
 static int dyay_iter(L) {
-	struct variable *i = ymd_bval(l, 0)->u.ext,
-	                *m = ymd_bval(l, 1)->u.ext;
+	struct variable *i = ymd_upval(l, 0)->u.ext,
+	                *m = ymd_upval(l, 1)->u.ext;
 	if (i >= m)
 		return 0;
-	switch (int_of(l, ymd_bval(l, 3))) {
+	switch (int_of(l, ymd_upval(l, 3))) {
 	case ITER_KEY: {
-		ymd_int_t idx = int_of(l, ymd_bval(l, 2));
+		ymd_int_t idx = int_of(l, ymd_upval(l, 2));
 		ymd_int(l, idx);
-		setv_int(ymd_bval(l, 2), idx + 1);
+		setv_int(ymd_upval(l, 2), idx + 1);
 		} break;
 	case ITER_VALUE: {
 		*ymd_push(l) = *i;
 		} break;
 	case ITER_KV: {
-		ymd_int_t idx = int_of(l, ymd_bval(l, 2));
+		ymd_int_t idx = int_of(l, ymd_upval(l, 2));
 		ymd_dyay(l, 2);
 		ymd_int(l, idx);
 		ymd_add(l);
 		*ymd_push(l) = *i;
 		ymd_add(l);
-		setv_int(ymd_bval(l, 2), idx + 1);
+		setv_int(ymd_upval(l, 2), idx + 1);
 		} break;
 	default:
 		assert(!"No reached.");
 		break;
 	}
-	setv_ext(ymd_bval(l, 0), i + 1);
+	setv_ext(ymd_upval(l, 0), i + 1);
 	return 1;
 }
 
@@ -289,13 +289,13 @@ static inline struct kvi *move2valid(struct kvi *i, struct kvi *m) {
 // bind[1]: struct kvi *m; end of pointer
 // bind[2]: iterator flag
 static int hmap_iter(L) {
-	struct kvi *i = ymd_bval(l, 0)->u.ext,
-			   *m = ymd_bval(l, 1)->u.ext;
+	struct kvi *i = ymd_upval(l, 0)->u.ext,
+			   *m = ymd_upval(l, 1)->u.ext;
 	if (i >= m) {
 		setv_nil(ymd_push(l));
 		return 1;
 	}
-	switch (int_of(l, ymd_bval(l, 2))) {
+	switch (int_of(l, ymd_upval(l, 2))) {
 	case ITER_KEY:
 		*ymd_push(l) = i->k;
 		break;
@@ -311,7 +311,7 @@ static int hmap_iter(L) {
 		assert(!"No reached.");
 		break;
 	}
-	setv_ext(ymd_bval(l, 0), move2valid(i + 1, m));
+	setv_ext(ymd_upval(l, 0), move2valid(i + 1, m));
 	return 1;
 }
 
@@ -319,12 +319,12 @@ static int hmap_iter(L) {
 // bind[0]: struct sknd *i; current pointer
 // bind[1]: iterator flag
 static int skls_iter(L) {
-	struct sknd *i = ymd_bval(l, 0)->u.ext;
+	struct sknd *i = ymd_upval(l, 0)->u.ext;
 	if (!i) {
 		setv_nil(ymd_push(l));
 		return 1;
 	}
-	switch (int_of(l, ymd_bval(l, 1))) {
+	switch (int_of(l, ymd_upval(l, 1))) {
 	case ITER_KEY:
 		*ymd_push(l) = i->k;
 		break;
@@ -340,7 +340,7 @@ static int skls_iter(L) {
 		assert(!"No reached.");
 		break;
 	}
-	setv_ext(ymd_bval(l, 0), i->fwd[0]);
+	setv_ext(ymd_upval(l, 0), i->fwd[0]);
 	return 1;
 }
 

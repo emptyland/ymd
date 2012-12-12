@@ -242,6 +242,22 @@ void ymd_format(struct ymd_context *l, const char *fmt, ... ) {
 	setv_kstr(ymd_push(l), o);
 	gc_release(o);
 }
+
+struct variable *ymd_upval(struct ymd_context *l, int i) {
+	struct func *fn = ymd_called(l);
+	int k = fn->is_c ? fn->n_upval : fn->u.core->kuz;
+#ifndef NDEBUG
+	if (!fn->is_c) {
+		assert(fn->n_upval == fn->u.core->kuz 
+				&& "Function's n_upval and u.core->kuz not synchronous!");
+	}
+#endif
+	if (i < 0 || i >= k)
+		ymd_panic(l, "Upval index out of range, %d vs. [%d, %d)",
+				i, 0, k);
+	return fn->upval + i;
+}
+
 //-----------------------------------------------------------------------------
 // Mach:
 // ----------------------------------------------------------------------------

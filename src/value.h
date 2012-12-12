@@ -234,8 +234,11 @@ struct func *func_new_c(struct ymd_mach *vm, ymd_nafn_t nafn,
                         const char *name);
 struct func *func_clone(struct ymd_mach *vm, struct func *fn);
 void func_final(struct ymd_mach *vm, struct func *fn);
-int func_bind(struct ymd_mach *vm, struct func *fn, int i,
-              const struct variable *var);
+
+// Return a variable for binding, default: nil
+struct variable *func_bind(struct ymd_mach *vm, struct func *fn, int i);
+
+// Dump a function debug informations.
 void func_dump(struct func *fn, FILE *fp);
 
 #endif // YMD_VALUE_H

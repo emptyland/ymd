@@ -76,8 +76,8 @@ static int test_dump_func (struct ymd_mach *vm) {
 	struct chunk *x = mm_zalloc(vm, 1, sizeof(*x));
 	struct func *o = func_new(vm, x, "foo");
 	o->n_upval = 2;
-	setv_int(func_bval(vm, o, 0), 1LL);
-	setv_bool(func_bval(vm, o, 1), 0LL);
+	setv_int(func_bind(vm, o, 0), 1LL);
+	setv_bool(func_bind(vm, o, 1), 0LL);
 	blk_emit(vm, x, emitAfP(PUSH, KVAL, 0), 0);
 	blk_emit(vm, x, emitAP(RET, 1), 1);
 	blk_add_lz(vm, x, "i");
