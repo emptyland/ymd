@@ -86,23 +86,42 @@ CallTest = @{
 		}
 	},
 
-	test04func_close : func (self) {
+	test05func_closed_levels : func (self) {
+		var top = "top guys"
 		var func build(i) {
-			return (func () {
-				var j = 1
-				return (func () {
-					var k = 2
-					return (func () {
-						return [i, j, k];
-					}) ()
-				}) ()
-			}) ()
+			var j = 5
+			var k = "kk"
+			return func (x) {
+				var l = 6
+				var m = "mm"
+				return func () {
+					return {
+						this: self,
+						top: top,
+						i: i,
+						j: j,
+						k: k,
+						l: l,
+						m: m,
+						x: x
+					}
+				}
+			}
 		}
-		var f = build(0)
-		Assert:EQ("array", typeof f)
-		Assert:EQ(3, len(f))
-		Assert:EQ(0, f[0])
-		Assert:EQ(1, f[1])
-		Assert:EQ(2, f[2])
+
+		f = build(99)
+		Assert:EQ("function", typeof f)
+		f = f("xx")
+		Assert:EQ("function", typeof f)
+		f = f()
+		Assert:EQ("hashmap", typeof f)
+		Assert:EQ(self, f.this)
+		Assert:EQ(top,  f.top)
+		Assert:EQ(99,   f.i)
+		Assert:EQ(5,    f.j)
+		Assert:EQ("kk", f.k)
+		Assert:EQ(6,    f.l)
+		Assert:EQ("mm", f.m)
+		Assert:EQ("xx", f.x)
 	}
 }

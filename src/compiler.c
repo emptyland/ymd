@@ -179,6 +179,12 @@ static void ymk_emit_push(
 		if (i < 0)
 			i = blk_find_uz(x, symbol); // upval is upval?
 		if (i >= 0) {
+			struct chunk *link = p->blk;
+			while ((link = link->chain) != x) { // Link upval in every level.
+				// FIXME: use better linking
+				i = blk_add_uz(p->vm, link, symbol);
+				assert (i >= 0 && "Duplicate linked upval.");
+			}
 			i = blk_add_uz(p->vm, p->blk, symbol);
 			ymk_emitOfP(p, I_PUSH, F_UP, i);
 			return;
