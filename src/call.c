@@ -39,7 +39,7 @@
 // +----------------------+
 static inline struct variable *vm_local(struct ymd_context *l,
                                         struct func *fn, int i) {
-	assert(fn == l->info->run);
+	assert(fn == l->info->run && "Not current running.");
 	return l->info->loc + i;
 }
 
@@ -120,7 +120,7 @@ static inline void do_put(struct ymd_mach *vm,
 		*dyay_add(vm, (struct dyay *)raw) = *v;
 		break;
 	default:
-		assert(0);
+		assert(!"No reached.");
 		break;
 	}
 }
@@ -167,7 +167,7 @@ static int vm_close_upval(struct ymd_context *l, struct func *fn) {
 		}
 	}
 	if (linked != core->kuz)
-		ymd_panic(l, "Upval no linked!");
+		ymd_panic(l, "Some upval has no linked yet.");
 	return 0;
 }
 
@@ -264,7 +264,7 @@ int vm_calc(struct ymd_context *l, unsigned op) {
 		info->pc -= asm_param(inst); \
 		break;                       \
 	default:                         \
-		assert(0);                   \
+		assert(!"No reached.");      \
 		break;                       \
 	}
 int vm_run(struct ymd_context *l, struct func *fn, int argc) {
@@ -274,7 +274,7 @@ int vm_run(struct ymd_context *l, struct func *fn, int argc) {
 	struct ymd_mach *vm = l->vm;
 
 	(void)argc;
-	assert(fn == info->run);
+	assert(fn == info->run && "Not current be running.");
 
 retry:
 	while (info->pc < core->kinst) {
@@ -335,7 +335,7 @@ retry:
 					info->pc -= asm_param(inst);
 					break;
 				default:
-					assert(0);
+					assert(!"No reached.");
 					break;
 				}
 				ymd_pop(l, 1);
@@ -357,7 +357,7 @@ retry:
 				ymd_pop(l, 2);
 				break;
 			default:
-				assert(0);
+				assert(!"No reached.");
 				break;
 			}
 			} break;
@@ -419,7 +419,7 @@ retry:
 				rhs->u.i = vm_match(vm, kstr_of(l, rhs), kstr_of(l, lhs));
 				break;
 			default:
-				assert(0);
+				assert(!"No reached.");
 				break;
 			}
 			rhs->tt = T_BOOL;
@@ -438,7 +438,7 @@ retry:
 				                         &core->kval[asm_param(inst)]);
 				break;
 			default:
-				assert(0);
+				assert(!"No reached.");
 				break;
 			}
 			} break;
@@ -466,7 +466,7 @@ retry:
 				rhs->u.i = int_of(l, rhs) >> int_of(l, lhs);
 				break;
 			default:
-				assert(0);
+				assert(!"No reached.");
 				break;
 			}
 			ymd_pop(l, 1);
@@ -514,7 +514,7 @@ retry:
 			gc_release(map);
 			} break;
 		default:
-			assert(0);
+			assert(!"No reached.");
 			break;
 		}
 		++info->pc;

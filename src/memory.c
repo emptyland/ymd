@@ -121,7 +121,7 @@ static int gc_mark_mand(struct mand *o) {
 	case T_SKLS:
 		return gc_mark_skls(skls_f(o->proto));
 	default:
-		assert (0); // Noreached!
+		assert(!"No reached.");
 		break;
 	}
 	return 0;
@@ -275,7 +275,7 @@ int gc_active(struct ymd_mach *vm, int act) {
 		if (!gc->pause) gc_adjust(vm, gc_sweep(vm));
 		break;
 	default:
-		assert(0);
+		assert(!"No reached.");
 		break;
 	}
 	assert(gc->pause >= 0);
@@ -312,7 +312,7 @@ void gc_del(struct ymd_mach *vm, void *p) {
 		chunk += mand_f(o)->len;
 		break;
 	default:
-		assert(0);
+		assert(!"No reached.");
 		return;
 	}
 	mm_free(vm, o, 1, chunk);

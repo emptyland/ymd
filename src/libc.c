@@ -271,7 +271,7 @@ static int dyay_iter(L) {
 		setv_int(ymd_bval(l, 2), idx + 1);
 		} break;
 	default:
-		assert(0);
+		assert(!"No reached.");
 		break;
 	}
 	setv_ext(ymd_bval(l, 0), i + 1);
@@ -308,7 +308,7 @@ static int hmap_iter(L) {
 		*ymd_push(l) = i->v; ymd_add(l);
 		} break;
 	default:
-		assert(0);
+		assert(!"No reached.");
 		break;
 	}
 	setv_ext(ymd_bval(l, 0), move2valid(i + 1, m));
@@ -337,7 +337,7 @@ static int skls_iter(L) {
 		*ymd_push(l) = i->v; ymd_add(l);
 		} break;
 	default:
-		assert(0);
+		assert(!"No reached.");
 		break;
 	}
 	setv_ext(ymd_bval(l, 0), i->fwd[0]);
@@ -849,7 +849,7 @@ static int libx_error(L) {
 		ymd_kstr(l, "Unknown", -1);
 	ymd_error(l, NULL);
 	ymd_raise(l);
-	assert(0);
+	assert(!"No reached.");
 	return 0; // Never
 }
 

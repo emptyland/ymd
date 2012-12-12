@@ -108,7 +108,7 @@ const char *tostring(struct zostream *os, const struct variable *var) {
 		mand_tostring(os, mand_k(var));
 		break;
 	default:
-		assert(0);
+		assert(!"No reached");
 		return NULL;
 	}
 	return zos_buf(os);

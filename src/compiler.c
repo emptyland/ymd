@@ -676,7 +676,7 @@ static void ymk_unary(struct ymd_parser *p, int op) {
 		ymk_emitO(p, I_TYPEOF);
 		break;
 	default:
-		assert(0);
+		assert(!"No reached.");
 		break;
 	}
 }
@@ -756,7 +756,7 @@ static void ymk_binary(struct ymd_parser *p, int op, ushort_t ipos) {
 		ymk_hack_jmp(p, ipos, I_JNN, 0);
 		break;
 	default:
-		assert(0);
+		assert(!"No reached.");
 		break;
 	}
 }

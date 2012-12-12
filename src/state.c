@@ -133,7 +133,7 @@ struct variable *vm_get(struct ymd_mach *vm, struct variable *var,
 		ymd_panic(l, "Variable can not be index");
 		break;
 	}
-	assert(0); // Noreached!
+	assert(!"No reached.");
 	return NULL;
 }
 
@@ -162,7 +162,7 @@ struct variable *vm_def(struct ymd_mach *vm, void *o, const char *field) {
 		gc_release(k.u.ref);
 		break;
 	default:
-		assert(0);
+		assert(!"No reached.");
 		break;
 	}
 	return v;
@@ -182,7 +182,7 @@ struct variable *vm_mem(struct ymd_mach *vm, void *o, const char *field) {
 		gc_release(k.u.ref);
 		break;
 	default:
-		assert(0);
+		assert(!"No reached.");
 		break;
 	}
 	return v;

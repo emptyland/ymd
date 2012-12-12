@@ -106,7 +106,7 @@ int equals(const struct variable *lhs, const struct variable *rhs) {
 	// TODO:
 	//	return mand_equals(mand_k(lhs), mand_k(rhs));
 	default:
-		assert(0);
+		assert(!"No reached.");
 		break;
 	}
 	return 0;
@@ -141,7 +141,7 @@ int compare(const struct variable *lhs, const struct variable *rhs) {
 	//case T_MAND:
 	//	return mand_compare(mand_k(lhs), mand_k(rhs));
 	default:
-		assert(0);
+		assert(!"No reached.");
 		break;
 	}
 	return 0;

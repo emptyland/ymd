@@ -20,7 +20,7 @@ static int log2x(int n) {
 	for (i = 0; i < (int)sizeof(n)*8; ++i)
 		if ((1 << i) > n)
 			return i;
-	assert(0);
+	assert(!"No reached.");
 	return -1;
 }
 
@@ -117,7 +117,7 @@ static size_t hash(const struct variable *v) {
 	case T_MAND:
 		return hash_mand(mand_k(v));
 	default:
-		assert(0);
+		assert(!"No reached.");
 		break;
 	}
 	return 0;
@@ -306,7 +306,7 @@ static struct kvi *hindex(struct ymd_mach *vm, struct hmap *o,
 	case KVI_NODE:
 		return index_if_node(vm, o, k, slot, h);
 	default:
-		assert(0);
+		assert(!"No reached.");
 		break;
 	}
 	return NULL;

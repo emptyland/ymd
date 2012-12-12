@@ -52,7 +52,7 @@ static const char *address(const struct func *fn, uint_t inst,
 		snprintf(buf, n, "[upval]:@%s", fn_uz(fn, asm_param(inst)));
 		break;
 	default:
-		assert(0);
+		assert(!"No reached.");
 		return "<N/A>";
 	}
 	return buf;
@@ -67,7 +67,7 @@ static const char *jmp(uint_t inst, char *buf, size_t n) {
 		snprintf(buf, n, "-%d", asm_param(inst));
 		break;
 	default:
-		assert(0);
+		assert(!"No reached.");
 		return "<N/A>";
 	}
 	return buf;
@@ -84,7 +84,7 @@ static const char *getf(const struct func *fn, uint_t inst,
 		snprintf(buf, n, "[%s]", fn_kz(fn, asm_param(inst)));
 		break;
 	default:
-		assert(0);
+		assert(!"No reached.");
 		return "<N/A>";
 	}
 	return buf;
