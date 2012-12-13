@@ -1,4 +1,5 @@
 #include "print.h"
+#include "flags.h"
 #include "yut.h"
 #include <sys/time.h>
 #include <stdarg.h>
@@ -139,22 +140,43 @@ int yut_time_log1(const char *file, int line) {
 //-----------------------------------------------------------------------------
 // Args Parsing:
 //-----------------------------------------------------------------------------
-enum yut_cmd {
-	YUT_TEST, // Run test.
-	YUT_LIST, // List all test name.
-	YUT_HELP, // Show usage.
-};
-
 struct filter {
 	int negative; // Is Negatvie?
 	const char *test_pattern;
 	const char *case_pattern;
 };
 
-struct options {
-	enum yut_cmd cmd; // Which action should do?
-	struct filter filter;
+struct {
+	int list;
 	int repeated;
+	int color;
+	struct filter filter;
+} yut_opt = { 0, 1, FLAG_AUTO, { 0, NULL, NULL, }, };
+
+static int FlagYutFilter(const char *z, void *data);
+
+const struct ymd_flag_entry yut_opt_entries[] = {
+	{
+		"color",
+		"Colored test output.",
+		&yut_opt.color,
+		FlagTriBool,
+	}, {
+		"filter",
+		"Test filter. \"*\" for any test; \"-\" for no test.",
+		&yut_opt.filter,
+		FlagYutFilter,
+	}, {
+		"repeated",
+		"Number of repeated running test.",
+		&yut_opt.repeated,
+		FlagInt,
+	}, {
+		"list",
+		"List all tests only.",
+		&yut_opt.list,
+		FlagBool,
+	}, FLAG_END
 };
 
 // Filter: is any?
@@ -166,57 +188,41 @@ static inline int fok(const char *pattern, const char *z) {
 	return fany(pattern) || strcmp(pattern, z) == 0;
 }
 
-static const char *prefix_filter   = "filter=";
-static const char *prefix_repeated = "repeated=";
-static const char *prefix_list     = "list";
-static const char *prefix_help     = "help";
-
-static int yut_parse_args(int argc, char *argv[], struct options *opt) {
-	int i;
-
-	memset(opt, 0, sizeof(*opt));
-	opt->repeated = 1;
-	for (i = 1; i < argc; ++i) {
-		const char *argz = argv[i];
-		if (strstr(argz, "--") != argz)
-			continue;
-
-		argz += 2; // Skip "--"
-		if (strstr(argz, prefix_filter) == argz) {
-			const char *p;
-			argz += strlen(prefix_filter); // Skip "filter="
-			if (!argz[0])
-				continue;
-			if (argz[0] == '-') {
-				++argz;
-				opt->filter.negative = 1;
-			}
-			// Split '.'
-			if ((p = strchr(argz, '.')) == NULL) {
-				opt->filter.test_pattern = strdup(argz);
-			} else {
-				opt->filter.test_pattern = strndup(argz, p - argz);
-				opt->filter.case_pattern = strdup(p + 1);
-			}
-		} else if (strstr(argz, prefix_repeated) == argz) {
-			argz += strlen(prefix_repeated);
-			opt->repeated = atoi(argz);
-			if (opt->repeated <= 0)
-				opt->repeated = 1;
-		} else if (strcmp(argz, prefix_list) == 0) {
-			opt->cmd = YUT_LIST;
-		} else if (strcmp(argz, prefix_help) == 0) {
-			opt->cmd = YUT_HELP;
-		}
-	}
-	return 0;
+static inline
+const char *fstr(const struct filter *filter, char *buf, size_t len) {
+	snprintf(buf, len, "%s%s.%s",
+			filter->negative ? "-" : "",
+			filter->test_pattern ? filter->test_pattern : "*",
+			filter->case_pattern ? filter->case_pattern : "*");
+	return buf;
 }
 
+static int FlagYutFilter(const char *z, void *data) {
+	struct filter *filter = data;
+	const char *p = strchr(z, '=');
+	if (!p)
+		return -1;
+	z = p + 1;
+	if (z[0] == '-') {
+		filter->negative = 1;
+		++z;
+	} else {
+		filter->negative = 0;
+	}
+	p = strchr(z, '.');
+	if (!p) {
+		filter->test_pattern = strdup(z);
+		return 0;
+	}
+	filter->test_pattern = strndup(z, p - z);
+	filter->case_pattern = strdup(p + 1);
+	return 0;
+}
 
 // All tests
 extern const struct yut_case_def *yut_intl_test[];
 
-static int yut_foreach_with(struct options *opt) {
+static int yut_foreach_with() {
 	int err = 0;
 	const struct yut_case_def **x = NULL;
 	for (x = yut_intl_test; *x != NULL; ++x) {
@@ -225,11 +231,11 @@ static int yut_foreach_with(struct options *opt) {
 		int i = 0;
 
 		// Do filter check for test:
-		if (opt->filter.negative) {
-			if ( fok(opt->filter.test_pattern, test->name))
+		if (yut_opt.filter.negative) {
+			if ( fok(yut_opt.filter.test_pattern, test->name))
 				continue;
 		} else {
-			if (!fok(opt->filter.test_pattern, test->name))
+			if (!fok(yut_opt.filter.test_pattern, test->name))
 				continue;
 		}
 
@@ -241,13 +247,13 @@ static int yut_foreach_with(struct options *opt) {
 			if (!test->caze[i].name || !test->caze[i].func)
 				break;
 			// Do filter check for test case:
-			if (opt->filter.negative) {
-				if (fok(opt->filter.test_pattern, test->name) &&
-						fok(opt->filter.case_pattern, test->caze[i].name))
+			if (yut_opt.filter.negative) {
+				if (fok(yut_opt.filter.test_pattern, test->name) &&
+						fok(yut_opt.filter.case_pattern, test->caze[i].name))
 					continue;
 			} else {
-				if (fok(opt->filter.test_pattern, test->name) &&
-						!fok(opt->filter.case_pattern, test->caze[i].name))
+				if (fok(yut_opt.filter.test_pattern, test->name) &&
+						!fok(yut_opt.filter.case_pattern, test->caze[i].name))
 					continue;
 			}
 			snprintf(full_name, sizeof(full_name), "%s.%s",
@@ -286,29 +292,28 @@ int yut_list_all() {
 
 int yut_run_all(int argc, char *argv[]) {
 	int i, err = 0;
-	struct options opt;
 
-	yut_parse_args(argc, argv, &opt);
-	switch (opt.cmd) {
-	case YUT_LIST:
+	ymd_flags_parse(yut_opt_entries, NULL, &argc, &argv, 0);
+	if (yut_opt.list) {
 		yut_list_all();
 		goto final;
-	case YUT_HELP:
-		//yut_usage();
-		goto final;
-	case YUT_TEST:
-		break;
 	}
-	for (i = 0; i < opt.repeated; ++i) {
-		if (opt.repeated > 1)
-			ymd_printf("${[!yellow]Repeated test %d of %d ...\n",
-					i + 1, opt.repeated);
-		err += yut_foreach_with(&opt);
+	if (yut_opt.filter.test_pattern ||
+			yut_opt.filter.case_pattern) {
+		char buf[128];
+		ymd_printf("${[!yellow]Use filter: %s}$\n",
+				fstr(&yut_opt.filter, buf, sizeof(buf)));
+	}
+	for (i = 0; i < yut_opt.repeated; ++i) {
+		if (yut_opt.repeated > 1)
+			ymd_printf("${[!yellow]Repeated test %d of %d ...}$\n",
+					i + 1, yut_opt.repeated);
+		err += yut_foreach_with();
 	}
 
 final:
-	free((void*)opt.filter.test_pattern);
-	free((void*)opt.filter.case_pattern);
+	free((void*)yut_opt.filter.test_pattern);
+	free((void*)yut_opt.filter.case_pattern);
 	return err;
 }
 

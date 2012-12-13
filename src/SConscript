@@ -31,6 +31,7 @@ env.Library('yamada',
 	print_posix.c
 	disassembly.c
 	keywords.c
+	flags.c
 	'''.split());
 env.Depends('libyamada.a', 'keywords.c')
 
@@ -99,5 +100,6 @@ AllTest('''
 	memory
 	pickle
 	zstream
-	print'''.split())
+	print
+	flags'''.split())
 

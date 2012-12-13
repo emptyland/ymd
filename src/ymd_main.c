@@ -3,80 +3,95 @@
 #include "compiler.h"
 #include "libc.h"
 #include "libtest.h"
+#include "flags.h"
 #include <stdio.h>
 #include <string.h>
 
-struct cmd_opt {
-	FILE *input;
-	FILE *gc_logf;
-	const char *name;
-	int external;
-	int debug;
-	int argv_off;
+struct {
+	int color;
+	int dump;
 	int test;
+	int test_repeated;
+	char test_filter[MAX_FLAG_STRING_LEN];
+	char logf[MAX_FLAG_STRING_LEN];
+} cmd_opt;
+
+const struct ymd_flag_entry cmd_entries[] = {
+	{
+		"log_file",
+		"Debug log file name.",
+		cmd_opt.logf,
+		FlagString,
+	}, {
+		"dump",
+		"Dump bytecode only.",
+		&cmd_opt.dump,
+		FlagBool,
+	}, {
+		"test",
+		"Run Yamada Unit Test?",
+		&cmd_opt.test,
+		FlagBool,
+	}, {
+		"repeated",
+		"Number of yut test repeated.",
+		&cmd_opt.test_repeated,
+		FlagInt,
+	}, {
+		"color",
+		"Output color option.",
+		&cmd_opt.color,
+		FlagTriBool,
+	}, { NULL, NULL, NULL, NULL },
 };
 
-static struct cmd_opt opt = {
-	NULL,
-	NULL,
-	NULL,
-	0,
-	0,
-	1,
-	0,
-};
-
-static void die(const char *msg) {
-	printf("Fatal: %s\n", msg);
-	exit(0);
+static void die(const char *info) {
+	fprintf(stderr, "%s\n", info);
+	exit(1);
 }
 
 int main(int argc, char *argv[]) {
-	int i;
+	int i, argv_off = 0;
 	struct ymd_mach *vm;
 	struct ymd_context *l;
+	FILE *input = NULL;
+	const char *input_file;
+	// Flags parsing:
+	ymd_flags_parse(cmd_entries, NULL, &argc, &argv, 1);
 	for (i = 1; i < argc; ++i) {
-		if (strcmp(argv[i], "-d") == 0) {
-			opt.debug = 1;
-		} else if (strcmp(argv[i], "--argv") == 0) {
-			opt.argv_off = i + 1;
+		if (strcmp(argv[i], "--argv") == 0) {
+			argv_off = i + 1;
 			break;
-		} else if (strcmp(argv[i], "--test") == 0) {
-			opt.test = 1;
-		} else if (strcmp(argv[i], "--gc-state") == 0) {
-			opt.gc_logf = fopen("gc.log", "w");
 		} else {
-			opt.external = 1;
-			opt.name = argv[i];
-			opt.input = fopen(opt.name, "r");
-			if (!opt.input)
+			input_file = argv[i];
+			input = fopen(input_file, "r");
+			if (!input)
 				die("Bad file!");
 		}
 	}
 	vm = ymd_init();
 	l = ioslate(vm);
-	if (opt.gc_logf)
-		ymd_log4gc(vm, opt.gc_logf);
-	if (!opt.input)
-		die("Null file!");
-	if (ymd_compilef(l, "__main__", opt.name, opt.input) < 0)
+	if (!input)
+		die("No file input!");
+	// Compile __main__ function
+	if (ymd_compilef(l, "__main__", input_file, input) < 0)
 		exit(1);
 	ymd_load_lib(vm, lbxBuiltin);
 	ymd_load_os(vm);
 	ymd_load_pickle(vm);
-	if (opt.test) ymd_load_ut(vm);
-	if (opt.debug) {
-		if (l->top > l->stk) dasm_func(stdout, func_k(ymd_top(l, 0)));
+	if (cmd_opt.test) ymd_load_ut(vm);
+	// Dump all byte code only.
+	if (cmd_opt.dump) {
+		if (l->top > l->stk)
+			dasm_func(stdout, func_k(ymd_top(l, 0)));
 		return 0;
 	}
-	if (opt.test)
-		i = ymd_test(l, argc - opt.argv_off, argv + opt.argv_off);
+	if (cmd_opt.test)
+		i = ymd_test(l, argc - argv_off, argv + argv_off);
 	else
-		i = ymd_main(l, argc - opt.argv_off, argv + opt.argv_off);
-	if (opt.external)
-		fclose(opt.input);
-	if (opt.gc_logf)
-		fclose(opt.gc_logf);
+		i = ymd_main(l, argc - argv_off, argv + argv_off);
+	// Finalize:
+	if (input) fclose(input);
 	ymd_final(vm);
 	return i;
 }
