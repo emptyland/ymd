@@ -1,5 +1,5 @@
 LoopTest = @{
-	test00fail_sanity : func (self) {
+	test_fail_sanity : func (self) {
 		for {
 			break
 		} fail {
@@ -8,7 +8,7 @@ LoopTest = @{
 		Assert:Fail("Can not goto here, `fail' not work!")
 	},
 
-	test01fail_range : func (self) {
+	test_fail_range : func (self) {
 		var k = 1000
 		for var i in range(0, 10000) {
 			if i == k {
@@ -21,7 +21,7 @@ LoopTest = @{
 		Assert:Fail("Can not goto here, `fail' not work!")
 	},
 
-	test02range_counting : func (self) {
+	test_range_counting : func (self) {
 		var c = 0 // counter
 		var k = 65535 // max number
 		for var i in range(0, k) {
@@ -33,7 +33,7 @@ LoopTest = @{
 		Assert:EQ(k, c)
 	},
 
-	test03fail_range_negative : func (self) {
+	test_fail_range_negative : func (self) {
 		for var i in range(0, 100) {
 
 		} fail {

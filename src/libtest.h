@@ -22,6 +22,10 @@ int ymd_load_ut(struct ymd_mach *vm);
 // ymd_test() can call Test.test0 and Test.test1 as 2 test case.
 // the test must contain literal: "Test" as a `hashmap` or `skiplist`;
 // the case must contain literal: "test" as a `func`
-int ymd_test(struct ymd_context *l, int argc, char *argv[]);
+int ymd_test(struct ymd_context *l,
+		const char *pattern, // Filter pattern
+		int repeated,        // Number of repeated
+		int argc,            // argv for ymd_main() function
+		char *argv[]);
 
 #endif // YMD_LIBTEST_H

@@ -1,5 +1,5 @@
 ConditionTest = @{
-	test00if_stmt: func (self) {
+	test_if_stmt: func (self) {
 		// Only nil and false is FALSE
 		if nil {
 			Assert:Fail("Noreached: nil")		
@@ -13,7 +13,7 @@ ConditionTest = @{
 		}
 	},
 	
-	test01if_else_stmt : func (self) {
+	test_if_else_stmt : func (self) {
 		// Other value is TRUE
 		if 0 {} else { Assert:Fail("Else noreached: 0") }
 		if true {} else { Assert:Fail("Else noreached: true") }
@@ -24,7 +24,7 @@ ConditionTest = @{
 		if @{} {} else { Assert:Fail("Else noreached: skiplist") }
 	},
 
-	test02compare_operator : func (self) {
+	test_compare_operator : func (self) {
 		var i
 		Assert:True(i == nil)
 		Assert:True(not i)
@@ -50,7 +50,7 @@ ConditionTest = @{
 		Assert:True(i != [0])
 	},
 
-	test03or_and_operator : func (self) {
+	test_or_and_operator : func (self) {
 		if 0 or Assert:Fail("or op fail: 0 or fail") {
 			// Expected way
 		} else {
@@ -73,7 +73,7 @@ ConditionTest = @{
 		}
 	},
 
-	test04or_and_switching : func (self) {
+	test_or_and_switching : func (self) {
 		// `or` operator return one of TRUE value
 		Assert:EQ(0, 0 or nil)
 		Assert:EQ(0, nil or 0)
@@ -95,7 +95,7 @@ ConditionTest = @{
 		Assert:EQ(0, true and 0 or 1)
 	},
 
-	test05let_and_var_syntax: func (self) {
+	test_let_and_var_syntax: func (self) {
 		var i = 0
 		if let i = nil; typeof i == "nil" {
 			Assert:Nil(i)

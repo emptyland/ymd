@@ -1,6 +1,6 @@
 
 CalcTest = @{
-	test00VarDecl : func (self) {
+	test_VarDecl : func (self) {
 		Assert:EQ(0, 0)
 		Assert:EQ(-1, -1)
 		Assert:EQ(nil, nil)
@@ -12,7 +12,7 @@ CalcTest = @{
 		Assert:NE("hash", " hash")
 	},
 
-	test01Add : func (self) {
+	test_Add : func (self) {
 		var m = 1, n = 100
 		Assert:EQ(101, m + n)
 		Assert:EQ(99,  n - m)
@@ -28,7 +28,7 @@ CalcTest = @{
 	},
 
 	// Mul and Div:
-	test02Mul : func (self) {
+	test_Mul : func (self) {
 		var m = 1, n = 100
 		Assert:EQ(100, m * n)
 		Assert:EQ(100, n * m)
@@ -49,7 +49,7 @@ CalcTest = @{
 		Assert:EQ(1.1, 5.5 / 5)
 	},
 
-	test03Bitwise : func (self) {
+	test_Bitwise : func (self) {
 		Assert:EQ(-1, ~0)
 		Assert:EQ(-2, ~1)
 		Assert:EQ(0, ~(-1))
@@ -71,12 +71,12 @@ CalcTest = @{
 		Assert:EQ(0x7, 1 | 1 << 1 | 1 << 2)
 	},
 
-	test04Expr : func (self) {
+	test_Expr : func (self) {
 		var a = 0, b = 1
 		Assert:EQ(-7, 1 - b * 8 / b)
 	},
 
-	test05Equals : func (self) {
+	test_Equals : func (self) {
 		Assert:True(0 == 0)
 		Assert:True(10000 == 10000)
 		Assert:True(99999 == 99999)
@@ -92,7 +92,7 @@ CalcTest = @{
 		Assert:True(-1.1 != -1)
 	},
 
-	test06Compare : func (self) {
+	test_Compare : func (self) {
 		Assert:True(0 < 1)
 		Assert:True(-1 < 0)
 		Assert:True(9999 < 10000)

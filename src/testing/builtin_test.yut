@@ -2,7 +2,7 @@ BuiltinTest = @{
 	kTestFile1: "testing/test1.log",
 	kTestFile2: "testing/test2.log",
 
-	test00len : func (self) {
+	test_len : func (self) {
 		Assert:EQ(0, len(""))
 		Assert:EQ(1, len("0"))
 		Assert:EQ(2, len("\n\r"))
@@ -32,7 +32,7 @@ BuiltinTest = @{
 		Assert:EQ(14, len(val))
 	},
 
-	test01insert : func (self) {
+	test_insert : func (self) {
 		var val = []
 		Assert:EQ(0, len(val))
 
@@ -65,7 +65,7 @@ BuiltinTest = @{
 		Assert:EQ(@{}, val[6])
 	},
 
-	test02insert_ordered : func (self) {
+	test_insert_ordered : func (self) {
 		var val = [0, 1, 2, 3, 4, 5, 6, 7]
 		var i = len(val);
 		Assert:EQ(0, val[0])
@@ -88,7 +88,7 @@ BuiltinTest = @{
 		Assert:EQ(1, val[3])
 	},
 
-	test03append : func (self) {
+	test_append : func (self) {
 		var val = []
 		append(val, 0, 1, 2, 3)
 		Assert:EQ(4, len(val))
@@ -102,7 +102,7 @@ BuiltinTest = @{
 		Assert:EQ(0, val[4])
 	},
 
-	test04range : func (self) {
+	test_range : func (self) {
 		var iter = range(0, 0)
 		Assert:Nil(iter())
 		Assert:Nil(iter()) // Again
@@ -133,7 +133,7 @@ BuiltinTest = @{
 		Assert:Nil(iter())
 	},
 
-	test05range_container : func (self) {
+	test_range_container : func (self) {
 		var iter = range([])
 		var i
 		for i in range(0, rand(100, 200)) {
@@ -163,7 +163,7 @@ BuiltinTest = @{
 		Assert:Nil(iter())
 	},
 
-	test06rank : func (self) {
+	test_rank : func (self) {
 		var iter = rank([])
 		Assert:Nil(iter())
 		Assert:Nil(iter())
@@ -187,7 +187,7 @@ BuiltinTest = @{
 		Assert:Nil(iter())
 	},
 
-	test07import : func (self) {
+	test_import : func (self) {
 		var lib = import "testing/imported1.ymd"
 		Assert:EQ("imported1", lib)
 		lib = import "testing/imported2.ymd"
@@ -201,7 +201,7 @@ BuiltinTest = @{
 		print(__reached__)
 	},
 
-	test08strbuf : func (self) {
+	test_strbuf : func (self) {
 		var s = strbuf()
 		var i, rv
 		for i in range(0, 8) {
@@ -221,7 +221,7 @@ BuiltinTest = @{
 		Assert:EQ("abc", s:get())
 	},
 
-	test09file : func (self) {
+	test_file : func (self) {
 		var f = open(self.kTestFile1, "w")
 		var buf
 		Assert:NotNil(f);
@@ -243,7 +243,7 @@ BuiltinTest = @{
 		os.remove(self.kTestFile1)
 	},
 
-	test10regex : func (self) {
+	test_regex : func (self) {
 		var regex = pattern("a=([0-9]*)", "*sub")
 		var fast_match = env("*global").match
 		//var match = func [fast_match] (r, s) {
@@ -263,7 +263,7 @@ BuiltinTest = @{
 		Assert:EQ("", match(regex, "name=")[1])
 	},
 
-	test11rand : func (self) {
+	test_rand : func (self) {
 		var i, n
 		//for i in range(0, 100) {
 		//	print("rand():",         rand(),
@@ -284,7 +284,7 @@ BuiltinTest = @{
 		}
 	},
 
-	test12eval : func (self) {
+	test_eval : func (self) {
 		var n = eval("return 1111 + 256 / 2")
 		Assert:EQ(1111 + 256 / 2, n)
 
@@ -326,7 +326,7 @@ BuiltinTest = @{
 		Assert:Nil(o[0])
 	},
 
-	test13remove : func (self) {
+	test_remove : func (self) {
 		self:remove_run({})
 		self:remove_run(@{})
 	}

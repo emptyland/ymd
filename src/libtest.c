@@ -5,6 +5,66 @@
 #include <sys/time.h>
 #include <setjmp.h>
 
+// Test filter:
+struct filter {
+	int negative;
+	const char *test_pattern;
+	const char *case_pattern;
+};
+
+// Filter: is any?
+static inline int fany(const char *z) {
+	return (!z || !z[0] || z[0] == '*');
+}
+
+static inline int fok(const char *pattern, const char *z) {
+	return fany(pattern) || strcmp(pattern, z) == 0;
+}
+
+static void fparse(const char *pattern, struct filter *filter) {
+	const char *p = pattern;
+	memset(filter, 0, sizeof(*filter));
+	if (!pattern || !pattern[0])
+		return;
+	if (p[0] == '-') {
+		filter->negative = 1;
+		++p;
+	}
+	pattern = p;
+	p = strchr(pattern, '.');
+	if (!p) {
+		filter->test_pattern = strdup(p);
+		return;
+	}
+	filter->test_pattern = strndup(pattern, p - pattern);
+	filter->case_pattern = strdup(p + 1);
+}
+
+static int ftest(const struct filter *filter, const char *test) {
+	if (filter->negative) {
+		if ( fok(filter->test_pattern, test))
+			return 0;
+	} else {
+		if (!fok(filter->test_pattern, test))
+			return 0;
+	}
+	return 1;
+}
+
+static int fcase(const struct filter *filter, const char *test,
+		const char *caze) {
+	if (filter->negative) {
+		if (fok(filter->test_pattern, test) &&
+				fok(filter->case_pattern, caze))
+			return 0;
+	} else {
+		if (fok(filter->test_pattern, test) &&
+				!fok(filter->case_pattern, caze))
+			return 0;
+	}
+	return 1;
+}
+
 #define L struct ymd_context *l
 
 struct yut_cookie {
@@ -218,13 +278,63 @@ static int yut_case(
 	return 0;
 }
 
-static int yut_test(struct ymd_mach *vm, const char *clazz,
-                    struct variable *test) {
+struct yut_case_entry {
+	struct func *fn;  // Test case function object.
+	const char *name; // Test case name.
+	int line;         // Defined function line.
+};
+
+static void yut_ordered_insert(const char *name, struct func *fn,
+		struct yut_case_entry *ord, int *count) {
+		int i, line = func_line(fn);
+#define SET_ENT() \
+	ord[i].name = name; \
+	ord[i].fn   = fn; \
+	ord[i].line = line
+		// Insert ord into array `ord' in ordered.
+		for (i = 0; i < *count; ++i) {
+			if (line < ord[i].line) {
+				memmove(ord + i + 1, ord + i, (*count - i) * sizeof(*ord));
+				SET_ENT();
+				++(*count);
+				break;
+			}
+		}
+		if (i == *count) {
+			SET_ENT(); ++(*count);
+		}
+#undef SET_ENT
+
+}
+
+static struct yut_case_entry *yut_ordered_case(struct ymd_context *l,
+		struct variable *test, int *k) {
 	struct sknd *i;
+	struct yut_case_entry *ord = calloc(skls_x(test)->count, sizeof(*ord));
+	*k = 0;
+	// Find all "test_" prefix function.
+	for (i = skls_x(test)->head->fwd[0]; i != NULL; i = i->fwd[0]) {
+		struct func *fn;
+		const char *name = kstr_of(l, &i->k)->land;
+		if (strstr(name, "test") != name || // Check prefix
+				TYPEV(&i->v) != T_FUNC ||   // Check func type
+				(fn = func_x(&i->v)) == NULL ||
+				fn->is_c) // It's C function?
+			continue;
+		yut_ordered_insert(name, fn, ord, k);
+	}
+	return ord;
+}
+
+static int yut_test(struct ymd_mach *vm, const struct filter *filter,
+		const char *clazz, struct variable *test) {
+	int i, k, rv = 0;
+	struct yut_case_entry *ord;
 	struct func *setup, *teardown, *init, *final;
 	struct ymd_context *l = ioslate(vm);
-	if (TYPEV(test) != T_SKLS)
+	if (TYPEV(test) != T_SKLS || !ftest(filter, clazz))
 		return 0;
+	// Get all of environmord functions.
 	setup    = yut_method(vm, test->u.ref, "setup");
 	teardown = yut_method(vm, test->u.ref, "teardown");
 	init     = yut_method(vm, test->u.ref, "init");
@@ -233,19 +343,24 @@ static int yut_test(struct ymd_mach *vm, const char *clazz,
 		yut_fault(); // Print failed message
 		return -1; // Test Fail
 	}
+	// Sort all case by defined line number.
+	if ((ord = yut_ordered_case(l, test, &k)) == NULL)
+		return 0;
 	yut_call(l, test, init); // ---- Initialize
 	ymd_printf("${[!green][----------]}$ %s setup\n", clazz);
-	for (i = skls_x(test)->head->fwd[0]; i != NULL; i = i->fwd[0]) {
-		const char *caze = kstr_of(l, &i->k)->land;
-		if (!strstr(caze, "test") || TYPEV(&i->v) != T_FUNC)
+	for (i = 0; i < k; ++i) {
+		if (!fcase(filter, clazz, ord[i].name))
 			continue;
-		if (yut_case(l, clazz, caze, test, setup, teardown,
-			         func_x(&i->v)) < 0)
+		if (yut_case(l, clazz, ord[i].name, test, setup, teardown,
+					ord[i].fn) < 0) {
+			--rv;
 			break;
+		}
 	}
 	yut_call(l, test, final); // ---- Finalize
 	ymd_printf("${[!green][----------]}$ %s teardown\n\n", clazz);
-	return 0;
+	free(ord);
+	return rv;
 }
 
 LIBC_BEGIN(YutAssertMethod)
@@ -283,22 +398,38 @@ int ymd_load_ut(struct ymd_mach *vm) {
 	return rv;
 }
 
-int ymd_test(struct ymd_context *l, int argc, char *argv[]) {
-	struct kvi *i, *k;
+int ymd_test(struct ymd_context *l, const char *pattern, int repeated,
+		int argc, char *argv[]) {
+	int t, rv = 0;
+	struct filter filter;
 	if (ymd_main(l, argc, argv) < 0)
 		return -1;
-	k = l->vm->global->item + (1 << l->vm->global->shift);
-	for (i = l->vm->global->item; i != k; ++i) {
-		const char *clazz;
-		if (!i->flag)
-			continue;
-		clazz = kstr_of(l, &i->k)->land;
-		if (strstr(clazz, "Test")) {
-			if (yut_test(l->vm, clazz, &i->v) < 0)
-				return 1;
-			break;
+	fparse(pattern, &filter);
+	if (pattern && pattern[0])
+		ymd_printf("${[!yellow]Use filter: %s}$\n", pattern);
+	for (t = 0; t < repeated; ++t) {
+		struct kvi *k = l->vm->global->item + (1 << l->vm->global->shift);
+		struct kvi *i;
+		if (repeated > 1)
+			ymd_printf("${[!yellow]Repeated test %d of %d ...}$\n",
+					t + 1, repeated);
+		for (i = l->vm->global->item; i != k; ++i) {
+			const char *clazz;
+			if (!i->flag)
+				continue;
+			clazz = kstr_of(l, &i->k)->land;
+			if (strstr(clazz, "Test")) { // Check "Test" prefix
+				if (yut_test(l->vm, &filter, clazz, &i->v) < 0) {
+					rv = 1;
+					goto final;
+				}
+				break;
+			}
 		}
 	}
-	return 0;
+final:
+	free((void*)filter.test_pattern);
+	free((void*)filter.case_pattern);
+	return rv;
 }
 

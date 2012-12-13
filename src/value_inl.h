@@ -83,8 +83,16 @@ struct gc_node *mand_proto(struct mand *x, struct gc_node *metatable) {
 	return NULL;
 }
 
+// Number of function's local variable.
 static inline int func_nlocal(const struct func *fn) {
 	return fn->is_c ? 0 : fn->u.core->klz;
+}
+
+// Defined function's first line number.
+static inline int func_line(const struct func *fn) {
+	assert (!fn->is_c && "C function is not defined by script.");
+	assert (fn->u.core->kinst > 0);
+	return fn->u.core->line[0];
 }
 
 #endif // YMD_VALUE_INL_H

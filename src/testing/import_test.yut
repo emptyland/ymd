@@ -11,7 +11,7 @@ func external.baz () {
 ImportTest = @{
 	k_flag: "test.flag",
 
-	test00import_external : func (self) {
+	test_import_external : func (self) {
 		Assert:NotNil(external)
 		Assert:EQ("hashmap", typeof external)
 
@@ -22,7 +22,7 @@ ImportTest = @{
 		Assert:EQ("foo", external:foo())
 	},
 
-	test01import_partial : func (self) {
+	test_import_partial : func (self) {
 		Assert:EQ("function", typeof external.bar)
 		Assert:EQ("bar", external:bar())
 
@@ -30,7 +30,7 @@ ImportTest = @{
 		Assert:EQ("baz", external:baz())
 	},
 
-	test02import_data : func (self) {
+	test_import_data : func (self) {
 		var data = import("testing/im_data.ymd")
 		Assert:EQ("imported data", data.name)
 		Assert:EQ(0x0fff, data.id)
@@ -41,7 +41,7 @@ ImportTest = @{
 		Assert:EQ(65535, data.nested.number)
 	},
 
-	test03import_reached : func (self) {
+	test_import_reached : func (self) {
 		var ok = import("testing/im_external.ymd")
 		Assert:Nil(ok)
 		print(__reached__)

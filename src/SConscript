@@ -2,6 +2,16 @@ from SCons.Script import *
 
 Import('env')
 
+#
+# gperf options description:
+# -L ANSI-C      : Generate to ANSI-C source file.
+# -C             : Read only tables.
+# -N lex_keyword : Generated function's name
+# -K z           : String member is `z'
+# -t             : Use struct type that it defined in .gperf file.
+# -c             : Compare `strncmp'.
+# -n             : No `strlen'.
+#
 env.Command('keywords.c',
 	'keywords.gperf',
 	'gperf -L ANSI-C -C -N lex_keyword -K z -t -c -n keywords.gperf | sed -e "s/{\\\"\\\"}/{\\\"\\\",0}/g" > keywords.c',

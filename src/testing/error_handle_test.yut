@@ -1,5 +1,5 @@
 ErrorHandleTest = @{
-	test00pcall : func (self) {
+	test_pcall : func (self) {
 		var func ret0 ()      {}
 		var func ret_str ()   { return "ReturnValue" }
 		var func ret_arg0 (a) { return a }
@@ -12,7 +12,7 @@ ErrorHandleTest = @{
 		Assert:EQ(@{}, pcall(ret_nil))
 	},
 
-	test01error : func (self) {
+	test_error : func (self) {
 		var func ret_err (a) {
 			if not a { error("Not a error!") }
 		}
@@ -28,7 +28,7 @@ ErrorHandleTest = @{
 		Assert:EQ("Reached!", pcall(ret_void, false).ret)
 	},
 
-	test02nested : func (self) {
+	test_nested : func (self) {
 		Assert:EQ("Looooog!", pcall(maybe_error, 0, 0, 5).error)
 		var rv = pcall(maybe_error, 0, 0, 20)
 		Assert:EQ("string",   typeof rv.error)

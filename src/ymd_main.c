@@ -14,7 +14,14 @@ struct {
 	int test_repeated;
 	char test_filter[MAX_FLAG_STRING_LEN];
 	char logf[MAX_FLAG_STRING_LEN];
-} cmd_opt;
+} cmd_opt = {
+	FLAG_AUTO,
+	0,
+	0,
+	1,
+	"",
+	"",
+};
 
 const struct ymd_flag_entry cmd_entries[] = {
 	{
@@ -37,6 +44,11 @@ const struct ymd_flag_entry cmd_entries[] = {
 		"Number of yut test repeated.",
 		&cmd_opt.test_repeated,
 		FlagInt,
+	}, {
+		"filter",
+		"Yut in script filter. \"*\" for any test; \"-\" for no test.",
+		cmd_opt.test_filter,
+		FlagString,
 	}, {
 		"color",
 		"Output color option.",
@@ -87,9 +99,14 @@ int main(int argc, char *argv[]) {
 		return 0;
 	}
 	if (cmd_opt.test)
-		i = ymd_test(l, argc - argv_off, argv + argv_off);
+		i = ymd_test(l, cmd_opt.test_filter,
+				cmd_opt.test_repeated,
+				argc - argv_off,
+				argv + argv_off);
 	else
-		i = ymd_main(l, argc - argv_off, argv + argv_off);
+		i = ymd_main(l,
+				argc - argv_off,
+				argv + argv_off);
 	// Finalize:
 	if (input) fclose(input);
 	ymd_final(vm);
