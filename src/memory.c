@@ -8,14 +8,6 @@
 //-----------------------------------------------------------------------------
 // GC functions:
 //-----------------------------------------------------------------------------
-#define gc_otherwhite(white) ((white) == GC_WHITE0 ? GC_WHITE1 : GC_WHITE0)
-
-#define gc_mask(o)    ((o)->marked & GC_MASK)
-
-#define gc_grayo(o)   (gc_mask(o) == GC_GRAY)
-#define gc_fixedo(o)  (gc_mask(o) == GC_FIXED)
-#define gc_whiteo(o)  (gc_mask(o) <= GC_WHITE1)
-#define gc_blacko(o)  (gc_mask(o) == GC_BLACK)
 
 #define gc_marko(o) \
 	if (gc_whiteo(o)) \
@@ -27,12 +19,12 @@
 		gc_mark_obj((v)->u.ref)
 
 #define gc_travelo(o) \
-	if (!gc_grabed(o)) \
+	if (!mm_busy(o)) \
 		gc_travel_obj(gcx(o))
 
 #define gc_travelv(v) \
 	if ((v)->tt == T_REF && \
-			!gc_grabed((v)->u.ref)) \
+			!mm_busy((v)->u.ref)) \
 		gc_travel_obj((v)->u.ref)
 
 
@@ -76,9 +68,9 @@ static inline void gc_black2white(struct gc_node *o, int white) {
 }
 
 // Can we sweep a object?
-static inline int gc_sweepo(const struct gc_struct *gc,
+static inline int gc_should_sweep(const struct gc_struct *gc,
 		const struct gc_node *o) {
-	assert (!gc_grabed(o));
+	assert (!mm_busy(o));
 	return !gc_fixedo(o) && o->marked == gc_otherwhite(gc->white);
 }
 
@@ -91,6 +83,7 @@ static inline int gc_delta(const struct gc_struct *gc) {
 static void gc_hook(struct ymd_mach *vm, struct gc_node *o) {
 	(void)vm;
 	(void)o;
+	// TODO: For debugging.
 }
 
 static size_t gc_record(struct ymd_mach *vm, size_t inc, int neg) {
@@ -290,13 +283,6 @@ void *mm_shrink(struct ymd_mach *vm, void *raw, int n, int align,
 	return bak;
 }
 
-void mm_drop(struct ymd_mach *vm, void *p, size_t size) {
-	int *ref = p;
-	--(*ref);
-	if (*ref == 0)
-		mm_free(vm, p, 1, size);
-}
-
 // Mark all reached object white to gray color.
 // This process is ATOMIC.
 static void gc_mark_root(struct ymd_mach *vm) {
@@ -337,7 +323,10 @@ static void gc_atomic(struct ymd_mach *vm) {
 	gc->white = gc_otherwhite(vm->gc.white);
 	// Check Point, save used byte in GC beginning.
 	gc->point = gc->used;
+	// Sweep string step number:
+	gc->sweep_step  = vm->kpool.shift;
 	gc->sweep_kpool = 0;
+	// -> sweep string
 	gc->state = GC_SWEEPSTRING;
 }
 
@@ -345,8 +334,10 @@ static void gc_atomic(struct ymd_mach *vm) {
 static void gc_sweep_kpool(struct ymd_mach *vm) {
 	struct gc_struct *gc = &vm->gc;
 	struct kpool *kt = &vm->kpool;
-	struct gc_node **i, **k = kt->slot + (1 << kt->shift);
-	for (i = kt->slot + gc->sweep_kpool; i != k; ++i) {
+	int step = gc->sweep_step;
+	struct gc_node **i = kt->slot + gc->sweep_kpool,
+				   **k = kt->slot + (1 << kt->shift);
+	for (; i != k; ++i) {
 		struct gc_node dummy = {*i, 0, 0, 0}, *p = &dummy, *x = *i;
 		// Find fisrt valid slot
 		if (!x)
@@ -355,7 +346,7 @@ static void gc_sweep_kpool(struct ymd_mach *vm) {
 			// Sweep a list in one time.
 			assert (!gc_grayo(x) &&
 					"No pooled string can be gray.");
-			if (gc_sweepo(gc, x)) {
+			if (gc_should_sweep(gc, x)) {
 				p->next = x->next;
 				gc_hook(vm, x);
 				gc_del(vm, x);
@@ -371,7 +362,7 @@ static void gc_sweep_kpool(struct ymd_mach *vm) {
 			}
 		}
 		*i = dummy.next;
-		break;
+		if (!step--) break;
 	}
 	// Save current slot's index.
 	gc->sweep_kpool = (int)(++i - kt->slot);
@@ -380,27 +371,31 @@ static void gc_sweep_kpool(struct ymd_mach *vm) {
 static void gc_final_kpool(struct ymd_mach *vm) {
 	struct gc_struct *gc = &vm->gc;
 
+	// Sweep objects step number
+	// We hope sweep 1k by one step:
+	gc->sweep_step = gc_delta(gc) / (sizeof(struct variable) * 100);
+	gc->sweep_step = gc->sweep_step <= 0 ? 1 : gc->sweep_step;
 	// Move alloced list to sweep list for sweeping.
 	gc->sweep = gc->alloced;
 	gc->alloced = NULL;
-	gc->sweep_step = gc_delta(gc) / (sizeof(struct variable) * 50);
-	gc->sweep_step = gc->sweep_step <= 0 ? 1 : gc->sweep_step;
+	// -> sweep objects
 	gc->state = GC_SWEEP;
 }
 
 // Incrmential sweep non-string objects
 static void gc_sweep(struct ymd_mach *vm) {
 	struct gc_struct *gc = &vm->gc;
-	int i = gc->sweep_step;
+	int step = gc->sweep_step;
 	// Sweep some object by `sweep_setp' in one time
-	while (i-- && gc->sweep) {
+	while (step && gc->sweep) {
 		struct gc_node *x = gc->sweep;
 		assert (!gc_grayo(x) &&
 				"No sweeping object can be gray.");
 		gc->sweep = gc->sweep->next;
-		if (gc_sweepo(gc, x)) {
+		if (gc_should_sweep(gc, x)) {
 			gc_hook(vm, x);
 			gc_del(vm, x);
+			--step;
 		} else {
 			x->next = gc->alloced;
 			if (gc_fixedo(x))
@@ -473,8 +468,8 @@ static int gc_mark_context(struct ymd_mach *vm) {
 
 static void gc_move2gray(struct ymd_mach *vm) {
 	struct gc_struct *gc = &vm->gc;
-	struct gc_node fake = { gc->alloced, 0, 0, 0, };
-	struct gc_node *i = gc->alloced, *p = &fake;
+	struct gc_node dummy = { gc->alloced, 0, 0, 0, };
+	struct gc_node *i = gc->alloced, *p = &dummy;
 	assert (i != NULL && "No any alloced objects?");
 	while (i) {
 		if (gc_grayo(i)) {
@@ -487,7 +482,7 @@ static void gc_move2gray(struct ymd_mach *vm) {
 			i = i->next;
 		}
 	}
-	gc->alloced = fake.next; // Reset header node.
+	gc->alloced = dummy.next; // Reset header node.
 }
 
 static void gc_mark_obj(struct gc_node *o) {
@@ -514,7 +509,7 @@ static void gc_mark_obj(struct gc_node *o) {
 }
 
 static void gc_travel_obj(struct gc_node *o) {
-	gc_grabo(o);
+	mm_work(o);
 	gc_gray2black(o);
 	switch (o->type) {
 	case T_KSTR:
@@ -554,7 +549,7 @@ static void gc_travel_obj(struct gc_node *o) {
 		assert (!"No reached.");
 		break;
 	}
-	gc_dropo(o);
+	mm_idle(o);
 }
 
 static int gc_travel_func(struct func *o) {

@@ -832,6 +832,9 @@ static int libx_gc(L) {
 	} else if (strcmp(arg0->land, "state") == 0) {
 		ymd_kstr(l, gc_state_str[l->vm->gc.state], -1);
 		return 1;
+	} else if (strcmp(arg0->land, "sweepstep") == 0) {
+		ymd_int(l, l->vm->gc.sweep_step);
+		return 1;
 	}
 	return 0;
 }

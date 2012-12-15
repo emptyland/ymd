@@ -110,11 +110,19 @@ static struct kstr *kstr_new(struct ymd_mach *vm, int raw, const char *z,
 }
 
 struct kstr *kstr_fetch(struct ymd_mach *vm, const char *z, int count) {
+	struct kstr *kz;
 	if (count < 0)
 		count = strlen(z);
 	if (count < MAX_KPOOL_LEN)
-		return kpool_index(vm, z, count);
-	return kstr_new(vm, 0, z, count);
+		kz = kpool_index(vm, z, count);
+	else
+		kz = kstr_new(vm, 0, z, count);
+	// NOTE:
+	// Reset white color, because short string in pool:
+	// We fetch a string, make it to new string.
+	if (!gc_fixedo(kz))
+		kz->marked = vm->gc.white;
+	return kz;
 }
 
 int kstr_equals(const struct kstr *kz, const struct kstr *rhs) {

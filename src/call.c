@@ -375,6 +375,7 @@ retry:
 				for (i = 0; i < k; i += 2)
 					vm_iput(vm, var, ymd_top(l, i + 1), ymd_top(l, i));
 				ymd_pop(l, k + 1);
+				gc_step(vm);
 				} break;
 			case F_FAST:
 				vm_iput(vm, ymd_top(l, 1), &core->kval[asm_param(inst)],
@@ -500,6 +501,7 @@ retry:
 			int argc = asm_argc(inst);
 			struct func *called = func_of(l, ymd_top(l, argc));
 			ymd_adjust(l, adjust, ymd_call(l, called, argc, 0));
+			gc_step(vm);
 			} break;
 		case I_SELFCALL: {
 			struct func *called;
@@ -509,6 +511,7 @@ retry:
 			called = func_of(l, vm_get(vm, ymd_top(l, argc),
 			                            &core->kval[imethod]));
 			ymd_adjust(l, adjust, ymd_call(l, called, argc, 1));
+			gc_step(vm);
 			} break;
 		case I_NEWMAP: {
 			struct hmap *map = hmap_new(vm, asm_param(inst));
@@ -517,6 +520,7 @@ retry:
 				do_put(vm, gcx(map), ymd_top(l, i + 1), ymd_top(l, i));
 			ymd_pop(l, n);
 			setv_hmap(ymd_push(l), map);
+			gc_step(vm);
 			} break;
 		case I_NEWSKL: {
 			struct skls *map = skls_new(vm);
@@ -525,6 +529,7 @@ retry:
 				do_put(vm, gcx(map), ymd_top(l, i + 1), ymd_top(l, i));
 			ymd_pop(l, n);
 			setv_skls(ymd_push(l), map);
+			gc_step(vm);
 			} break;
 		case I_NEWDYA: {
 			struct dyay *map = dyay_new(vm, 0);
@@ -533,6 +538,7 @@ retry:
 				do_put(vm, gcx(map), NULL, ymd_top(l, i));
 			ymd_pop(l, asm_param(inst));
 			setv_dyay(ymd_push(l), map);
+			gc_step(vm);
 			} break;
 		default:
 			assert(!"No reached.");

@@ -36,4 +36,7 @@ typedef unsigned short     ushort_t;
 
 #define ARRAY_SIZEOF(arr) (sizeof(arr)/sizeof(arr[0]))
 
+#define YMD_MIN(lhs, rhs) (((lhs) < (rhs)) ? (lhs) : (rhs))
+#define YMD_MAX(lhs, rhs) (((lhs) > (rhs)) ? (lhs) : (rhs))
+
 #endif // YMD_BUILTIN_H

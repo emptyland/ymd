@@ -19,15 +19,24 @@ struct ymd_mach;
 #define GC_BLACK  3
 #define GC_FIXED  4
 #define GC_MASK   0x0ff
-#define GC_GRAB   0x100
-
-#define gcx(obj)     ((struct gc_node *)(obj))
+#define GC_BUSY   0x100
 
 #define GC_PAUSE       0
 #define GC_PROPAGATE   1
 #define GC_SWEEPSTRING 2
 #define GC_SWEEP       3
 #define GC_FINALIZE    4
+
+#define gcx(obj)     ((struct gc_node *)(obj))
+
+#define gc_otherwhite(white) ((white) == GC_WHITE0 ? GC_WHITE1 : GC_WHITE0)
+
+#define gc_grayo(o)   (gc_mask(o) == GC_GRAY)
+#define gc_fixedo(o)  (gc_mask(o) == GC_FIXED)
+#define gc_whiteo(o)  (gc_mask(o) <= GC_WHITE1)
+#define gc_blacko(o)  (gc_mask(o) == GC_BLACK)
+
+#define gc_mask(o)    ((o)->marked & GC_MASK)
 
 struct gc_node {
 	GC_HEAD;
@@ -55,40 +64,51 @@ struct gc_struct {
 // GC functions:
 int gc_init(struct ymd_mach *vm, int k);
 void gc_final(struct ymd_mach *vm);
-int gc_step(struct ymd_mach *vm); // Run gc in one step.
+
+// Run GC by one step.
+int gc_step(struct ymd_mach *vm);
+
+// New a GC managed object.
 void *gc_new(struct ymd_mach *vm, size_t size, unsigned char type);
 void gc_del(struct ymd_mach *vm, void *p);
+
+// Set GC pasue or running
 int gc_active(struct ymd_mach *vm, int off);
 
 // Memory managemant functions:
-// Maybe run gc processing.
 void *mm_zalloc(struct ymd_mach *vm, int n, size_t chunk);
 void *mm_realloc(struct ymd_mach *vm, void *raw, int old, int n,
-                 size_t chunk);
+		size_t chunk);
 void mm_free(struct ymd_mach *vm, void *raw, int n, size_t chunk);
-
 void *mm_need(struct ymd_mach *vm, void *raw, int n, int align,
-              size_t chunk);
+		size_t chunk);
 void *mm_shrink(struct ymd_mach *vm, void *raw, int n, int align,
-                size_t chunk);
+		size_t chunk);
 
 // Reference count management:
 static inline void *mm_grab(void *p) {
-	int *ref = p; ++(*ref); return p;
+	int *ref = p;
+	++(*ref);
+	return p;
 }
 
-void mm_drop(struct ymd_mach *vm, void *p, size_t size);
-
-#define gc_grabed(o)  ((o)->marked & GC_GRAB)
-
-static inline void gc_grabo(struct gc_node *o) {
-	assert (!(o->marked & GC_GRAB) && "Don't grab a object again.");
-	o->marked |= GC_GRAB;
+static inline void mm_drop(struct ymd_mach *vm, void *p, size_t size) {
+	int *ref = p;
+	assert(*ref > 0 && "Bad referened number.");
+	--(*ref);
+	if (*ref == 0) mm_free(vm, p, 1, size);
 }
 
-static inline void gc_dropo(struct gc_node *o) {
-	assert ((o->marked & GC_GRAB) && "Don't drop a object again.");
-	o->marked &= ~GC_GRAB;
+#define mm_busy(o)  ((o)->marked & GC_BUSY)
+
+static inline void mm_work(struct gc_node *o) {
+	assert (!(o->marked & GC_BUSY) && "Don't grab a object again.");
+	o->marked |= GC_BUSY;
+}
+
+static inline void mm_idle(struct gc_node *o) {
+	assert ((o->marked & GC_BUSY) && "Don't drop a object again.");
+	o->marked &= ~GC_BUSY;
 }
 
 #endif // YMD_MEMORY_H
