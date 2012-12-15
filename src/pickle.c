@@ -4,7 +4,7 @@
 #include "zstream.h"
 
 static inline void if_recursived(const void *p, int *ok) {
-	const struct gc_node *o = p; *ok = !fg_self(o);
+	const struct gc_node *o = p; *ok = !gc_grabed(o);
 }
 #define mutable(obj) ((struct gc_node *)(obj))
 
@@ -26,7 +26,7 @@ int ymd_dump_kstr(struct zostream *os, const struct kstr *kz) {
 int ymd_dump_dyay(struct zostream *os, const struct dyay *ax, int *ok) {
 	int j, i = 0;
 	if_recursived(ax, CHECK_OK);
-	fg_enter(mutable(ax));
+	gc_grabo(mutable(ax));
 	// :tt
 	i += zos_u32(os, T_DYAY);
 	// :count
@@ -35,7 +35,7 @@ int ymd_dump_dyay(struct zostream *os, const struct dyay *ax, int *ok) {
 	for (j = 0; j < ax->count; ++j) {
 		i += ymd_serialize(os, ax->elem + j, CHECK_OK);
 	}
-	fg_leave(mutable(ax));
+	gc_dropo(mutable(ax));
 	return i;
 }
 
@@ -43,7 +43,7 @@ int ymd_dump_hmap(struct zostream *os, const struct hmap *mx, int *ok) {
 	int n, t = 0;
 	const struct kvi *i, *k = mx->item + (1 << mx->shift);
 	if_recursived(mx, CHECK_OK);
-	fg_enter(mutable(mx));
+	gc_grabo(mutable(mx));
 	// :tt
 	t += zos_u32(os, T_HMAP);
 	// :count
@@ -56,7 +56,7 @@ int ymd_dump_hmap(struct zostream *os, const struct hmap *mx, int *ok) {
 			t += ymd_serialize(os, &i->v, CHECK_OK);
 		}
 	}
-	fg_leave(mutable(mx));
+	gc_dropo(mutable(mx));
 	return t;
 }
 
@@ -64,7 +64,7 @@ int ymd_dump_skls(struct zostream *os, const struct skls *sk, int *ok) {
 	int n, t = 0;
 	const struct sknd *i;
 	if_recursived(sk, CHECK_OK);
-	fg_enter(mutable(sk));
+	gc_grabo(mutable(sk));
 	// :tt
 	t += zos_u32(os, T_SKLS);
 	// :count
@@ -75,7 +75,7 @@ int ymd_dump_skls(struct zostream *os, const struct skls *sk, int *ok) {
 		t += ymd_serialize(os, &i->k, CHECK_OK);
 		t += ymd_serialize(os, &i->v, CHECK_OK);
 	}
-	fg_leave(mutable(sk));
+	gc_dropo(mutable(sk));
 	return t;
 }
 

@@ -7,15 +7,15 @@
 
 static const char *dyay_tostring(struct zostream *os, const struct dyay *o) {
 	int i;
-	if (fg_self(o))
+	if (gc_grabed(o))
 		return zos_append(os, "..[self]..", 10);
 	zos_append(os, "[", 1);
-	fg_enter(gcx(o));
+	gc_grabo(gcx(o));
 	for (i = 0; i < o->count; ++i) {
 		if (i > 0) zos_append(os, ", ", 2);
 		tostring(os, o->elem + i);
 	}
-	fg_leave(gcx(o));
+	gc_dropo(gcx(o));
 	return zos_append(os, "]", 1);
 }
 
@@ -23,10 +23,10 @@ static const char *hmap_tostring(struct zostream *os, const struct hmap *o) {
 	struct kvi *initial = o->item, *i = NULL,
 			   *k = initial + (1 << o->shift);
 	int f = 0;
-	if (fg_self(o))
+	if (gc_grabed(o))
 		return zos_append(os, "..{self}..", 10);
 	zos_append(os, "{", 1);
-	fg_enter(gcx(o));
+	gc_grabo(gcx(o));
 	for (i = initial; i != k; ++i) {
 		if (!i->flag) continue;
 		if (f++ > 0) zos_append(os, ", ", 2);
@@ -34,24 +34,24 @@ static const char *hmap_tostring(struct zostream *os, const struct hmap *o) {
 		zos_append(os, " : ", 3);
 		tostring(os, &i->v);
 	}
-	fg_leave(gcx(o));
+	gc_dropo(gcx(o));
 	return zos_append(os, "}", 1);
 }
 
 static const char *skls_tostring(struct zostream *os, const struct skls *o) {
 	struct sknd *initial = o->head->fwd[0], *i = NULL;
 	int f = 0;
-	if (fg_self(o))
+	if (gc_grabed(o))
 		return zos_append(os, "..@{self}..", 11);
 	zos_append(os, "@{", 2);
-	fg_enter(gcx(o));
+	gc_grabo(gcx(o));
 	for (i = initial; i != NULL; i = i->fwd[0]) {
 		if (f++ > 0) zos_append(os, ", ", 2);
 		tostring(os, &i->k);
 		zos_append(os, " : ", 3);
 		tostring(os, &i->v);
 	}
-	fg_leave(gcx(o));
+	gc_dropo(gcx(o));
 	return zos_append(os, "}", 1);
 }
 

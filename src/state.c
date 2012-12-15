@@ -155,12 +155,10 @@ struct variable *vm_def(struct ymd_mach *vm, void *o, const char *field) {
 	case T_HMAP:
 		setv_kstr(&k, kstr_fetch(vm, field, -1));
 		v = hmap_put(vm, o, &k);
-		gc_release(k.u.ref);
 		break;
 	case T_SKLS:
 		setv_kstr(&k, kstr_fetch(vm, field, -1));
 		v = skls_put(vm, o, &k);
-		gc_release(k.u.ref);
 		break;
 	default:
 		assert(!"No reached.");
@@ -175,12 +173,10 @@ struct variable *vm_mem(struct ymd_mach *vm, void *o, const char *field) {
 	case T_HMAP:
 		setv_kstr(&k, kstr_fetch(vm, field, -1));
 		v = hmap_get(o, &k);
-		gc_release(k.u.ref);
 		break;
 	case T_SKLS:
 		setv_kstr(&k, kstr_fetch(vm, field, -1));
 		v = skls_get(o, &k);
-		gc_release(k.u.ref);
 		break;
 	default:
 		assert(!"No reached.");
@@ -193,7 +189,6 @@ struct variable *vm_getg(struct ymd_mach *vm, const char *field) {
 	struct variable k, *v;
 	setv_kstr(&k, kstr_fetch(vm, field, -1));
 	v = hmap_get(vm->global, &k);
-	gc_release(k.u.ref);
 	return v;
 }
 
@@ -201,7 +196,6 @@ struct variable *vm_putg(struct ymd_mach *vm, const char *field) {
 	struct variable k, *v;
 	setv_kstr(&k, kstr_fetch(vm, field, -1));
 	v = hmap_put(vm, vm->global, &k);
-	gc_release(k.u.ref);
 	return v;
 }
 
@@ -241,7 +235,6 @@ void ymd_format(struct ymd_context *l, const char *fmt, ... ) {
 	va_end(ap);
 	o = kstr_fetch(l->vm, buf, -1);
 	setv_kstr(ymd_push(l), o);
-	gc_release(o);
 }
 
 struct variable *ymd_upval(struct ymd_context *l, int i) {
@@ -275,7 +268,7 @@ struct ymd_mach *ymd_init() {
 	// Init global map:
 	kpool_init(vm);
 	vm->global = hmap_new(vm, -1);
-	gc_release(vm->global);
+	vm->global->marked = GC_FIXED; // global is a fixed object.
 	// Init context
 	vm_init_context(vm);
 	// Load symbols
@@ -289,10 +282,11 @@ struct ymd_mach *ymd_init() {
 }
 
 void ymd_final(struct ymd_mach *vm) {
-	vm_final_context(vm);
-	kpool_final(vm);
 	gc_final(vm);
-	assert(vm->gc.used == 0); // Must free all memory!
+	kpool_final(vm);
+	vm_final_context(vm);
+	assert (vm->gc.used == 0); // Must free all memory!
+	assert (vm->gc.n_alloced == 0); // Allocated object must be zero.
 	free(vm);
 }
 

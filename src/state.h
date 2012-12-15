@@ -249,7 +249,6 @@ static inline int ymd_adjust(L, int adjust, int ret) {
 static inline void ymd_dyay(L, int k) {
 	struct dyay *o = dyay_new(l->vm, k);
 	setv_dyay(ymd_push(l), o); 
-	gc_release(o);
 }
 
 static inline void ymd_add(L) {
@@ -261,13 +260,11 @@ static inline void ymd_add(L) {
 static inline void ymd_hmap(L, int k) {
 	struct hmap *o = hmap_new(l->vm, k);
 	setv_hmap(ymd_push(l), o);
-	gc_release(o);
 }
 
 static inline void ymd_skls(L) {
 	struct skls *o = skls_new(l->vm);
 	setv_skls(ymd_push(l), o);
-	gc_release(o);
 }
 
 static inline void *ymd_mand(L, const char *tt, size_t size,
@@ -275,14 +272,12 @@ static inline void *ymd_mand(L, const char *tt, size_t size,
 	struct mand *o = mand_new(l->vm, size, final);
 	o->tt = tt;
 	setv_mand(ymd_push(l), o);
-	gc_release(o);
 	return o->land;
 }
 
 static inline void ymd_kstr(L, const char *z, int len) {
 	struct kstr *o = kstr_fetch(l->vm, z, len);
 	setv_kstr(ymd_push(l), o);
-	gc_release(o);
 }
 
 void ymd_format(L, const char *fmt, ... );
@@ -311,19 +306,16 @@ static inline void ymd_nafn(L, ymd_nafn_t fn, const char *name, int nbind) {
 	struct func *o = func_new_c(l->vm, fn, name);
 	o->n_upval = nbind;
 	setv_func(ymd_push(l), o);
-	gc_release(o);
 }
 
 static inline void ymd_func(L, struct chunk *blk, const char *name) {
 	struct func *o = func_new(l->vm, blk, name);
 	setv_func(ymd_push(l), o);
-	gc_release(o);
 }
 
 static inline struct func *ymd_naked(L, struct chunk *blk) {
 	struct func *o = func_new(l->vm, blk, NULL);
 	setv_func(ymd_push(l), o);
-	gc_release(o);
 	return o;
 }
 

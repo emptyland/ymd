@@ -225,7 +225,6 @@ static int vm_calc(struct ymd_context *l, unsigned op) {
 		case T_KSTR:
 			lhs->u.ref = gcx(vm_strcat(l->vm, kstr_of(l, lhs),
 						kstr_of(l, rhs)));
-			gc_release(lhs->u.ref);
 			break;
 		default:
 			ymd_panic(l, "Operator + don't support this type");
@@ -416,7 +415,6 @@ retry:
 			struct variable *opd = &core->kval[asm_param(inst)];
 			struct func *copied = func_clone(vm, func_of(l, opd));
 			vm_close_upval(l, copied);
-			gc_release(copied);
 			setv_func(ymd_push(l), copied);
 			} break;
 		case I_TEST: {
@@ -519,7 +517,6 @@ retry:
 				do_put(vm, gcx(map), ymd_top(l, i + 1), ymd_top(l, i));
 			ymd_pop(l, n);
 			setv_hmap(ymd_push(l), map);
-			gc_release(map);
 			} break;
 		case I_NEWSKL: {
 			struct skls *map = skls_new(vm);
@@ -528,7 +525,6 @@ retry:
 				do_put(vm, gcx(map), ymd_top(l, i + 1), ymd_top(l, i));
 			ymd_pop(l, n);
 			setv_skls(ymd_push(l), map);
-			gc_release(map);
 			} break;
 		case I_NEWDYA: {
 			struct dyay *map = dyay_new(vm, 0);
@@ -537,7 +533,6 @@ retry:
 				do_put(vm, gcx(map), NULL, ymd_top(l, i));
 			ymd_pop(l, asm_param(inst));
 			setv_dyay(ymd_push(l), map);
-			gc_release(map);
 			} break;
 		default:
 			assert(!"No reached.");
@@ -554,7 +549,6 @@ static void vm_copy_args(struct ymd_context *l, struct func *fn, int argc) {
 	struct variable *argv = NULL;
 	// Lazy creating
 	fn->argv = !fn->argv ? dyay_new(l->vm, argc) : fn->argv;
-	gc_release(fn->argv);
 	if (!fn->is_c) {
 		struct chunk *core = fn->u.core;
 		const int k = core->kargs < argc ? core->kargs : argc;

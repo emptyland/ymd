@@ -5,236 +5,101 @@
 #include <assert.h>
 #include <stdio.h>
 
-// GC Running:
-static int gc_mark_var(struct variable *var);
-static int gc_mark_hmap(struct hmap *o);
-static int gc_mark_func(struct func *o);
-static int gc_mark_dyay(struct dyay *o);
-static int gc_mark_skls(struct skls *o);
-static int gc_mark_mand(struct mand *o);
+//-----------------------------------------------------------------------------
+// GC functions:
+//-----------------------------------------------------------------------------
+#define gc_otherwhite(white) ((white) == GC_WHITE0 ? GC_WHITE1 : GC_WHITE0)
+
+#define gc_mask(o)    ((o)->marked & GC_MASK)
+
+#define gc_grayo(o)   (gc_mask(o) == GC_GRAY)
+#define gc_fixedo(o)  (gc_mask(o) == GC_FIXED)
+#define gc_whiteo(o)  (gc_mask(o) <= GC_WHITE1)
+#define gc_blacko(o)  (gc_mask(o) == GC_BLACK)
+
+#define gc_marko(o) \
+	if (gc_whiteo(o)) \
+		gc_white2gray(gcx(o))
+
+#define gc_markv(v) \
+	if ((v)->tt == T_REF && \
+			gc_whiteo((v)->u.ref)) \
+		gc_mark_obj((v)->u.ref)
+
+#define gc_travelo(o) \
+	if (!gc_grabed(o)) \
+		gc_travel_obj(gcx(o))
+
+#define gc_travelv(v) \
+	if ((v)->tt == T_REF && \
+			!gc_grabed((v)->u.ref)) \
+		gc_travel_obj((v)->u.ref)
+
+
 static void gc_adjust(struct ymd_mach *vm, size_t prev);
+static void gc_mark_root(struct ymd_mach *vm);
+static void gc_propagate(struct ymd_mach *vm);
+static void gc_atomic(struct ymd_mach *vm);
+static void gc_sweep_kpool(struct ymd_mach *vm);
+static void gc_final_kpool(struct ymd_mach *vm);
+static void gc_sweep(struct ymd_mach *vm);
+static void gc_final_sweep(struct ymd_mach *vm);
+static int gc_mark_global(struct ymd_mach *vm);
+static int gc_mark_context(struct ymd_mach *vm);
+static void gc_move2gray(struct ymd_mach *vm);
+static void gc_mark_obj(struct gc_node *o);
+static void  gc_travel_obj(struct gc_node *o);
+static int gc_travel_func(struct func *o);
 
-static inline int marked(struct variable *var, unsigned flag) {
-	return (is_ref(var) ? (var->u.ref->marked & flag) != 0 : 1);
+static inline void gc_white2gray(struct gc_node *o) {
+	assert (gc_whiteo(o) && "Only white object can become gray.");
+	assert (!gc_fixedo(o) && "Don't mark fixed object.");
+	o->marked = (o->marked & ~GC_MASK) | GC_GRAY;
 }
 
-static inline int track(struct gc_struct *gc, struct gc_node *x) {
-	x->next = gc->alloced;
-	gc->alloced = x;
-	return ++gc->n_alloced;
+static inline void gc_white2black(struct gc_node *o) {
+	assert (gc_whiteo(o) && "Only white object can become black.");
+	assert (!gc_fixedo(o) && "Don't mark fixed object.");
+	o->marked = (o->marked & ~GC_MASK) | GC_BLACK;
 }
 
-static int gc_mark_var(struct variable *var) {
-	struct gc_node *o = var->u.ref;
-	switch (TYPEV(var)) {
-	case T_KSTR:
-		o->marked |= GC_BLACK_BIT0;
-		break;
-	case T_MAND:
-		return gc_mark_mand(mand_f(o));
-	case T_FUNC:
-		return gc_mark_func(func_f(o));
-	case T_DYAY:
-		return gc_mark_dyay(dyay_f(o));
-	case T_HMAP:
-		return gc_mark_hmap(hmap_f(o));
-	case T_SKLS:
-		return gc_mark_skls(skls_f(o));
-	}
-	return 0;
+static inline void gc_gray2black(struct gc_node *o) {
+	assert (!gc_fixedo(o) && "Don't mark fixed object.");
+	o->marked = (o->marked & ~GC_MASK) | GC_BLACK;
 }
 
-static int gc_mark_func(struct func *o) {
-	int i;
-	struct chunk *core;
-	o->marked |= GC_BLACK_BIT0;
-	o->proto->marked |= GC_BLACK_BIT0;
-	if (o->argv && (o->argv->marked & GC_BLACK_BIT0) == 0) {
-		gc_mark_dyay(o->argv);
-	}
-	if (o->upval) {
-		for (i = 0; i < o->n_upval; ++i) {
-			if (!marked(o->upval + i, GC_BLACK_BIT0)) {
-				gc_mark_var(o->upval + i);
-			}
-		}
-	}
-	if (o->is_c)
-		return 0;
-	core = o->u.core;
-	core->file->marked |= GC_BLACK_BIT0;
-	for (i = 0; i < core->klz; ++i)
-		core->lz[i]->marked |= GC_BLACK_BIT0;
-	for (i = 0; i < core->kuz; ++i)
-		core->uz[i]->marked |= GC_BLACK_BIT0;
-	for (i = 0; i < core->kkval; ++i) {
-		if (!marked(core->kval + i, GC_BLACK_BIT0))
-			gc_mark_var(core->kval + i);
-	}
-	return 0;
+static inline void gc_black2white(struct gc_node *o, int white) {
+	assert (gc_blacko(o) && "Only black object can become white.");
+	assert (!gc_fixedo(o) && "Don't mark fixed object.");
+	assert (white == GC_WHITE0 || white == GC_WHITE1);
+	o->marked = (o->marked & ~GC_MASK) | white;
 }
 
-static int gc_mark_dyay(struct dyay *o) {
-	int i;
-	o->marked |= GC_BLACK_BIT0; // Mark self first
-	for (i = 0; i < o->count; ++i) {
-		if (!marked(o->elem + i, GC_BLACK_BIT0))
-			gc_mark_var(o->elem + i);
-	}
-	return 0;
+// Can we sweep a object?
+static inline int gc_sweepo(const struct gc_struct *gc,
+		const struct gc_node *o) {
+	assert (!gc_grabed(o));
+	return !gc_fixedo(o) && o->marked == gc_otherwhite(gc->white);
 }
 
-static int gc_mark_hmap(struct hmap *o) {
-	struct kvi *initial = o->item,
-			   *i = NULL,
-			   *k = initial + (1 << o->shift);
-	o->marked |= GC_BLACK_BIT0; // Mark self first
-	for (i = initial; i != k; ++i) {
-		if (!i->flag) continue;
-		if (!marked(&i->k, GC_BLACK_BIT0))
-			gc_mark_var(&i->k);
-		if (!marked(&i->v, GC_BLACK_BIT0))
-			gc_mark_var(&i->v);
-	}
-	return 0;
+// Get value between gc->point and gc->used: 
+static inline int gc_delta(const struct gc_struct *gc) {
+	return gc->point > gc->used ? gc->point - gc->used :
+		gc->used - gc->point;
 }
 
-static int gc_mark_skls(struct skls *o) {
-	struct sknd *i;
-	o->marked |= GC_BLACK_BIT0; // Mark self first
-	for (i = o->head->fwd[0]; i != NULL; i = i->fwd[0]) {
-		if (!marked(&i->k, GC_BLACK_BIT0))
-			gc_mark_var(&i->k);
-		if (!marked(&i->v, GC_BLACK_BIT0))
-			gc_mark_var(&i->v);
-	}
-	return 0;
-}
-
-static int gc_mark_mand(struct mand *o) {
-	o->marked |= GC_BLACK_BIT0;
-	if (!o->proto || gc_marked(o->proto, GC_BLACK_BIT0))
-		return 1;
-	switch (o->proto->type) {
-	case T_HMAP:
-		return gc_mark_hmap(hmap_f(o->proto));
-	case T_SKLS:
-		return gc_mark_skls(skls_f(o->proto));
-	default:
-		assert(!"No reached.");
-		break;
-	}
-	return 0;
-}
-
-static int gc_mark(struct ymd_mach *vm) {
-	struct ymd_context *l = ioslate(vm);
-	// Mark all reached variable from global
-	gc_mark_hmap(vm->global);
-	if (l->info) { // Mark all local variable
-		int n = func_nlocal(l->info->run);
-		struct variable *i, *k = l->info->loc + n;
-		assert(l->info->loc);
-		for (i = l->loc; i != k; ++i)
-			if (!marked(i, GC_BLACK_BIT0))
-				gc_mark_var(i);
-
-	}
-	if (l->info) { // Mark all function in stack
-		struct call_info *i = l->info;
-		while (i) {
-			if ((i->run->marked & GC_BLACK_BIT0) == 0)
-				gc_mark_func(i->run);
-			i = i->chain;
-		}
-	}
-	if (l->stk != l->top) { // Mark all stack variable
-		struct variable *i, *k = l->top;
-		for (i = l->stk; i != k; ++i)
-			if (!marked(i, GC_BLACK_BIT0))
-				gc_mark_var(i);
-	}
-	return 0;
-}
-
-static void gc_hook(struct ymd_mach *vm, struct gc_node *i) {
+static void gc_hook(struct ymd_mach *vm, struct gc_node *o) {
 	(void)vm;
-	(void)i;
-}
-
-static int gc_kpool_sweep(struct ymd_mach *vm) {
-	int rv = 0;
-	struct kpool *kt = &vm->kpool;
-	struct gc_node **i, **k = kt->slot + (1 << kt->shift);
-	for (i = kt->slot; i != k; ++i) {
-		if (*i) {
-			struct gc_node dummy;
-			struct gc_node *x = *i, *p = &dummy;
-			memset(&dummy, 0, sizeof(dummy));
-			dummy.next = x;
-			while (x) {
-				if ((x->marked & (GC_BLACK_BIT0 | GC_GRAY_BIT0)) == 0) {
-					p->next = x->next;
-					gc_hook(vm, x);
-					gc_del(vm, x);
-					kt->used--;
-					x = p->next;
-					rv++;
-				} else {
-					if (x->marked & GC_GRAY_BIT0)
-						++vm->gc.grab;
-					x->marked &= ~GC_BLACK_BIT0;
-					p = x;
-					x = x->next;
-				}
-			}
-			*i = dummy.next;
-		}
-	}
-	return rv;
-}
-
-static size_t gc_sweep(struct ymd_mach *vm) {
-	struct gc_struct *gc = &vm->gc;
-	size_t old = gc->used;
-	struct gc_node dummy, *i = gc->alloced, *p = &dummy;
-	gc_kpool_sweep(vm);
-	memset(&dummy, 0, sizeof(dummy));
-	dummy.next = i;
-	while (i) {
-		if ((i->marked & (GC_BLACK_BIT0 | GC_GRAY_BIT0)) == 0) {
-			p->next = i->next;
-			gc_hook(vm, i);
-			gc_del(vm, i);
-			i = p->next;
-		} else {
-			if (i->marked & GC_GRAY_BIT0)
-				++gc->grab;
-			i->marked &= ~GC_BLACK_BIT0;
-			p = i;
-			i = i->next;
-		}
-	}
-	gc->alloced = dummy.next;
-	return old - gc->used;
+	(void)o;
 }
 
 static size_t gc_record(struct ymd_mach *vm, size_t inc, int neg) {
-	size_t rv = 0;
 	struct gc_struct *gc = &vm->gc;
 	if (neg)
 		gc->used -= inc;
 	else
 		gc->used += inc;
-	if (neg)
-		return 0;
-	if (gc->used > gc->threshold) {
-		if (!gc->pause)
-			gc_mark(vm);
-		if (!gc->pause)
-			gc_adjust(vm, gc_sweep(vm));
-	}
-	return rv;
+	return 0;
 }
 
 void *gc_new(struct ymd_mach *vm, size_t size, unsigned char type) {
@@ -242,44 +107,70 @@ void *gc_new(struct ymd_mach *vm, size_t size, unsigned char type) {
 	struct gc_node *x = vm_zalloc(vm, size);
 	assert(type < (1 << 4));
 	x->type = type;
-	x->marked = GC_GRAY_BIT0;
+	x->marked = gc->white; // Initial mark is current white.
 	gc_record(vm, size, 0);
-	track(gc, x);
+	// Link it in alloced list.
+	x->next = gc->alloced;
+	gc->alloced = x;
+	++gc->n_alloced;
 	return x;
 }
 
 int gc_init(struct ymd_mach *vm, int k) {
 	struct gc_struct *gc = &vm->gc;
-	gc->alloced   = NULL;
-	gc->n_alloced = 0;
 	gc->threshold = k;
-	gc->pause     = 0;
-	gc->logf      = NULL;
+	gc->state = GC_PAUSE;
+	gc->white = GC_WHITE0;
 	return 0;
 }
 
-int gc_active(struct ymd_mach *vm, int act) {
+int gc_active(struct ymd_mach *vm, int off) {
 	struct gc_struct *gc = &vm->gc;
 	int old = gc->pause;
-	switch (act) {
-	case GC_PAUSE:
+	if (off > 0)
 		++gc->pause;
-		break;
-	case GC_IDLE:
+	else if (off < 0)
 		--gc->pause;
-		break;
-	case GC_MARK:
-		if (!gc->pause) gc_mark(vm);
-		break;
-	case GC_SWEEP:
-		if (!gc->pause) gc_adjust(vm, gc_sweep(vm));
-		break;
-	default:
-		assert(!"No reached.");
-		break;
-	}
 	assert(gc->pause >= 0);
 	return old;
+}
+
+int gc_step(struct ymd_mach *vm) { // Run gc in one step.
+	struct gc_struct *gc = &vm->gc;
+	if (gc->pause)
+		return -1;
+	switch (gc->state) {
+	case GC_PAUSE:
+		gc_mark_root(vm);
+		break;
+	case GC_PROPAGATE:
+		if (gc->gray)
+			gc_propagate(vm);
+		else
+			gc_atomic(vm);
+		break;
+	case GC_SWEEPSTRING:
+		if (gc->sweep_kpool < (1 << vm->kpool.shift))
+			gc_sweep_kpool(vm);
+		else
+			gc_final_kpool(vm);
+		break;
+	case GC_SWEEP:
+		if (gc->sweep)
+			gc_sweep(vm);
+		else
+			gc_final_sweep(vm);
+		break;
+	case GC_FINALIZE:
+		gc_adjust(vm, gc_delta(gc));
+		gc->point = 0;
+		gc->state = GC_PAUSE;
+		break;
+	default:
+		assert (!"No reached.");
+		break;
+	}
+	return 0;
 }
 
 void gc_del(struct ymd_mach *vm, void *p) {
@@ -321,7 +212,14 @@ void gc_del(struct ymd_mach *vm, void *p) {
 
 void gc_final(struct ymd_mach *vm) {
 	struct gc_struct *gc = &vm->gc;
-	struct gc_node *i = gc->alloced, *p = i;
+	struct gc_node *i, *p;
+	// Run gc in last one.
+	gc->pause = 0;
+	while (gc->state != GC_FINALIZE)
+		gc_step(vm);
+	// Delete all allocated objects.
+	i = gc->alloced;
+	p = i;
 	while (i) {
 		p = i;
 		i = i->next;
@@ -339,9 +237,9 @@ static void gc_adjust(struct ymd_mach *vm, size_t prev) {
 	if (prev > 0 && gc->logf)
 		fprintf(gc->logf, "Full GC: %zd\t%zd\t%zd\t%02f\t%lld\t%d\n",
 		        prev, gc->used + prev, gc->threshold, rate,
-				vm->tick - gc->last, gc->grab);
+				vm->tick - gc->last, gc->fixed);
 	gc->last = vm->tick;
-	gc->grab = 0;
+	gc->fixed = 0;
 }
 
 void *mm_zalloc(struct ymd_mach *vm, int n, size_t chunk) {
@@ -398,3 +296,295 @@ void mm_drop(struct ymd_mach *vm, void *p, size_t size) {
 	if (*ref == 0)
 		mm_free(vm, p, 1, size);
 }
+
+// Mark all reached object white to gray color.
+// This process is ATOMIC.
+static void gc_mark_root(struct ymd_mach *vm) {
+	struct gc_struct *gc = &vm->gc;
+	// Mark all reached variable from global, no deeped.
+	gc_mark_global(vm);
+	gc_mark_context(vm);
+	gc_move2gray(vm);
+	gc->fixed = 0;
+	// Mark finialize, change gc state to next step.
+	gc->state = GC_PROPAGATE;
+}
+
+// Incrmential change gray to black.
+static void gc_propagate(struct ymd_mach *vm) {
+	struct gc_struct *gc = &vm->gc;
+	struct gc_node *curr = gc->gray;
+	assert (gc->gray && "Gray list already empty.");
+	// Remark one object in one time.
+	gc_travel_obj(curr);
+	// Remove current node from gray list to gray_again list.
+	gc->gray = curr->next;
+	curr->next = gc->gray_again;
+	gc->gray_again = curr;
+}
+
+// Finilize propagate.
+static void gc_atomic(struct ymd_mach *vm) {
+	struct gc_struct *gc = &vm->gc;
+	// Remark again:
+	gc->gray = gc->gray_again;
+	gc->gray_again = NULL;
+	gc_mark_global(vm);
+	gc_mark_context(vm);
+	gc_move2gray(vm);
+	while (gc->gray) gc_propagate(vm);
+	// Change gc's white flag:
+	gc->white = gc_otherwhite(vm->gc.white);
+	// Check Point, save used byte in GC beginning.
+	gc->point = gc->used;
+	gc->sweep_kpool = 0;
+	gc->state = GC_SWEEPSTRING;
+}
+
+// Sweep constant string pool(hash table)
+static void gc_sweep_kpool(struct ymd_mach *vm) {
+	struct gc_struct *gc = &vm->gc;
+	struct kpool *kt = &vm->kpool;
+	struct gc_node **i, **k = kt->slot + (1 << kt->shift);
+	for (i = kt->slot + gc->sweep_kpool; i != k; ++i) {
+		struct gc_node dummy = {*i, 0, 0, 0}, *p = &dummy, *x = *i;
+		// Find fisrt valid slot
+		if (!x)
+			continue; 
+		while (x) {
+			// Sweep a list in one time.
+			assert (!gc_grayo(x) &&
+					"No pooled string can be gray.");
+			if (gc_sweepo(gc, x)) {
+				p->next = x->next;
+				gc_hook(vm, x);
+				gc_del(vm, x);
+				--kt->used;
+				x = p->next;
+			} else {
+				if (gc_fixedo(x))
+					++vm->gc.fixed;
+				if (gc_blacko(x))
+					gc_black2white(x, gc->white);
+				p = x;
+				x = x->next;
+			}
+		}
+		*i = dummy.next;
+		break;
+	}
+	// Save current slot's index.
+	gc->sweep_kpool = (int)(++i - kt->slot);
+}
+
+static void gc_final_kpool(struct ymd_mach *vm) {
+	struct gc_struct *gc = &vm->gc;
+
+	// Move alloced list to sweep list for sweeping.
+	gc->sweep = gc->alloced;
+	gc->alloced = NULL;
+	gc->sweep_step = gc_delta(gc) / (sizeof(struct variable) * 50);
+	gc->sweep_step = gc->sweep_step <= 0 ? 1 : gc->sweep_step;
+	gc->state = GC_SWEEP;
+}
+
+// Incrmential sweep non-string objects
+static void gc_sweep(struct ymd_mach *vm) {
+	struct gc_struct *gc = &vm->gc;
+	int i = gc->sweep_step;
+	// Sweep some object by `sweep_setp' in one time
+	while (i-- && gc->sweep) {
+		struct gc_node *x = gc->sweep;
+		assert (!gc_grayo(x) &&
+				"No sweeping object can be gray.");
+		gc->sweep = gc->sweep->next;
+		if (gc_sweepo(gc, x)) {
+			gc_hook(vm, x);
+			gc_del(vm, x);
+		} else {
+			x->next = gc->alloced;
+			if (gc_fixedo(x))
+				++vm->gc.fixed;
+			if (gc_blacko(x))
+				gc_black2white(x, gc->white);
+			gc->alloced = x;
+		}
+	}
+}
+
+static void gc_final_sweep(struct ymd_mach *vm) {
+	struct gc_struct *gc = &vm->gc;
+	// Move gray_again list to alloced list
+	while (gc->gray_again) {
+		struct gc_node *x = gc->gray_again;
+		gc->gray_again = gc->gray_again->next;
+		x->next = gc->alloced;
+		gc_black2white(x, gc->white);
+		gc->alloced = x;
+	}
+	assert (!gc->gray_again);
+	gc->state = GC_FINALIZE;
+}
+
+static int gc_mark_global(struct ymd_mach *vm) {
+	struct kvi *initial = vm->global->item,
+			   *i = NULL,
+			   *k = initial + (1 << vm->global->shift);
+	int count = 0;
+	assert(gc_fixedo(vm->global) && "Global must be fixed.");
+	for (i = initial; i != k; ++i) {
+		if (!i->flag) continue;
+		gc_markv(&i->k);
+		gc_markv(&i->v);
+		++count;
+	}
+	return count;
+}
+
+static int gc_mark_context(struct ymd_mach *vm) {
+	int count = 0;
+	struct ymd_context *l = ioslate(vm);
+	if (l->info) { // Mark all local variable
+		int n = func_nlocal(l->info->run);
+		struct variable *i, *k = l->info->loc + n;
+		assert(l->info->loc);
+		for (i = l->loc; i != k; ++i) {
+			gc_markv(i);
+			++count;
+		}
+	}
+	if (l->info) { // Mark all function in stack
+		struct call_info *i = l->info;
+		while (i) {
+			gc_marko(i->run);
+			++count;
+			i = i->chain;
+		}
+	}
+	if (l->stk != l->top) { // Mark all stack variable
+		struct variable *i, *k = l->top;
+		for (i = l->stk; i != k; ++i) {
+			gc_markv(i);
+			++count;
+		}
+	}
+	return count;
+}
+
+static void gc_move2gray(struct ymd_mach *vm) {
+	struct gc_struct *gc = &vm->gc;
+	struct gc_node fake = { gc->alloced, 0, 0, 0, };
+	struct gc_node *i = gc->alloced, *p = &fake;
+	assert (i != NULL && "No any alloced objects?");
+	while (i) {
+		if (gc_grayo(i)) {
+			p->next = i->next;
+			i->next = gc->gray;
+			gc->gray = i;
+			i = p->next;
+		} else {
+			p = i;
+			i = i->next;
+		}
+	}
+	gc->alloced = fake.next; // Reset header node.
+}
+
+static void gc_mark_obj(struct gc_node *o) {
+	if (!gc_whiteo(o))
+		return;
+	switch (o->type) {
+	case T_KSTR:
+		if (kstr_f(o)->len < MAX_KPOOL_LEN)
+			gc_white2black(o);
+		else
+			gc_white2gray(o);
+		break;
+	case T_MAND:
+	case T_FUNC:
+	case T_DYAY:
+	case T_HMAP:
+	case T_SKLS:
+		gc_white2gray(o);
+		break;
+	default:
+		assert(!"No reached.");
+		break;
+	}
+}
+
+static void gc_travel_obj(struct gc_node *o) {
+	gc_grabo(o);
+	gc_gray2black(o);
+	switch (o->type) {
+	case T_KSTR:
+		break;
+	case T_MAND:
+		if (mand_f(o)->proto) {
+			gc_travelo(mand_f(o)->proto);
+		}
+		break;
+	case T_FUNC:
+		gc_travel_func(func_f(o));
+		break;
+	case T_DYAY: {
+		int i;
+		for (i = 0; i < dyay_f(o)->count; ++i) {
+			gc_travelv(dyay_f(o)->elem + i);
+		}
+		} break;
+	case T_HMAP: {
+		struct kvi *initial = hmap_f(o)->item,
+				   *i = NULL,
+				   *k = initial + (1 << hmap_f(o)->shift);
+		for (i = initial; i != k; ++i) {
+			if (!i->flag) continue;
+			gc_travelv(&i->k);
+			gc_travelv(&i->v);
+		}
+		} break;
+	case T_SKLS: {
+		struct sknd *i;
+		for (i = skls_f(o)->head->fwd[0]; i != NULL; i = i->fwd[0]) {
+			gc_travelv(&i->k);
+			gc_travelv(&i->v);
+		}
+		} break;
+	default:
+		assert (!"No reached.");
+		break;
+	}
+	gc_dropo(o);
+}
+
+static int gc_travel_func(struct func *o) {
+	int i;
+	struct chunk *core;
+	gc_travelo(o->proto);
+	/*if (o->argv && gc_grayo(o->argv)) {
+		gc_travelo(o->argv);
+	}*/
+	if (o->argv) {
+		gc_travelo(o->argv);
+	}
+	if (o->upval) {
+		for (i = 0; i < o->n_upval; ++i) {
+			gc_travelv(o->upval + i);
+		}
+	}
+	if (o->is_c)
+		return 0;
+	core = o->u.core;
+	gc_travelo(core->file);
+	for (i = 0; i < core->klz; ++i) {
+		gc_travelo(core->lz[i]);
+	}
+	for (i = 0; i < core->kuz; ++i) {
+		gc_travelo(core->uz[i]);
+	}
+	for (i = 0; i < core->kkval; ++i) {
+		gc_travelv(core->kval + i);
+	}
+	return 0;
+}
+

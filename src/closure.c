@@ -51,7 +51,6 @@ int blk_kz(struct ymd_mach *vm, struct chunk *core, const char *z, int k) {
 	}
 	kz = kstr_fetch(vm, z, k);
 	setv_kstr(blk_klast(vm, core), kz);
-	gc_release(kz);
 	return core->kkval++;
 }
 
@@ -83,7 +82,6 @@ int blk_kf(struct ymd_mach *vm, struct chunk *core, void *p) {
 			return i;
 	}
 	setv_func(blk_klast(vm, core), fn);
-	gc_release(fn);
 	return core->kkval++;
 }
 
@@ -114,7 +112,6 @@ int blk_add_lz(struct ymd_mach *vm, struct chunk *core, const char *z) {
 	core->lz = mm_need(vm, core->lz, core->klz, LVAR_ALIGN,
 	                   sizeof(*core->lz));
 	core->lz[core->klz] = kstr_fetch(vm, z, -1);
-	gc_release(core->lz[core->klz]);
 	core->klz++;
 	return core->klz - 1;
 }
@@ -131,7 +128,6 @@ int blk_add_uz(struct ymd_mach *vm, struct chunk *core, const char *z) {
 	core->uz = mm_need(vm, core->uz, core->kuz, UVAR_ALIGN,
 	                   sizeof(*core->uz));
 	core->uz[core->kuz] = kstr_fetch(vm, z, -1);
-	gc_release(core->uz[core->kuz]);
 	core->kuz++;
 	return core->kuz - 1;
 }
@@ -167,7 +163,6 @@ static void func_init(struct ymd_mach *vm, struct func *fn,
 		fn->proto = vm_format(vm, "func %s(*) {...}",
 		                      !name ? "" : name);
 	}
-	gc_release(fn->proto);
 }
 
 struct func *func_new_c(struct ymd_mach *vm, ymd_nafn_t nafn,

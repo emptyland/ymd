@@ -97,7 +97,8 @@ static struct kstr *kstr_new(struct ymd_mach *vm, int raw, const char *z,
 	if (raw) {
 		x = mm_zalloc(vm, 1, sizeof(*x) + count);
 		x->type = T_KSTR;
-		x->marked = GC_GRAY_BIT0;
+		x->marked = vm->gc.white;
+		++vm->gc.n_alloced;
 	} else
 		x = gc_new(vm, sizeof(*x) + count, T_KSTR);
 	x->len = count;

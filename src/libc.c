@@ -804,14 +804,35 @@ static int libx_rand(L) {
 	return 1;
 }
 
+static const char *gc_state_str[] = {
+	"pause",
+	"propagate",
+	"sweepstring",
+	"sweep",
+	"finalize",
+};
+
 static int libx_gc(L) {
 	const struct kstr *arg0 = kstr_of(l, ymd_argv_get(l, 0));
-	if (strcmp(arg0->land, "pause") == 0)
-		gc_active(l->vm, GC_PAUSE);
-	else if (strcmp(arg0->land, "resume") == 0)
-		gc_active(l->vm, GC_IDLE);
-	else if (strcmp(arg0->land, "collect") == 0)
-		gc_active(l->vm, GC_MARK), gc_active(l->vm, GC_SWEEP);
+	if (strcmp(arg0->land, "pause") == 0) {
+		gc_active(l->vm, +1);
+		return 0;
+	} else if (strcmp(arg0->land, "resume") == 0) {
+		gc_active(l->vm, -1);
+		return 0;
+	} else if (strcmp(arg0->land, "step") == 0) {
+		gc_step(l->vm);
+		return 0;
+	} else if (strcmp(arg0->land, "used") == 0) {
+		ymd_int(l, l->vm->gc.used);
+		return 1;
+	} else if (strcmp(arg0->land, "threshold") == 0) {
+		ymd_int(l, l->vm->gc.threshold);
+		return 1;
+	} else if (strcmp(arg0->land, "state") == 0) {
+		ymd_kstr(l, gc_state_str[l->vm->gc.state], -1);
+		return 1;
+	}
 	return 0;
 }
 

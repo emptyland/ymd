@@ -4,12 +4,12 @@
 
 static struct ymd_mach *setup() {
 	struct ymd_mach *vm = ymd_init();
-	gc_active(vm, GC_PAUSE);
+	gc_active(vm, +1);
 	return vm;
 }
 
 static void teardown(struct ymd_mach *vm) {
-	gc_active(vm, GC_IDLE);
+	gc_active(vm, -1);
 	ymd_final(vm);
 }
 
