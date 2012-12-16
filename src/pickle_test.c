@@ -72,7 +72,7 @@ static int test_dump_func (struct ymd_mach *vm) {
 	struct zostream os = ZOS_INIT;
 	struct zistream is = ZIS_INIT(NULL, NULL, 0);
 	char z[1024] = {0};
-	int i, ok = 1;
+	int ok = 1;
 	struct chunk *x = mm_zalloc(vm, 1, sizeof(*x));
 	struct func *o = func_new(vm, x, "foo");
 	o->n_upval = 2;
@@ -89,7 +89,7 @@ static int test_dump_func (struct ymd_mach *vm) {
 	x->file  = kstr_fetch(vm, "foo.ymd", -1);
 	blk_shrink(vm, x);
 
-	i = ymd_dump_func(&os, o, CHECK_OK);
+	ymd_dump_func(&os, o, CHECK_OK);
 	zis_pipe(&is, &os);
 
 	// :tt
@@ -228,7 +228,7 @@ static int test_load_simple (struct ymd_mach *vm) {
 	struct ymd_context *l = ioslate(vm);
 	struct zostream os = ZOS_INIT;
 	struct zistream is = ZIS_INIT(l, NULL, 0);
-	int i, ok = 1;
+	int ok = 1;
 
 	zos_u32(&os, T_NIL); // nil
 	zos_u32(&os, T_INT); // -1
@@ -240,19 +240,19 @@ static int test_load_simple (struct ymd_mach *vm) {
 
 	zis_pipe(&is, &os);
 
-	i = ymd_parse(&is, CHECK_OK);
+	ymd_parse(&is, CHECK_OK);
 	ASSERT_EQ(uint, ymd_top(l, 0)->tt, T_NIL);
 	ymd_pop(l, 1);
 
-	i = ymd_parse(&is, CHECK_OK);
+	ymd_parse(&is, CHECK_OK);
 	ASSERT_EQ(uint,  ymd_top(l, 0)->tt,    T_INT);
 	ASSERT_EQ(large, ymd_top(l, 0)->u.i, 0x8040);
 
-	i = ymd_parse(&is, CHECK_OK);
+	ymd_parse(&is, CHECK_OK);
 	ASSERT_EQ(uint,  ymd_top(l, 0)->tt,    T_BOOL);
 	ASSERT_EQ(large, ymd_top(l, 0)->u.i, 1);
 
-	i = ymd_parse(&is, CHECK_OK);
+	ymd_parse(&is, CHECK_OK);
 	ASSERT_EQ(uint,  ymd_top(l, 0)->tt,    T_BOOL);
 	ASSERT_EQ(large, ymd_top(l, 0)->u.i, 0);
 	zis_final(&is);
@@ -264,7 +264,7 @@ static int test_load_kstr (struct ymd_mach *vm) {
 	struct ymd_context *l = ioslate(vm);
 	struct zostream os = ZOS_INIT;
 	struct zistream is = ZIS_INIT(l, NULL, 0);
-	int i, ok = 1;
+	int ok = 1;
 
 	zos_u32(&os, T_KSTR); // "01234567"
 	zos_u32(&os, 8);
@@ -272,7 +272,7 @@ static int test_load_kstr (struct ymd_mach *vm) {
 
 	zis_pipe(&is, &os);
 
-	i = ymd_parse(&is, CHECK_OK);
+	ymd_parse(&is, CHECK_OK);
 	ASSERT_EQ(int, ymd_type(ymd_top(l, 0)), T_KSTR);
 	ASSERT_STREQ(kstr_k(ymd_top(l, 0))->land, "01234567");
 	ymd_pop(l, 1);
@@ -286,7 +286,7 @@ static int test_load_dyay (struct ymd_mach *vm) {
 	struct ymd_context *l = ioslate(vm);
 	struct zostream os = ZOS_INIT;
 	struct zistream is = ZIS_INIT(l, NULL, 0);
-	int i, ok = 1;
+	int ok = 1;
 	struct dyay *ax;
 
 	zos_u32(&os, T_DYAY);
@@ -304,7 +304,7 @@ static int test_load_dyay (struct ymd_mach *vm) {
 
 	zis_pipe(&is, &os);
 
-	i = ymd_parse(&is, CHECK_OK);
+	ymd_parse(&is, CHECK_OK);
 	ASSERT_EQ(int, ymd_type(ymd_top(l, 0)), T_DYAY);
 	ax = dyay_x(ymd_top(l, 0));
 	ASSERT_EQ(int,   ax->count, 3);
@@ -328,7 +328,7 @@ static int load_o (int tt, struct ymd_mach *vm) {
 	struct ymd_context *l = ioslate(vm);
 	struct zostream os = ZOS_INIT;
 	struct zistream is = ZIS_INIT(l, NULL, 0);
-	int i, ok = 1;
+	int ok = 1;
 	void *o;
 
 	zos_u32(&os, tt);
@@ -353,7 +353,7 @@ static int load_o (int tt, struct ymd_mach *vm) {
 	zos_i64(&os, 3LL);
 
 	zis_pipe(&is, &os);
-	i = ymd_parse(&is, CHECK_OK);
+	ymd_parse(&is, CHECK_OK);
 	ASSERT_EQ(int, ymd_type(ymd_top(l, 0)), tt);
 	o = ymd_top(l, 0)->u.ref;
 
