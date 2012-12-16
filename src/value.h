@@ -66,10 +66,10 @@ struct chunk {
 
 struct func {
 	GC_HEAD;
-	struct kstr *proto; // Prototype description
+	struct kstr *name; // Function name
 	struct variable *upval; // Up values
 	struct dyay *argv;  // Arguments
-	unsigned short is_c;
+	unsigned short is_c; // Is native C function?
 	unsigned short n_upval; // Natvie function use it for upval;
 	union {
 		ymd_nafn_t nafn;  // Native function
@@ -219,10 +219,13 @@ int dyay_remove(struct ymd_mach *vm, struct dyay *o, ymd_int_t i);
 // Managed data: `mand` functions:
 struct mand *mand_new(struct ymd_mach *vm, int size, ymd_final_t final);
 void mand_final(struct ymd_mach *vm, struct mand *o);
+
 // Proxy getting and putting
 struct variable *mand_get(struct mand *o, const struct variable *k);
 struct variable *mand_put(struct ymd_mach *vm, struct mand *o,
-                          const struct variable *k);
+		const struct variable *k);
+int mand_remove(struct ymd_mach *vm, struct mand *o,
+		const struct variable *k);
 
 // Chunk and compiling:
 void blk_final(struct ymd_mach *vm, struct chunk *core);
@@ -255,6 +258,13 @@ struct func *func_new_c(struct ymd_mach *vm, ymd_nafn_t nafn,
                         const char *name);
 struct func *func_clone(struct ymd_mach *vm, struct func *fn);
 void func_final(struct ymd_mach *vm, struct func *fn);
+
+// Return the func's prototype, like this:
+// func len(...) {[native:0x7864]}
+// func foo(a, b, c)
+struct kstr *func_proto(struct ymd_mach *vm, struct func *fn);
+
+const char *func_proto_z(const struct func *fn, char *buf, size_t len);
 
 // Return a variable for binding, default: nil
 struct variable *func_bind(struct ymd_mach *vm, struct func *fn, int i);

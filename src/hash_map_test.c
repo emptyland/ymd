@@ -21,14 +21,14 @@ static int test_hmap_creation_1 (struct ymd_mach *vm) {
 	setv_kstr(hmap_put(vm, map, &k), kstr_fetch(vm, "1024", -1));
 
 	rv = hmap_put(vm, map, &k);
-	ASSERT_EQ(int, TYPEV(rv), T_KSTR);
+	ASSERT_EQ(int, ymd_type(rv), T_KSTR);
 	ASSERT_STREQ(kstr_of(ioslate(vm), rv)->land, "1024");
 
 	setv_kstr(&k, kstr_fetch(vm, "1024", -1));
 	setv_int(hmap_put(vm, map, &k), 1024);
 
 	rv = hmap_get(map, &k);
-	ASSERT_EQ(int, TYPEV(rv), T_INT);
+	ASSERT_EQ(int, ymd_type(rv), T_INT);
 	ASSERT_EQ(large, rv->u.i, 1024);
 
 	setv_int(&k, 1024);
@@ -101,7 +101,7 @@ static int test_hmap_search_1 (struct ymd_mach *vm) {
 			snprintf(buf, sizeof(buf), "%u", index);
 			setv_kstr(&k, kstr_fetch(vm, buf, -1));
 			rv = hmap_get(map, &k);
-			ASSERT_EQ(int, TYPEV(rv), T_INT);
+			ASSERT_EQ(int, ymd_type(rv), T_INT);
 			ASSERT_EQ(large, rv->u.i, index);
 		}
 		TIME_RECORD_END
@@ -195,6 +195,25 @@ static int test_hmap_removing (struct ymd_mach *vm) {
 
 	setv_int(&k, 14);
 	ASSERT_FALSE(hmap_remove(vm, map, &k)); // rm 14
+	return 0;
+}
+
+static int test_hmap_removing2 (struct ymd_mach *vm) {
+	struct hmap *map = hmap_new(vm, 0);
+	struct variable k;
+	ymd_int_t i, n = 1000;
+	for (i = 0; i < n; ++i) {
+		setv_int(&k, i);
+		setv_int(hmap_put(vm, map, &k), i);
+	}
+	for (i = 0; i < n; ++i) {
+		setv_int(&k, i);
+		ASSERT_EQ(int, 1, hmap_remove(vm, map, &k));
+	}
+	for (i = 0; i < n; ++i) {
+		setv_int(&k, i);
+		ASSERT_TRUE(knil == hmap_get(map, &k));
+	}
 	return 0;
 }
 

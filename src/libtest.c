@@ -115,7 +115,7 @@ static void yut_fail0(L) {
 	int i;
 	struct zostream os = ZOS_INIT;
 	struct dyay *ax;
-	if (l->top - l->stk < 3 || TYPEV(ymd_top(l, 0)) != T_DYAY) {
+	if (l->top - l->stk < 3 || ymd_type(ymd_top(l, 0)) != T_DYAY) {
 		return;
 	}
 	// print backtrace info
@@ -177,14 +177,14 @@ static int libx_True(L) {
 	struct variable *arg0 = ymd_argv_get(l, 1);
 	if (is_nil(arg0))
 		yut_fail1(l, "not nil", arg0);
-	if (TYPEV(arg0) == T_BOOL && !arg0->u.i)
+	if (ymd_type(arg0) == T_BOOL && !arg0->u.i)
 		yut_fail1(l, "true or not nil", arg0);
 	return 0;
 }
 
 static int libx_False(L) {
 	struct variable *arg0 = ymd_argv_get(l, 1);
-	if (!is_nil(arg0) && (TYPEV(arg0) == T_BOOL && arg0->u.i))
+	if (!is_nil(arg0) && (ymd_type(arg0) == T_BOOL && arg0->u.i))
 		yut_fail1(l, "false or nil", arg0);
 	return 0;
 }
@@ -231,7 +231,7 @@ DEFINE_BIN_ASSERT(GE, vm_compare, <  0)
 static struct func *yut_method(struct ymd_mach *vm, void *o,
                                const char *field) {
 	struct variable *found = vm_mem(vm, o, field);
-	if (is_nil(found) || TYPEV(found) != T_FUNC)
+	if (is_nil(found) || ymd_type(found) != T_FUNC)
 		return NULL;
 	return func_x(found);
 }
@@ -317,7 +317,7 @@ static struct yut_case_entry *yut_ordered_case(struct ymd_context *l,
 		struct func *fn;
 		const char *name = kstr_of(l, &i->k)->land;
 		if (strstr(name, "test") != name || // Check prefix
-				TYPEV(&i->v) != T_FUNC ||   // Check func type
+				ymd_type(&i->v) != T_FUNC ||   // Check func type
 				(fn = func_x(&i->v)) == NULL ||
 				fn->is_c) // It's C function?
 			continue;
@@ -332,7 +332,7 @@ static int yut_test(struct ymd_mach *vm, const struct filter *filter,
 	struct yut_case_entry *ord;
 	struct func *setup, *teardown, *init, *final;
 	struct ymd_context *l = ioslate(vm);
-	if (TYPEV(test) != T_SKLS || !ftest(filter, clazz))
+	if (ymd_type(test) != T_SKLS || !ftest(filter, clazz))
 		return 0;
 	// Get all of environmord functions.
 	setup    = yut_method(vm, test->u.ref, "setup");

@@ -25,12 +25,12 @@ static int test_skls_creation_1 (struct ymd_mach *vm) {
 
 	rv = skls_get(ls, &k1);
 	ASSERT_NOTNULL(rv);
-	ASSERT_EQ(int, TYPEV(rv), T_KSTR);
+	ASSERT_EQ(int, ymd_type(rv), T_KSTR);
 	ASSERT_STREQ(kstr_of(ioslate(vm), rv)->land, "1024");
 
 	rv = skls_get(ls, &k2);
 	ASSERT_NOTNULL(rv);
-	ASSERT_EQ(int, TYPEV(rv), T_INT);
+	ASSERT_EQ(int, ymd_type(rv), T_INT);
 	ASSERT_EQ(large, rv->u.i, 1024LL);
 	return 0;
 }

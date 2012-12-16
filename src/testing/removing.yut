@@ -1,0 +1,68 @@
+RemovingTest = @{
+	test_sanity : func (self) {
+		var o = {
+			i: 0,
+			j: 1,
+			k: "Hello"
+		}
+		self:sanity(o)
+		o = @{
+			i: 0,
+			j: 1,
+			k: "Hello"
+		}
+		self:sanity(o)
+		o = [0, {}, "Hello"]
+		self:sanity(o)
+	},
+
+	sanity : func (self, o) {
+		if typeof o == "array" {
+			Assert:EQ(0, o[0])
+			Assert:EQ({}, o[1])
+			Assert:EQ("Hello", o[2])
+
+			o[0] = nil
+			Assert:EQ(2, len(o))
+			Assert:EQ({}, o[0])
+			Assert:EQ("Hello", o[1])
+
+			o[1] = nil
+			Assert:EQ(1, len(o))
+			Assert:EQ({}, o[0])
+		} else {
+			Assert:EQ(0, o.i)
+			Assert:EQ(1, o.j)
+			Assert:EQ("Hello", o.k)
+
+			o.i = nil
+			Assert:Nil(o.i)
+
+			o.k = nil
+			Assert:Nil(o.k)
+
+			o.j = nil
+			Assert:Nil(o.j)
+		}
+	},
+
+	test_skls : func (self) {
+		self:all_remove(@{})
+	},
+
+	test_hmap : func (self) {
+		self:all_remove({})
+	},
+
+	all_remove : func (self, o) {
+		var k = 10000
+		for var i in range(0, k) {
+			o[i] = str(i)	
+		}
+		Assert:EQ(k, len(o))
+		for i in range(0, k) {
+			o[i] = nil
+		}
+		Assert:EQ(0, len(o))
+	}
+}

@@ -52,7 +52,7 @@ ymd_int_t int_of(struct ymd_context *l, const struct variable *var) {
 }
 
 ymd_int_t int4of(struct ymd_context *l, const struct variable *var) {
-	switch (TYPEV(var)) {
+	switch (ymd_type(var)) {
 	case T_INT:
 		return var->u.i;
 	case T_FLOAT:
@@ -71,7 +71,7 @@ ymd_float_t float_of(struct ymd_context *l, const struct variable *var) {
 }
 
 ymd_float_t float4(const struct variable *var) {
-	switch (TYPEV(var)) {
+	switch (ymd_type(var)) {
 	case T_INT:
 		return (ymd_float_t)var->u.i;
 	case T_FLOAT:
@@ -84,7 +84,7 @@ ymd_float_t float4(const struct variable *var) {
 }
 
 ymd_float_t float4of(struct ymd_context *l, const struct variable *var) {
-	switch (TYPEV(var)) {
+	switch (ymd_type(var)) {
 	case T_INT:
 		return (ymd_float_t)var->u.i;
 	case T_FLOAT:
@@ -105,7 +105,7 @@ ymd_int_t bool_of(struct ymd_context *l, const struct variable *var) {
 #define DEFINE_REFOF(name, tt) \
 struct name *name##_of(struct ymd_context *l, \
 		struct variable *var) { \
-	if (TYPEV(var) != tt) \
+	if (ymd_type(var) != tt) \
 		ymd_panic(l, "Variable is not `"#name"'"); \
 	assert(var->u.ref != NULL); \
 	return (struct name *)var->u.ref; \
@@ -128,9 +128,9 @@ void *mand_land(struct ymd_context *l, struct variable *var,
 int equals(const struct variable *lhs, const struct variable *rhs) {
 	if (lhs == rhs)
 		return 1;
-	if (TYPEV(lhs) != TYPEV(rhs))
+	if (ymd_type(lhs) != ymd_type(rhs))
 		return 0;
-	switch (TYPEV(lhs)) {
+	switch (ymd_type(lhs)) {
 	case T_NIL:
 		return 1;
 	case T_INT:
@@ -166,9 +166,9 @@ int equals(const struct variable *lhs, const struct variable *rhs) {
 int compare(const struct variable *lhs, const struct variable *rhs) {
 	if (lhs == rhs)
 		return 0;
-	if (TYPEV(lhs) != TYPEV(rhs))
-		return safe_compare(TYPEV(lhs), TYPEV(rhs));
-	switch (TYPEV(lhs)) {
+	if (ymd_type(lhs) != ymd_type(rhs))
+		return safe_compare(ymd_type(lhs), ymd_type(rhs));
+	switch (ymd_type(lhs)) {
 	case T_NIL:
 		return 0; // Do not compare a nil value.
 	case T_INT:
@@ -283,7 +283,7 @@ struct variable *mand_get(struct mand *o, const struct variable *k) {
 }
 
 struct variable *mand_put(struct ymd_mach *vm, struct mand *o,
-                          const struct variable *k) {
+		const struct variable *k) {
 	if (!o->proto)
 		return knil;
 	assert (o->proto->type == T_HMAP || o->proto->type == T_SKLS);
@@ -294,5 +294,19 @@ struct variable *mand_put(struct ymd_mach *vm, struct mand *o,
 		return skls_put(vm, skls_f(o->proto), k);
 	}
 	return knil;
+}
+
+int mand_remove(struct ymd_mach *vm, struct mand *o,
+		const struct variable *k) {
+	if (!o->proto)
+		return 0;
+	assert (o->proto->type == T_HMAP || o->proto->type == T_SKLS);
+	switch (o->proto->type) {
+	case T_HMAP:
+		return hmap_remove(vm, hmap_f(o->proto), k);
+	case T_SKLS:
+		return skls_remove(vm, skls_f(o->proto), k);
+	}
+	return 0;
 }
 

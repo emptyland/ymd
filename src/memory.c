@@ -555,10 +555,7 @@ static void gc_travel_obj(struct gc_node *o) {
 static int gc_travel_func(struct func *o) {
 	int i;
 	struct chunk *core;
-	gc_travelo(o->proto);
-	/*if (o->argv && gc_grayo(o->argv)) {
-		gc_travelo(o->argv);
-	}*/
+	gc_travelo(o->name);
 	if (o->argv) {
 		gc_travelo(o->argv);
 	}

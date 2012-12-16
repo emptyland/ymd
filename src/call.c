@@ -52,28 +52,6 @@ static inline struct variable *vm_find_local(struct ymd_context *l,
 	return vm_local(l, fn, i);
 }
 
-static inline const struct variable *do_keyz(struct func *fn, int i,
-                                             struct variable *key) {
-	struct chunk *core = fn->u.core;
-	assert(i >= 0);
-	assert(i < core->kkval);
-	assert(TYPEV(core->kval + i) == T_KSTR);
-	*key = core->kval[i];
-	return key;
-}
-
-static inline struct variable *vm_igetg(struct ymd_mach *vm, int i) {
-	struct variable k;
-	struct func *fn = ymd_called(ioslate(vm));
-	return hmap_get(vm->global, do_keyz(fn, i, &k));
-}
-
-static inline void vm_iputg(struct ymd_mach *vm, int i, const struct variable *v) {
-	struct variable k;
-	struct func *fn = ymd_called(ioslate(vm));
-	*hmap_put(vm, vm->global, do_keyz(fn, i, &k)) = *v;
-}
-
 static inline int vm_match(struct ymd_mach *vm,
                            const struct kstr *lhs,
                            const struct kstr *pattern) {
@@ -92,7 +70,7 @@ static inline int vm_match(struct ymd_mach *vm,
 }
 
 static inline int vm_bool(const struct variable *lhs) {
-	switch (TYPEV(lhs)) {
+	switch (ymd_type(lhs)) {
 	case T_NIL:
 		return 0;
 	case T_BOOL:
@@ -125,14 +103,40 @@ static inline void do_put(struct ymd_mach *vm,
 	}
 }
 
-static inline void vm_iput(struct ymd_mach *vm,
-                          struct variable *var,
-						  const struct variable *k,
-                          const struct variable *v) {
-	struct variable *rv = vm_put(vm, var, k);
+static inline void vm_iput(struct ymd_mach *vm, struct variable *var,
+		const struct variable *k, const struct variable *v) {
+	if (is_nil(k))
+		ymd_panic(ioslate(vm), "Key can not be `nil' in k-v pair");
 	if (is_nil(v))
-		ymd_panic(ioslate(vm), "Value can not be `nil` in k-v pair");
-	*rv = *v;
+		vm_remove(vm, var, k);
+	else
+		*vm_put(vm, var, k) = *v;
+}
+
+static inline const struct variable *do_keyz(struct func *fn, int i,
+                                             struct variable *key) {
+	struct chunk *core = fn->u.core;
+	assert(i >= 0);
+	assert(i < core->kkval);
+	assert(ymd_type(core->kval + i) == T_KSTR);
+	*key = core->kval[i];
+	return key;
+}
+
+static inline struct variable *vm_igetg(struct ymd_mach *vm, int i) {
+	struct variable k;
+	struct func *fn = ymd_called(ioslate(vm));
+	return hmap_get(vm->global, do_keyz(fn, i, &k));
+}
+
+static inline void vm_iputg(struct ymd_mach *vm, int i,
+		const struct variable *v) {
+	struct variable k;
+	struct func *fn = ymd_called(ioslate(vm));
+	if (is_nil(v))
+		hmap_remove(vm, vm->global, do_keyz(fn, i, &k));
+	else
+		*hmap_put(vm, vm->global, do_keyz(fn, i, &k)) = *v;
 }
 
 //-----------------------------------------------------------------------------
@@ -173,9 +177,9 @@ static int vm_close_upval(struct ymd_context *l, struct func *fn) {
 
 // Operand is zero?
 static inline int vm_zero(const struct variable *var) {
-	if (TYPEV(var) == T_INT)
+	if (ymd_type(var) == T_INT)
 		return var->u.i == 0LL;
-	if (TYPEV(var) == T_FLOAT)
+	if (ymd_type(var) == T_FLOAT)
 		return var->u.f == 0.0f;
 	return 0;
 }
@@ -184,7 +188,7 @@ static int vm_calc(struct ymd_context *l, unsigned op) {
 	switch (op) {
 	case F_INV: {
 		struct variable *opd = ymd_top(l, 0);
-		if (TYPEV(opd) == T_INT)
+		if (ymd_type(opd) == T_INT)
 			setv_int(opd, opd->u.i);
 		else
 			setv_float(opd, float4of(l, opd));
@@ -212,9 +216,9 @@ static int vm_calc(struct ymd_context *l, unsigned op) {
 	case F_ADD: {
 		struct variable *lhs = ymd_top(l, 1),
 						*rhs = ymd_top(l, 0);
-		switch (TYPEV(lhs)) {
+		switch (ymd_type(lhs)) {
 		case T_INT:
-			if (TYPEV(rhs) == T_FLOAT)
+			if (ymd_type(rhs) == T_FLOAT)
 				setv_float(lhs, float4of(l, lhs) + float4of(l, rhs));
 			else
 				lhs->u.i = int4of(l, lhs) + int4of(l, rhs);
@@ -307,7 +311,7 @@ retry:
 		l->vm->tick++;
 		switch (asm_op(inst)) {
 		case I_PANIC:
-			ymd_panic(l, "%s Panic!", fn->proto->land);
+			ymd_panic(l, "%s Panic!", func_proto(vm, fn)->land);
 			break;
 		case I_STORE:
 			switch (asm_flag(inst)) {
@@ -468,7 +472,7 @@ retry:
 			}
 			} break;
 		case I_TYPEOF: {
-			const unsigned tt = TYPEV(ymd_top(l, 0));
+			const unsigned tt = ymd_type(ymd_top(l, 0));
 			assert(tt < T_MAX);
 			setv_kstr(ymd_top(l, 0), typeof_kstr(vm, tt));
 			} break;

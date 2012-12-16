@@ -111,5 +111,6 @@ AllTest('''
 	pickle
 	zstream
 	print
-	flags'''.split())
+	flags
+	value'''.split())
 

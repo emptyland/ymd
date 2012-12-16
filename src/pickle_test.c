@@ -94,11 +94,11 @@ static int test_dump_func (struct ymd_mach *vm) {
 
 	// :tt
 	ASSERT_EQ(uint,  zis_u32(&is), T_FUNC);
-	// :proto
+	// :name
 	ASSERT_EQ(uint,  zis_u32(&is), T_KSTR);
-	ASSERT_EQ(int,   zis_u32(&is), o->proto->len);
-	zis_fetch(&is, z, o->proto->len);
-	ASSERT_STREQ(z, o->proto->land);
+	ASSERT_EQ(int,   zis_u32(&is), o->name->len);
+	zis_fetch(&is, z, o->name->len);
+	ASSERT_STREQ(z, o->name->land);
 	// :bind
 	ASSERT_EQ(int,    zis_u32(&is), 2);
 	ASSERT_EQ(uint,   zis_u32(&is), T_INT);
@@ -273,7 +273,7 @@ static int test_load_kstr (struct ymd_mach *vm) {
 	zis_pipe(&is, &os);
 
 	i = ymd_parse(&is, CHECK_OK);
-	ASSERT_EQ(int, TYPEV(ymd_top(l, 0)), T_KSTR);
+	ASSERT_EQ(int, ymd_type(ymd_top(l, 0)), T_KSTR);
 	ASSERT_STREQ(kstr_k(ymd_top(l, 0))->land, "01234567");
 	ymd_pop(l, 1);
 
@@ -305,7 +305,7 @@ static int test_load_dyay (struct ymd_mach *vm) {
 	zis_pipe(&is, &os);
 
 	i = ymd_parse(&is, CHECK_OK);
-	ASSERT_EQ(int, TYPEV(ymd_top(l, 0)), T_DYAY);
+	ASSERT_EQ(int, ymd_type(ymd_top(l, 0)), T_DYAY);
 	ax = dyay_x(ymd_top(l, 0));
 	ASSERT_EQ(int,   ax->count, 3);
 
@@ -315,7 +315,7 @@ static int test_load_dyay (struct ymd_mach *vm) {
 	ASSERT_EQ(uint,  ax->elem[1].tt, T_BOOL);
 	ASSERT_EQ(large, ax->elem[1].u.i, 1LL);
 
-	ASSERT_EQ(int,  TYPEV(&ax->elem[2]), T_KSTR);
+	ASSERT_EQ(int,  ymd_type(&ax->elem[2]), T_KSTR);
 	ASSERT_STREQ(kstr_k(ax->elem + 2)->land, "01234567");
 	ymd_pop(l, 1);
 
@@ -354,7 +354,7 @@ static int load_o (int tt, struct ymd_mach *vm) {
 
 	zis_pipe(&is, &os);
 	i = ymd_parse(&is, CHECK_OK);
-	ASSERT_EQ(int, TYPEV(ymd_top(l, 0)), tt);
+	ASSERT_EQ(int, ymd_type(ymd_top(l, 0)), tt);
 	o = ymd_top(l, 0)->u.ref;
 
 	ASSERT_EQ(int,  vm_mem(l->vm, o, "1st")->tt, T_INT);

@@ -26,7 +26,7 @@ static int test_dyay_creation_1 (struct ymd_mach *vm) {
 	rv = dyay_add(vm, arr);
 	ASSERT_NOTNULL(rv);
 	ASSERT_FALSE(rv == knil);
-	ASSERT_EQ(int, TYPEV(rv), T_NIL);
+	ASSERT_EQ(int, ymd_type(rv), T_NIL);
 	ASSERT_EQ(large, rv->u.i, 0LL);
 	ASSERT_EQ(uint, arr->count, 1);
 	ASSERT_EQ(uint, arr->max, 16);
@@ -51,7 +51,7 @@ static int test_dyay_addition_1 (struct ymd_mach *vm) {
 		rv = dyay_add(vm, arr);
 		ASSERT_NOTNULL(rv);
 		ASSERT_FALSE(rv == knil);
-		ASSERT_EQ(int, TYPEV(rv), T_NIL);
+		ASSERT_EQ(int, ymd_type(rv), T_NIL);
 		ASSERT_EQ(large, rv->u.i, 0LL);
 		ASSERT_EQ(uint, arr->count, k - i);
 
@@ -62,7 +62,7 @@ static int test_dyay_addition_1 (struct ymd_mach *vm) {
 	i = k;
 	while (i--) {
 		rv = dyay_get(arr, i);
-		ASSERT_EQ(int, TYPEV(rv), T_INT);
+		ASSERT_EQ(int, ymd_type(rv), T_INT);
 		ASSERT_EQ(large, rv->u.i, i);
 	}
 	return 0;
@@ -86,7 +86,7 @@ static int test_dyay_addition_2 (struct ymd_mach *vm) {
 		while (i--) {
 			size_t index = RAND_RANGE(ularge, 0, BENCHMARK_COUNT);
 			rv = dyay_get(arr, index);
-			ASSERT_EQ(int, TYPEV(rv), T_INT);
+			ASSERT_EQ(int, ymd_type(rv), T_INT);
 			ASSERT_EQ(large, rv->u.i, index);
 		}
 	RAND_END

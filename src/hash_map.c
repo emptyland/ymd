@@ -102,7 +102,7 @@ static inline size_t hash_kstr(const struct kstr *kz) {
 }
 
 static size_t hash(const struct variable *v) {
-	switch (TYPEV(v)) {
+	switch (ymd_type(v)) {
 	case T_NIL:
 		return 0;
 	case T_INT:

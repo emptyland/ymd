@@ -4,7 +4,7 @@
 //
 // Type getter
 //
-static inline int TYPEV(const struct variable *var) {
+static inline int ymd_type(const struct variable *var) {
 	return (var)->tt == T_REF ? (var)->u.ref->type : (var)->tt;
 }
 
@@ -43,24 +43,24 @@ DECL_TREF(DECL_REFOF)
 static inline void setv_nil (struct variable *v) {
 	v->tt = T_NIL; v->u.i = 0;
 }
-#define VSET_DECL(name, arg1) \
+#define SETV_DECL(name, arg1) \
 	static inline void setv_##name (struct variable *v, arg1 x)
-VSET_DECL(int, ymd_int_t) {
+SETV_DECL(int, ymd_int_t) {
 	v->tt = T_INT; v->u.i = x;
 }
-VSET_DECL(float, ymd_float_t) {
+SETV_DECL(float, ymd_float_t) {
 	v->tt = T_FLOAT; v->u.f = x;
 }
-VSET_DECL(bool, ymd_int_t) {
+SETV_DECL(bool, ymd_int_t) {
 	v->tt = T_BOOL; v->u.i = x;
 }
-VSET_DECL(ext, void *) {
+SETV_DECL(ext, void *) {
 	v->tt = T_EXT; v->u.ext = x;
 }
-VSET_DECL(ref, struct gc_node *) {
+SETV_DECL(ref, struct gc_node *) {
 	v->tt = T_REF; v->u.ref = gcx(x);
 }
-#undef VSET_DECL
+#undef SETV_DECL
 #define DEFINE_SETTER(name, ty) \
 static inline void setv_##name(struct variable *v, struct name *o) { \
 	v->tt = T_REF; \
@@ -72,7 +72,7 @@ DECL_TREF(DEFINE_SETTER)
 // Check lhs and rhs one of float type
 static inline int floatize(const struct variable *lhs,
 		const struct variable *rhs) {
-	return TYPEV(lhs) == T_FLOAT || TYPEV(rhs) == T_FLOAT;
+	return ymd_type(lhs) == T_FLOAT || ymd_type(rhs) == T_FLOAT;
 }
 
 static inline

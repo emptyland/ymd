@@ -46,12 +46,13 @@ static void vm_backtrace(struct ymd_context *l, int max) {
 	assert(max >= 0);
 	while (i && max--) {
 		if (i->run->is_c)
-			ymd_fprintf(stderr, " ${[green]>}$ %s\n", i->run->proto->land);
+			ymd_fprintf(stderr, " ${[green]>}$ %s\n",
+					func_proto(l->vm, i->run)->land);
 		else
 			ymd_fprintf(stderr, " ${[green]>}$ %s:%d %s\n",
 			        i->run->u.core->file->land,
 					i->run->u.core->line[i->pc - 1],
-					i->run->proto->land);
+					func_proto(l->vm, i->run)->land);
 		i = i->chain;
 	}
 	if (i != NULL)
@@ -83,18 +84,18 @@ int vm_reached(struct ymd_mach *vm, const char *name) {
 // Generic mapping functions:
 // -----------------------------------------------------------------------
 struct variable *vm_put(struct ymd_mach *vm,
-                        struct variable *var,
-                        const struct variable *key) {
+		struct variable *var,
+		const struct variable *key) {
 	struct ymd_context *l = ioslate(vm);
 	if (is_nil(key))
-		ymd_panic(l, "No any key will be `nil`");
-	switch (TYPEV(var)) {
+		ymd_panic(l, "No any key will be `nil'");
+	switch (ymd_type(var)) {
 	case T_SKLS:
 		return skls_put(vm, skls_x(var), key);
 	case T_HMAP:
 		return hmap_put(vm, hmap_x(var), key);
 	case T_DYAY:
-		return dyay_get(dyay_x(var), int_of(l, key));
+		return dyay_get(dyay_x(var), int4of(l, key));
 	case T_MAND:
 		if (!mand_x(var)->proto)
 			ymd_panic(l, "Management memory has no metatable yet");
@@ -119,7 +120,7 @@ struct variable *vm_get(struct ymd_mach *vm, struct variable *var,
 	struct ymd_context *l = ioslate(vm);
 	if (is_nil(key))
 		ymd_panic(l, "No any key will be `nil`");
-	switch (TYPEV(var)) {
+	switch (ymd_type(var)) {
 	case T_SKLS:
 		return skls_get(skls_x(var), key);
 	case T_HMAP:
@@ -136,6 +137,23 @@ struct variable *vm_get(struct ymd_mach *vm, struct variable *var,
 	}
 	assert(!"No reached.");
 	return NULL;
+}
+
+int vm_remove(struct ymd_mach *vm, struct variable *var,
+              const struct variable *key) {
+	struct ymd_context *l = ioslate(vm);
+	switch (ymd_type(var)) {
+	case T_DYAY:
+		return dyay_remove(vm, dyay_x(var), int4of(l, key));
+	case T_HMAP:
+		return hmap_remove(vm, hmap_x(var), key);
+	case T_SKLS:
+		return skls_remove(vm, skls_x(var), key);
+	case T_MAND:
+		return mand_remove(vm, mand_x(var), key);
+	}
+	ymd_panic(l, "Variable can not be remove");
+	return 0;
 }
 
 struct kstr *vm_strcat(struct ymd_mach *vm, const struct kstr *lhs,
@@ -197,21 +215,6 @@ struct variable *vm_putg(struct ymd_mach *vm, const char *field) {
 	setv_kstr(&k, kstr_fetch(vm, field, -1));
 	v = hmap_put(vm, vm->global, &k);
 	return v;
-}
-
-int vm_remove(struct ymd_mach *vm, struct variable *var,
-              const struct variable *key) {
-	struct ymd_context *l = ioslate(vm);
-	switch (TYPEV(var)) {
-	case T_DYAY:
-		return dyay_remove(vm, dyay_x(var), int_of(l, key));
-	case T_HMAP:
-		return hmap_remove(vm, hmap_x(var), key);
-	case T_SKLS:
-		return skls_remove(vm, skls_x(var), key);
-	}
-	ymd_panic(l, "Variable can not be remove");
-	return 0;
 }
 
 //-----------------------------------------------------------------------------
@@ -334,7 +337,7 @@ int ymd_error(struct ymd_context *l, const char *msg) {
 		struct func *run = ci->run;
 		ymd_format(l, "%s:%d %s", run->u.core->file->land,
 				   run->u.core->line[ci->pc - 1],
-				   run->proto->land);
+				   func_proto(l->vm, run)->land);
 	} else {
 		ymd_nil(l);
 	}
@@ -343,11 +346,11 @@ int ymd_error(struct ymd_context *l, const char *msg) {
 	while (ci) {
 		struct func *run = ci->run;
 		if (run->is_c)
-			ymd_format(l, "%s", run->proto->land);
+			ymd_format(l, "%s", func_proto(l->vm, run)->land);
 		else
 			ymd_format(l, "%s:%d %s", run->u.core->file->land,
 			           run->u.core->line[ci->pc - 1],
-					   run->proto->land);
+					   func_proto(l->vm, run)->land);
 		ymd_add(l);
 		ci = ci->chain;
 	}

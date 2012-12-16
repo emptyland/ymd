@@ -173,17 +173,18 @@ int dasm_inst(FILE *fp, const struct func *fn, uint_t inst) {
 }
 
 int dasm_func(FILE *fp, const struct func *fn) {
+	char buf[1024];
 	int i, count = 0;
 	if (fn->is_c)
 		return -1;
-	fprintf(fp, "----<%s>:\n", fn->proto->land);
+	fprintf(fp, "----<%s>:\n", func_proto_z(fn, buf, sizeof(buf)));
 	for (i = 0; i < fn->u.core->kinst; ++i) {
 		fprintf(fp, "[%03d] ", i);
 		count += dasm_inst(fp, fn, fn->u.core->inst[i]);
 		fprintf(fp, "\n");
 	}
 	for (i = 0; i < fn->u.core->kkval; ++i) {
-		if (TYPEV(&fn->u.core->kval[i]) == T_FUNC)
+		if (ymd_type(&fn->u.core->kval[i]) == T_FUNC)
 			count += dasm_func(fp, func_k(fn->u.core->kval + i));
 	}
 	return count;

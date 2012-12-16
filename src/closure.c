@@ -44,7 +44,7 @@ int blk_kz(struct ymd_mach *vm, struct chunk *core, const char *z, int k) {
 	int i = core->kkval;
 	struct kstr *kz;
 	while (i--) {
-		if (TYPEV(&core->kval[i]) == T_KSTR &&
+		if (ymd_type(&core->kval[i]) == T_KSTR &&
 			kstr_k(core->kval + i)->len == k &&
 			memcmp(kstr_k(core->kval + i)->land, z, k) == 0)
 			return i;
@@ -57,7 +57,7 @@ int blk_kz(struct ymd_mach *vm, struct chunk *core, const char *z, int k) {
 int blk_ki(struct ymd_mach *vm, struct chunk *core, ymd_int_t n) {
 	int i = core->kkval;
 	while (i--) {
-		if (TYPEV(&core->kval[i]) == T_INT && core->kval[i].u.i == n)
+		if (ymd_type(&core->kval[i]) == T_INT && core->kval[i].u.i == n)
 			return i;
 	}
 	setv_int(blk_klast(vm, core), n);
@@ -67,7 +67,7 @@ int blk_ki(struct ymd_mach *vm, struct chunk *core, ymd_int_t n) {
 int blk_kd(struct ymd_mach *vm, struct chunk *core, ymd_float_t f) {
 	int i = core->kkval;
 	while (i--) {
-		if (TYPEV(&core->kval[i]) == T_FLOAT && core->kval[i].u.f == f)
+		if (ymd_type(&core->kval[i]) == T_FLOAT && core->kval[i].u.f == f)
 			return i;
 	}
 	setv_float(blk_klast(vm, core), f);
@@ -78,7 +78,7 @@ int blk_kf(struct ymd_mach *vm, struct chunk *core, void *p) {
 	int i = core->kkval;
 	struct func *fn = p;
 	while (i--) {
-		if (TYPEV(&core->kval[i]) == T_FUNC && core->kval[i].u.ref == p)
+		if (ymd_type(&core->kval[i]) == T_FUNC && core->kval[i].u.ref == p)
 			return i;
 	}
 	setv_func(blk_klast(vm, core), fn);
@@ -155,14 +155,8 @@ void blk_shrink(struct ymd_mach *vm, struct chunk *core) {
 //-----------------------------------------------------------------------------
 static void func_init(struct ymd_mach *vm, struct func *fn,
                       const char *name) {
-	assert(fn->proto == NULL);
-	if (fn->is_c) {
-		fn->proto = vm_format(vm, "func %s(...) {[native:%p]}",
-							   !name ? "" : name, fn->u.nafn);
-	} else {
-		fn->proto = vm_format(vm, "func %s(*) {...}",
-		                      !name ? "" : name);
-	}
+	assert(fn->name == NULL);
+	fn->name = kstr_fetch(vm, name, -1);
 }
 
 struct func *func_new_c(struct ymd_mach *vm, ymd_nafn_t nafn,
@@ -200,6 +194,27 @@ void func_final(struct ymd_mach *vm, struct func *fn) {
 	mm_drop(vm, fn->u.core, sizeof(*fn->u.core));
 }
 
+struct kstr *func_proto(struct ymd_mach *vm, struct func *fn) {
+	char buf[1024];
+	return kstr_fetch(vm, func_proto_z(fn, buf, sizeof(buf)), -1);
+}
+
+const char *func_proto_z(const struct func *fn, char *buf, size_t len) {
+	char args[1024] = {0};
+	int i;
+	if (fn->is_c) {
+		snprintf(buf, len, "func %s(...) {[native:%p]}",
+				fn->name->land, fn->u.nafn);
+		return buf;
+	}
+	for (i = 0; i < fn->u.core->kargs; ++i) {
+		if (i) strcat(args, ", ");
+		strcat(args, fn->u.core->lz[i]->land);
+	}
+	snprintf(buf, len, "func %s(%s)", fn->name->land, args);
+	return buf;
+}
+
 struct variable *func_bind(struct ymd_mach *vm, struct func *fn, int i) {
 	assert(i >= 0);
 	assert(i < fn->n_upval);
@@ -227,7 +242,7 @@ void func_dump(struct func *fn, FILE *fp) {
 struct func *func_clone(struct ymd_mach *vm, struct func *fn) {
 	struct func *x = gc_new(vm, sizeof(*x), T_FUNC);
 	assert(!fn->is_c);
-	x->proto = fn->proto;
+	x->name = fn->name;
 	x->is_c = fn->is_c;
 	x->n_upval = fn->n_upval;
 	x->u.core = mm_grab(fn->u.core);

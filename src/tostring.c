@@ -69,7 +69,7 @@ static const char *mand_tostring(struct zostream *os, const struct mand *o) {
 }
 
 const char *tostring(struct zostream *os, const struct variable *var) {
-	switch (TYPEV(var)) {
+	switch (ymd_type(var)) {
 	case T_NIL:
 		zos_append(os, "nil", 3);
 		break;
@@ -98,7 +98,9 @@ const char *tostring(struct zostream *os, const struct variable *var) {
 		zos_append(os, kstr_k(var)->land, kstr_k(var)->len);
 		break;
 	case T_FUNC:
-		zos_append(os, func_k(var)->proto->land, func_k(var)->proto->len);
+		zos_reserved(os, 1024);
+		func_proto_z(func_k(var), zos_last(os), zos_remain(os));
+		zos_add(os);
 		break;
 	case T_DYAY:
 		dyay_tostring(os, dyay_k(var));

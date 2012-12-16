@@ -113,8 +113,8 @@ int ymd_dump_func(struct zostream *os, const struct func *fn, int *ok) {
 	if (fn->is_c) return 0;
 	// :tt
 	i += zos_u32(os, T_FUNC);
-	// :proto type desc
-	i += ymd_dump_kstr(os, fn->proto);
+	// :name
+	i += ymd_dump_kstr(os, fn->name);
 	// :upval variable
 	i += zos_u32(os, fn->n_upval);
 	for (j = 0; j < fn->n_upval; ++j) {
@@ -130,7 +130,7 @@ int ymd_dump_func(struct zostream *os, const struct func *fn, int *ok) {
 int ymd_serialize(struct zostream *os, const struct variable *v,
 	              int *ok) {
 	int i = 0;
-	switch (TYPEV(v)) {
+	switch (ymd_type(v)) {
 	case T_NIL:
 		i += zos_u32(os, T_NIL);
 		break;
@@ -269,10 +269,10 @@ int ymd_load_func(struct zistream *is, int *ok) {
 	struct chunk *x = mm_zalloc(l->vm, 1, sizeof(*x));
 	struct func *fn = ymd_naked(l, x);
 	int i;
-	// :proto
+	// :name
 	pickle_assert(T_KSTR == zis_u32(is));
 	ymd_load_kstr(is, CHECK_OK);
-	fn->proto = kstr_of(l, ymd_top(l, 0));
+	fn->name = kstr_of(l, ymd_top(l, 0));
 	ymd_pop(l, 1);
 	// :upval
 	fn->n_upval = zis_u32(is);
