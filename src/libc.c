@@ -78,7 +78,7 @@ static void checked_put(L, struct variable *arg0,
 		*skls_put(l->vm, skls_x(arg0), k) = *v;
 		break;
 	default:
-		ymd_panic(l, "This type: `%s` is not be support",
+		ymd_panic(l, "insert() don't support `%s'",
 				typeof_kz(ymd_type(arg0)));
 		break;
 	}
@@ -124,7 +124,7 @@ static int libx_append(L) {
 		}
 		break;
 	default:
-		ymd_panic(l, "This type: `%s` is not be support",
+		ymd_panic(l, "append() don't support `%s'",
 				typeof_kz(ymd_type(arg0)));
 		break;
 	}
@@ -174,9 +174,8 @@ static int libx_len(L) {
 		ymd_int(l, n);
 		} break;
 	default:
-		ymd_panic(l, "This type: `%s` is not be support, "
-		       "need a container or string type",
-		       typeof_kz(ymd_type(arg0)));
+		ymd_panic(l, "len() don't support `%s', need a container or "
+				"string type", typeof_kz(ymd_type(arg0)));
 		return 0;
 	}
 	return 1;
@@ -758,6 +757,94 @@ static int libx_atoi(L) {
 	return 1;
 }
 
+static int libx_atof(L) {
+	struct kstr *arg0 = kstr_of(l, ymd_argv_get(l, 0));
+	ymd_float(l, atof(arg0->land));
+	return 1;
+}
+
+// Slice
+// slice(string, start, count)
+// slice(string, start) == slice(string, start, len(string) - start)
+// slice(array, start, count)
+// slice(array, start) == slice(array, start, len(array) - start)
+// slice(skip_list, begin, end) -> skip_list[begin, end) 
+static int libx_slice(L) {
+	struct variable *arg0 = ymd_argv_get(l, 0);
+	switch (ymd_type(arg0)) {
+	case T_KSTR: {
+		struct kstr *o = kstr_of(l, arg0);
+		ymd_int_t start, count;
+		if (ymd_argv(l)->count == 2) {
+			start = int4of(l, ymd_argv_get(l, 1));
+			count = o->len - start;
+		} else {
+			start = int4of(l, ymd_argv_get(l, 1));
+			count = int4of(l, ymd_argv_get(l, 2));
+		}
+		count = YMD_MIN(count, o->len - start);
+		if (count <= 0)
+			ymd_kstr(l, "", 0);
+		else
+			ymd_kstr(l, o->land + start, count);
+		} break;
+	case T_DYAY: {
+		struct dyay *o = dyay_of(l, arg0);
+		ymd_int_t i, start, count;
+		if (ymd_argv(l)->count == 2) {
+			start = int4of(l, ymd_argv_get(l, 1));
+			count = o->count - start;
+		} else {
+			start = int4of(l, ymd_argv_get(l, 1));
+			count = int4of(l, ymd_argv_get(l, 2));
+		}
+		count = YMD_MIN(count, o->count - start);
+		ymd_dyay(l, 0);
+		if (count <= 0)
+			break;
+		for (i = start; i < start + count; ++i) {
+			*ymd_push(l) = o->elem[i];
+			ymd_add(l);
+		}
+		} break;
+	case T_SKLS: {
+		struct skls *o = skls_of(l, arg0);
+		struct variable *begin, *end;
+		ymd_skls(l);
+		if (ymd_argv(l)->count == 2) {
+			struct sknd *i;
+			begin = ymd_argv_get(l, 1);
+			// Make [begin, ...) skip list:
+			for (i = o->head->fwd[0]; i != NULL; i = i->fwd[0]) {
+				if (compare(begin, &i->k) <= 0) {
+					*ymd_push(l) = i->k;
+					*ymd_push(l) = i->v;
+					ymd_putf(l);
+				}
+			}
+		} else {
+			struct sknd *i;
+			begin = ymd_argv_get(l, 1);
+			end   = ymd_argv_get(l, 2);
+			// Make [begin, end) skip list:
+			for (i = o->head->fwd[0]; i != NULL; i = i->fwd[0]) {
+				if (compare(begin, &i->k) <= 0 &&
+						compare(end, &i->k) > 0) {
+					*ymd_push(l) = i->k;
+					*ymd_push(l) = i->v;
+					ymd_putf(l);
+				}
+			}
+		}
+		} break;
+	default:
+		ymd_panic(l, "slice() don't support `%s'",
+				typeof_kz(ymd_type(arg0)));
+		return 0;
+	}
+	return 1;
+}
+
 static int libx_exit(L) {
 	(void)l;
 	longjmp(l->jpt->core, 1); // jump to top
@@ -919,6 +1006,8 @@ LIBC_BEGIN(Builtin)
 	LIBC_ENTRY(ranki)
 	LIBC_ENTRY(str)
 	LIBC_ENTRY(atoi)
+	LIBC_ENTRY(atof)
+	LIBC_ENTRY(slice)
 	LIBC_ENTRY(panic)
 	LIBC_ENTRY(strbuf)
 	LIBC_ENTRY(open)

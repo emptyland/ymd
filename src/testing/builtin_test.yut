@@ -221,6 +221,25 @@ BuiltinTest = @{
 		Assert:EQ("abc", s:get())
 	},
 
+	test_strcat_benchmark : func (self) {
+		print ("Memory begin:", gc("used"))
+		var s = ""
+		for var i in range(0, 30000) {
+			s = s + str(i)
+		}
+		print ("end:", gc("used"))
+	},
+
+	test_strbuf_benchmark : func (self) {
+		print ("Memory begin:", gc("used"))
+		var sb = strbuf()
+		for var i in range(0, 30000) {
+			sb:cat(str(i))
+		}
+		var s = sb:get()
+		print ("end:", gc("used"))
+	},
+
 	test_file : func (self) {
 		var f = open(self.kTestFile1, "w")
 		var buf
@@ -329,5 +348,23 @@ BuiltinTest = @{
 	test_remove : func (self) {
 		self:remove_run({})
 		self:remove_run(@{})
+	},
+
+	test_slice : func (self) {
+		var k = "0123456789"
+		Assert:EQ("123456789", slice(k, 1))
+		Assert:EQ("123456789", slice(k, 1, 9))
+		Assert:EQ("9", slice(k, 9, 1))
+		Assert:EQ("9", slice(k, 9, 100))
+		Assert:EQ("", slice(k, 10, 1))
+
+		k = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+		Assert:EQ([7, 8, 9], slice(k, 7))
+		Assert:EQ([9], slice(k, 9, 1))
+		Assert:EQ([9], slice(k, 9, 100))
+
+		k = @{a:1, b:2, c:3, d:4, e:5, f:6, h:8, z:9}
+		Assert:EQ(@{h:8, z:9}, slice(k, "h"))
+		Assert:EQ(@{c:3, d:4, e:5}, slice(k, "c", "f"))
 	}
 }

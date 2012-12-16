@@ -1006,9 +1006,17 @@ static void parse_closure(struct ymd_parser *p) {
 }
 
 static void parse_return(struct ymd_parser *p) {
-	ymc_next(p); // return
-	parse_expr(p, 0);
-	ymk_emitOP(p, I_RET, 1);
+	ymc_next(p); // Skip `return'
+	switch (ymc_peek(p)) {
+	case ';':
+	case '}':
+		ymk_emitOP(p, I_RET, 0);
+		break;
+	default:
+		parse_expr(p, 0);
+		ymk_emitOP(p, I_RET, 1);
+		break;
+	}
 }
 
 static void parse_decl(struct ymd_parser *p) {

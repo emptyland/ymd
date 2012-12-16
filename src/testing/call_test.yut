@@ -123,5 +123,16 @@ CallTest = @{
 		Assert:EQ(6,    f.l)
 		Assert:EQ("mm", f.m)
 		Assert:EQ("xx", f.x)
+	},
+
+	test_0_return : func (self) {
+		var func zerof(isz) {
+			if isz {
+				return
+			}
+			return 0
+		}
+		Assert:EQ(0, zerof(false))
+		Assert:Nil(zerof(true))
 	}
 }

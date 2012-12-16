@@ -216,6 +216,7 @@ static int vm_calc(struct ymd_context *l, unsigned op) {
 	case F_ADD: {
 		struct variable *lhs = ymd_top(l, 1),
 						*rhs = ymd_top(l, 0);
+		int isstr = 0;
 		switch (ymd_type(lhs)) {
 		case T_INT:
 			if (ymd_type(rhs) == T_FLOAT)
@@ -229,12 +230,14 @@ static int vm_calc(struct ymd_context *l, unsigned op) {
 		case T_KSTR:
 			lhs->u.ref = gcx(vm_strcat(l->vm, kstr_of(l, lhs),
 						kstr_of(l, rhs)));
+			isstr = 1;
 			break;
 		default:
 			ymd_panic(l, "Operator + don't support this type");
 			break;
 		}
 		ymd_pop(l, 1);
+		if (isstr) gc_step(l->vm);
 		} break;
 	case F_SUB: {
 		struct variable *lhs = ymd_top(l, 1),
