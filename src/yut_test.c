@@ -63,3 +63,35 @@ static int test_foo(void *p) {
 	return 0;
 }
 
+static int test_float(void *p) {
+	(void)p;
+	float f = 3.141516927;
+
+	EXPECT_TRUE(3.141516927f == f);
+	ASSERT_EQ(float, 3.141516927, f);
+
+	f = 0.00001;
+	EXPECT_EQ(float, 0.00001, f);
+
+	f = 0.000001;
+	EXPECT_EQ(float, 0.000001, f);
+
+	f = 0.0000001;
+	EXPECT_EQ(float, 0.0000001, f);
+
+	f = 0.000001;
+	EXPECT_FLOAT_EQ(0.000002, f);
+	return 0;
+}
+
+static int test_double(void *p) {
+	(void)p;
+	double d = 3.141516927;
+
+	EXPECT_TRUE(3.141516927 == d);
+	EXPECT_EQ(double, 3.141516927, d);
+
+	d = 0.000001;
+	EXPECT_DOUBLE_EQ(0.000001, d);
+	return 0;
+}

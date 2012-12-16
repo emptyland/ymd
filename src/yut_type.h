@@ -13,5 +13,9 @@
 #define large_tag        "%lld"
 #define ularge_cast(i)   ((unsigned long long)(i))
 #define ularge_tag       "%llu"
+#define float_cast(i)    ((float)(i))
+#define float_tag        "%f"
+#define double_cast(i)   ((double)(i))
+#define double_tag       "%f"
 
 #endif // TEST_YUT_TYPE_H

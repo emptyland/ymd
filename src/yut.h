@@ -5,39 +5,34 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
+#include <float.h>
+#include <math.h>
 #include <sys/time.h>
 
-//--------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 // yut = [Y]amada [U]nit [T]est
-//--------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 
 #define EQ_DO(to, l, r)  (to(l) == to(r))
-#define EQ_DESC          "equal"
 #define NE_DO(to, l, r)  (to(l) != to(r))
-#define NE_DESC          "not equal"
 #define GT_DO(to, l, r)  (to(l) > to(r))
-#define GT_DESC          "greater then"
 #define GE_DO(to, l, r)  (to(l) >= to(r))
-#define GE_DESC          "greater or equal"
 #define LT_DO(to, l, r)  (to(l) < to(r))
-#define LT_DESC          "less"
 #define LE_DO(to, l, r)  (to(l) <= to(r))
-#define LE_DESC          "less or equal"
 
-//--------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 // Integer binary comparation:
-//--------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 #define ASSERT_BIN(action, type, expected, actual) \
 if (!action##_DO(type##_cast, expected, actual)) \
 	return yut_run_log2(__FILE__, __LINE__, 1, \
-		action##_DESC, #expected, #actual, \
-		type##_tag, expected, actual)
+		#actual, #expected, type##_tag, actual, expected)
 
 #define EXPECT_BIN(action, type, expected, actual) \
 if (!action##_DO(type##_cast, expected, actual)) \
 	yut_run_log2(__FILE__, __LINE__, 0, \
-		action##_DESC, #expected, #actual, \
-		type##_tag, expected, actual)
+		#actual, #expected, type##_tag, actual, expected)
 
 #define ASSERT_EQ(type, expected, actual) \
 	ASSERT_BIN(EQ, type, expected, actual)
@@ -54,22 +49,20 @@ if (!action##_DO(type##_cast, expected, actual)) \
 
 #define ASSERT_TRUE(condition) \
 	if (!(condition)) \
-		return yut_run_log1(__FILE__, __LINE__, 1, \
-			"must be true(not equal 0)", \
+		return yut_run_log1(__FILE__, __LINE__, 1, "false", "true", \
 			#condition)
 #define ASSERT_FALSE(condition) \
 	if (condition) \
-		return yut_run_log1(__FILE__, __LINE__, 1, \
-			"must be false(equal 0)", \
+		return yut_run_log1(__FILE__, __LINE__, 1, "true", "false", \
 			#condition)
 #define ASSERT_NULL(condition) \
 	if ((condition) != NULL) \
-		return yut_run_log1(__FILE__, __LINE__, 1, \
-			"must be NULL", #condition)
+		return yut_run_log1(__FILE__, __LINE__, 1, "!NULL", "NULL", \
+			#condition)
 #define ASSERT_NOTNULL(condition) \
 	if ((condition) == NULL) \
-		return yut_run_log1(__FILE__, __LINE__, 1, \
-			"must be NOT NULL", #condition)
+		return yut_run_log1(__FILE__, __LINE__, 1, "NULL", "!NULL", \
+			#condition)
 
 #define EXPECT_EQ(type, expected, actual) \
 	EXPECT_BIN(EQ, type, expected, actual)
@@ -84,74 +77,93 @@ if (!action##_DO(type##_cast, expected, actual)) \
 #define EXPECT_LE(type, expected, actual) \
 	EXPECT_BIN(LE, type, expected, actual)
 
-//--------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 // Boolean check: c has no boolean type, it's `int` type.
-//--------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 #define EXPECT_TRUE(condition) \
 	if (!(condition)) \
-		yut_run_log1(__FILE__, __LINE__, 0, \
-			"should be true(not equal 0)", \
-			#condition)
+		yut_run_log1(__FILE__, __LINE__, 0, "false", "true", #condition)
 #define EXPECT_FALSE(condition) \
 	if (condition) \
-		yut_run_log1(__FILE__, __LINE__, 0, \
-			"should be false(equal 0)", \
-			#condition)
+		yut_run_log1(__FILE__, __LINE__, 0, "true", "false", #condition)
 #define EXPECT_NULL(condition) \
 	if ((condition) != NULL) \
-		yut_run_log1(__FILE__, __LINE__, 0, \
-			"should be NULL", #condition)
+		yut_run_log1(__FILE__, __LINE__, 0, "!NULL", "NULL", #condition)
 #define EXPECT_NOTNULL(condition) \
 	if ((condition) == NULL) \
-		yut_run_log1(__FILE__, __LINE__, 0, \
-			"should be NOT NULL", #condition)
+		yut_run_log1(__FILE__, __LINE__, 0, "NULL", "!NULL", #condition)
 
-//--------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 // String check:
-//--------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 #define ASSERT_STREQ(expected, actual) \
 	if (strcmp(expected, actual)) \
-		return yut_run_logz(__FILE__, __LINE__, 1, "equal", \
-			#expected, #actual, \
-			expected, actual)
+		return yut_run_logz(__FILE__, __LINE__, 1, #actual, #expected, \
+			actual, expected)
 
 #define ASSERT_STRNE(expected, actual) \
 	if (strcmp(expected, actual) == 0) \
-		return yut_run_logz(__FILE__, __LINE__, 1, \
-			"not equal", \
-			#expected, #actual, \
-			expected, actual)
+		return yut_run_logz(__FILE__, __LINE__, 1, #actual, #expected, \
+			actual, expected)
 
 #define EXPECT_STREQ(expected, actual) \
 	if (strcmp(expected, actual)) \
-		yut_run_logz(__FILE__, __LINE__, 0, "equal", \
-			#expected, #actual, \
-			expected, actual)
+		yut_run_logz(__FILE__, __LINE__, 0, #actual, #expected, \
+			actual, expected)
 
 #define EXPECT_STRNE(expected, actual) \
 	if (strcmp(expected, actual) == 0) \
-		yut_run_logz(__FILE__, __LINE__, 0, \
-			"not equal", \
-			#expected, #actual, \
-			expected, actual)
+		yut_run_logz(__FILE__, __LINE__, 0, #actual, #expected, \
+			actual, expected)
 
-//--------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+// Float number check:
+//-----------------------------------------------------------------------------
+#define ASSERT_FLOAT_EQ(expected, actual) \
+	if (!yut_float_equal(expected, actual)) \
+		return yut_run_log2(__FILE__, __LINE__, 1, #actual, #expected, \
+			float_tag, actual, expected)
+
+#define EXPECT_FLOAT_EQ(expected, actual) \
+	if (!yut_float_equal(expected, actual)) \
+		yut_run_log2(__FILE__, __LINE__, 1, #actual, #expected, \
+			float_tag, actual, expected)
+
+#define ASSERT_DOUBLE_EQ(expected, actual) \
+	if (!yut_double_equal(expected, actual)) \
+		return yut_run_log2(__FILE__, __LINE__, 1, #actual, #expected, \
+			float_tag, actual, expected)
+
+#define EXPECT_DOUBLE_EQ(expected, actual) \
+	if (!yut_double_equal(expected, actual)) \
+		yut_run_log2(__FILE__, __LINE__, 1, #actual, #expected, \
+			float_tag, actual, expected)
+
+static inline int yut_float_equal(float lhs, float rhs) {
+	return fabs(lhs - rhs) < FLT_EPSILON;
+}
+
+static inline int yut_double_equal(double lhs, double rhs) {
+	return fabs(lhs - rhs) < DBL_EPSILON;
+}
+
+//-----------------------------------------------------------------------------
 // Test reporting functions:
-//--------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 int yut_run_log1(
 	const char *file,
 	int line,
 	int asserted,
-	const char *desc,
+	const char *actual,
+	const char *expected,
 	const char *condition);
 
 int yut_run_log2(
 	const char *file,
 	int line,
 	int asserted,
-	const char *desc,
-	const char *expected,
 	const char *actual,
+	const char *expected,
 	const char *tag,
 	...);
 
@@ -159,15 +171,14 @@ int yut_run_logz(
 	const char *file,
 	int line,
 	int asserted,
-	const char *desc,
-	const char *expected_expr,
 	const char *actual_expr,
-	const char *expected,
-	const char *actual);
+	const char *expected_expr,
+	const char *rhs,
+	const char *lhs);
 
-//--------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 // Time recording:
-//--------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 struct yut_time_count {
 	struct yut_time_count *chain;
 	const char *id;

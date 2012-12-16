@@ -31,6 +31,16 @@ static int test_sanity(struct ymd_mach *vm) {
 	setv_float(&var, 3.1415);
 	ASSERT_EQ(int, T_FLOAT, var.tt);
 	ASSERT_TRUE(3.1415 == var.u.f);
+
+#define ENTRY(clazz) \
+	printf ("sizeof("#clazz") = %zd\n", sizeof(struct clazz))
+	ENTRY(variable);
+	ENTRY(hmap);
+	ENTRY(skls);
+	ENTRY(dyay);
+	ENTRY(mand);
+	ENTRY(func);
+#undef ENTRY
 	return 0;
 }
 

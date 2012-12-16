@@ -9,33 +9,34 @@ static int yut_fault_log2(
 	const char *file,
 	int line,
 	int asserted,
-	const char *desc,
-	const char *expected,
 	const char *actual,
+	const char *expected,
 	const char *tag,
 	va_list ap) {
-	const char *s = asserted ? "Assertion" : "Expection";
 	char fmt[1024];
 	snprintf(fmt, sizeof(fmt),
-		 "${[yellow][   INFO   ] %s:%d %s Failed!\n"
-		 "[       -- ] Notice: (%s) %s (%s)\n"
-		 "[       -- ] %s aka. %s\n"
-		 "[       -- ] %s aka. %s}$\n",
-		 file, line, s, expected, desc, actual, expected, tag,
-		 actual, tag);
-	return ymd_vfprintf(stdout, fmt, ap);
+			"${[!yellow][  FAILURE ]}$ %s:%d Failure\n"
+			"Value of: %s\n"
+			"  Actual: %s\n"
+			"Expected: %s\n"
+			"Which is: %s\n",
+			file, line, actual, tag, expected, tag);
+	ymd_vfprintf(stdout, fmt, ap);
+	return asserted ? -1 : 1;
 }
 
 int yut_run_log1(
 	const char *file,
 	int line,
 	int asserted,
-	const char *desc,
+	const char *actual,
+	const char *expected,
 	const char *condition) {
-	const char *s = asserted ? "Assertion" : "Expection";
-	ymd_printf("${[yellow][   INFO   ] %s:%d %s Failed!\n"
-	       "[       -- ] Notice: (%s) %s}$\n",
-	       file, line, s, condition, desc);
+	ymd_printf("${[!yellow][  FAILURE ]}$ %s:%d Failure\n"
+			"Value of: %s\n"
+			"  Actual: %s\n"
+			"Expected: %s\n",
+	       file, line, condition, actual, expected);
 	return asserted ? -1 : 1;
 }
 
@@ -43,15 +44,13 @@ int yut_run_log2(
 	const char *file,
 	int line,
 	int asserted,
-	const char *desc,
-	const char *expected,
 	const char *actual,
+	const char *expected,
 	const char *tag,
 	...) {
 	va_list ap;
 	va_start(ap, tag);
-	yut_fault_log2(file, line, asserted, desc, expected, actual, tag,
-	               ap);
+	yut_fault_log2(file, line, asserted, actual, expected, tag, ap);
 	va_end(ap);
 	return asserted ? -1 : 1;
 }
@@ -60,18 +59,16 @@ int yut_run_logz(
 	const char *file,
 	int line,
 	int asserted,
-	const char *desc,
-	const char *expected,
 	const char *actual,
-	const char *lhs,
-	const char *rhs) {
-	const char *s = asserted ? "Assertion" : "Expection";
-	ymd_printf("${[yellow][   INFO   ] %s:%d %s Failed!\n"
-	       "[       -- ] Notice: (%s) %s (%s)\n"
-	       "[       -- ] %s aka. %s\n"
-	       "[       -- ] %s aka. %s}$\n",
-	       file, line, s, expected, desc, actual, expected, lhs,
-	       actual, rhs);
+	const char *expected,
+	const char *rhs,
+	const char *lhs) {
+	ymd_printf("${[!yellow][  FAILURE ]}$ %s:%d Failure\n"
+			"Value of: %s\n"
+			"  Actual: \"%s\"\n"
+			"Expected: %s\n"
+			"Which is: \"%s\"\n",
+			file, line, actual, expected, rhs, lhs); 
 	return asserted ? -1 : 1;
 }
 
