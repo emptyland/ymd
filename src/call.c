@@ -348,21 +348,47 @@ retry:
 			IMPL_JUMP
 			goto retry;
 		case I_FOREACH: {
-			if (is_nil(ymd_top(l, 0))) {
-				switch (asm_flag(inst)) {
-				case F_FORWARD:
-					info->pc += asm_param(inst);
-					break;
-				case F_BACKWARD:
-					info->pc -= asm_param(inst);
-					break;
-				default:
-					assert(!"No reached.");
-					break;
-				}
-				ymd_pop(l, 1);
-				goto retry;
+			if (!is_nil(ymd_top(l, 0)))
+				break;
+			switch (asm_flag(inst)) {
+			case F_FORWARD:
+				info->pc += asm_param(inst);
+				break;
+			case F_BACKWARD:
+				info->pc -= asm_param(inst);
+				break;
+			default:
+				assert(!"No reached.");
+				break;
 			}
+			ymd_pop(l, 1);
+			goto retry;
+			} break;
+		case I_FORSTEP: {
+			// [0]: step
+			// [1]: end
+			// [2]: tmp
+			ymd_int_t step = int4of(l, ymd_top(l, 0)),
+					  end  = int4of(l, ymd_top(l, 1)),
+					  tmp  = int4of(l, ymd_top(l, 2));
+			if (step == 0)
+				ymd_panic(l, "Zero step make a death loop.");
+			ymd_pop(l, 3);
+			if ((step > 0 && tmp < end) || (step < 0 && tmp > end))
+				break; // Loop continue
+			// Loop finalize
+			switch (asm_flag(inst)) {
+			case F_FORWARD:
+				info->pc += asm_param(inst);
+				break;
+			case F_BACKWARD:
+				info->pc -= asm_param(inst);
+				break;
+			default:
+				assert(!"No reached.");
+				break;
+			}
+			goto retry;
 			} break;
 		case I_SETF: {
 			switch (asm_flag(inst)) {
@@ -498,7 +524,7 @@ retry:
 			int argc = asm_argc(inst);
 			struct func *called = func_of(l, ymd_top(l, argc));
 			ymd_adjust(l, adjust, ymd_call(l, called, argc, 0));
-			gc_step(vm);
+			if (called->is_c) gc_step(vm);
 			} break;
 		case I_SELFCALL: {
 			struct func *called;
@@ -508,7 +534,7 @@ retry:
 			called = func_of(l, vm_get(vm, ymd_top(l, argc),
 			                            &core->kval[imethod]));
 			ymd_adjust(l, adjust, ymd_call(l, called, argc, 1));
-			gc_step(vm);
+			if (called->is_c) gc_step(vm);
 			} break;
 		case I_NEWMAP: {
 			struct hmap *map = hmap_new(vm, asm_param(inst));

@@ -15,8 +15,8 @@ static const char *kz_shift_op[] = {
 };
 
 static const char *kz_calc_op[] = {
-	"inv", "mul", "div", "add", "sub", "mod", "andb", "orb", "xorb",
-	"invb", "not",
+	"<error>", "inv", "mul", "div", "add", "sub", "mod", "andb", "orb",
+	"xorb", "invb", "not",
 };
 
 static const char *kz_order[] = {
@@ -131,6 +131,9 @@ int dasm_inst(FILE *fp, const struct func *fn, uint_t inst) {
 		break;
 	case I_FOREACH:
 		rv = fprintf(fp, "foreach %s", jmp(inst, BUF));
+		break;
+	case I_FORSTEP:
+		rv = fprintf(fp, "forstep %s", jmp(inst, BUF));
 		break;
 	case I_SETF:
 		rv = fprintf(fp, "setf %s", getf(fn, inst, BUF));

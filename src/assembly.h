@@ -19,7 +19,8 @@
 #define I_TYPEOF  60 // typeof
 #define I_CALC    65 // calc inv|mul|div|add|sub|mod|andb|orb|xorb|invb
 #define I_CLOSE   70 // close kval
-// reserved 70~115
+#define I_FORSTEP 75 // forstep label
+// reserved 80~115
 #define I_SHIFT   120 // shift l|r, a|l
 #define I_CALL    125 // call a, n
 #define I_NEWMAP  130 // newmap n
