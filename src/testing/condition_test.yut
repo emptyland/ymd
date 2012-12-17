@@ -108,5 +108,59 @@ ConditionTest = @{
 		} else {
 			Assert:Fail("Can not goto here!")
 		}
+	},
+
+	test_if_elif_else : func (self) {
+		var func if_only(i) {
+			if i == "0" {
+				return 0
+			}
+			return  -1
+		}
+		Assert:EQ(0, if_only("0"))
+		Assert:EQ(-1, if_only("1"))
+		Assert:EQ(-1, if_only("2"))
+
+		var func if_else(i) {
+			if i == "0" {
+				return 0
+			} else {
+				return 1
+			}
+			return -1
+		}
+		Assert:EQ(0, if_else("0"))
+		Assert:EQ(1, if_else("1"))
+		Assert:EQ(1, if_else("2"))
+
+		var func if_elif(i) {
+			if i == "0" {
+				return 0
+			} elif i == "1" {
+				return 1
+			}
+			return -1
+		}
+		Assert:EQ(0, if_elif("0"))
+		Assert:EQ(1, if_elif("1"))
+		Assert:EQ(-1, if_elif("2"))
+
+		var func if_elif_else(i) {
+			if i == "0" {
+				return 0
+			} elif i == "1" {
+				return 1
+			} elif i == "2" {
+				return 2
+			} else {
+				return 3
+			}
+			return -1
+		}
+		Assert:EQ(0, if_elif_else("0"))
+		Assert:EQ(1, if_elif_else("1"))
+		Assert:EQ(2, if_elif_else("2"))
+		Assert:EQ(3, if_elif_else("3"))
+		Assert:EQ(3, if_elif_else("4"))
 	}
 }

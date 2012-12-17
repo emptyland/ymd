@@ -120,6 +120,7 @@ int ymd_xcall(L, int argc);
 int ymd_ncall(L, struct func *fn, int nret, int narg);
 int ymd_main(L, int argc, char *argv[]);
 
+
 //-----------------------------------------------------------------------------
 // Misc:
 // ----------------------------------------------------------------------------
@@ -164,6 +165,8 @@ static inline int vm_compare(const struct variable *lhs,
 	return (is_num(lhs) && is_num(rhs)) ? num_compare(lhs, rhs) :
 		compare(lhs, rhs);
 }
+
+int vm_bool(const struct variable *lhs);
 
 //
 // Runtime:
@@ -262,8 +265,8 @@ static inline void ymd_hmap(L, int k) {
 	setv_hmap(ymd_push(l), o);
 }
 
-static inline void ymd_skls(L) {
-	struct skls *o = skls_new(l->vm);
+static inline void ymd_skls(L, struct func *cmp) {
+	struct skls *o = skls_new(l->vm, cmp);
 	setv_skls(ymd_push(l), o);
 }
 

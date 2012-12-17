@@ -488,7 +488,7 @@ static int libx_strbuf(L) {
 	struct zostream *self = ymd_mand(l, T_STRBUF, sizeof(*self),
 	                                 (ymd_final_t)strbuf_final);
 	self->max = MAX_STATIC_LEN;
-	ymd_skls(l); // FIXME:
+	ymd_skls(l, SKLS_ASC); // FIXME:
 	ymd_load_mem(l, "__buitin__.strbuf", lbxStringBuffer);
 	ymd_setmetatable(l);
 	return 1;
@@ -598,7 +598,7 @@ static int libx_open(L) {
 		ymd_pop(l, 1);
 		return 0;
 	}
-	ymd_skls(l); // FIXME:
+	ymd_skls(l, SKLS_ASC); // FIXME:
 	ymd_load_mem(l, "__buitin__.file", lbxANSICFile);
 	ymd_setmetatable(l);
 	return 1;
@@ -810,7 +810,7 @@ static int libx_slice(L) {
 	case T_SKLS: {
 		struct skls *o = skls_of(l, arg0);
 		struct variable *begin, *end;
-		ymd_skls(l);
+		ymd_skls(l, SKLS_ASC);
 		if (ymd_argv(l)->count == 2) {
 			struct sknd *i;
 			begin = ymd_argv_get(l, 1);
@@ -973,7 +973,7 @@ static int libx_pcall(L) {
 	for (i = 1; i < argv->count; ++i)
 		*ymd_push(l) = argv->elem[i];
 	i = ymd_pcall(l, fn, argv->count - 1);
-	ymd_skls(l);
+	ymd_skls(l, SKLS_ASC);
 	if (i < 0) {
 		ymd_move(l, 1);
 		ymd_def(l, "backtrace");

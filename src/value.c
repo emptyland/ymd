@@ -269,7 +269,8 @@ int mand_compare(const struct mand *o, const struct mand *rhs) {
 	return kz_compare(o->land, o->len, rhs->land, rhs->len);
 }
 
-struct variable *mand_get(struct mand *o, const struct variable *k) {
+struct variable *mand_get(struct ymd_mach *vm, struct mand *o,
+		const struct variable *k) {
 	if (!o->proto)
 		return knil;
 	assert (o->proto->type == T_HMAP || o->proto->type == T_SKLS);
@@ -277,7 +278,7 @@ struct variable *mand_get(struct mand *o, const struct variable *k) {
 	case T_HMAP:
 		return hmap_get(hmap_f(o->proto), k);
 	case T_SKLS:
-		return skls_get(skls_f(o->proto), k);
+		return skls_get(vm, skls_f(o->proto), k);
 	}
 	return knil;
 }

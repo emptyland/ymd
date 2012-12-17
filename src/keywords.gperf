@@ -15,7 +15,6 @@ false, FALSE
 !=, NE
 ~=, MATCH
 ==, EQ
-@{, SKLS
 <<, LSHIFT
 >>, RSHIFT_A
 |>, RSHIFT_L

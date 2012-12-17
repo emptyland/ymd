@@ -1,0 +1,84 @@
+SkipListTest = @{
+	test_sanity : func (self) {
+		var o = @{}
+		var t = "skiplist"
+		Assert:EQ(@{}, o)
+		Assert:EQ(t, typeof o)
+
+		o = @[<]{} // Skip list order by asc(default)
+		Assert:EQ(@{}, o)
+		Assert:EQ(t, typeof o)
+
+		o = @[>]{} // Skip list order by dasc
+		Assert:EQ(@{}, o)
+		Assert:EQ(t, typeof o)
+
+		o = @[func(){}]{} // Skip list order by user defined
+		Assert:EQ(@{}, o)
+		Assert:EQ(t, typeof o)
+	},
+
+	test_order_by_asc : func (self) {
+		var o = @[<]{
+			"a": 0,
+			"b": 1,
+			"c": 2
+		}
+		Assert:EQ([0, 1, 2], self:to_array(o))
+	},
+
+	test_order_by_dasc : func (self) {
+		var o = @[>]{
+			"a": 0,
+			"b": 1,
+			"c": 2
+		}
+		Assert:EQ([2, 1, 0], self:to_array(o))
+	},
+
+	test_order_by_user : func (self) {
+		// User defined comparing function
+		var o = @[func (lhs, rhs) {
+			lhs = lhs.k
+			rhs = rhs.k
+			return rhs - lhs
+		}] {
+			[{k:10, t:"xx"}] = 0,
+			[{k:20, t:"hh"}] = 1,
+			[{k:30, t:"dd"}] = 2
+		}
+		Assert:EQ([2, 1, 0], self:to_array(o))
+	},
+
+	to_array : func (self, o) {
+		var a = []
+		for var i in range(o) {
+			append(a, i)
+		}
+		return a
+	},
+
+	// Internal compare should be faster than user defined.
+	test_order_internal_benchmark : func (self) {
+		var o = @[>]{}
+		for var i in range(0, 30000) {
+			o[str(i)] = i
+		}
+	},
+
+	// It's should be slowly.
+	test_order_user_benchmark : func (self) {
+		var func compare(lhs, rhs) {
+			if lhs < rhs {
+				return -1
+			} elif lhs > rhs {
+				return 1
+			}
+			return 0
+		}
+		var o = @[compare]{}
+		for var i in range(0, 30000) {
+			o[str(i)] = i
+		}
+	}
+}

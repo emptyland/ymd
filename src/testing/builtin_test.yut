@@ -227,7 +227,7 @@ BuiltinTest = @{
 		for var i in range(0, 30000) {
 			s = s + str(i)
 		}
-		print ("end:", gc("used"))
+		print ("         end:", gc("used"))
 	},
 
 	test_strbuf_benchmark : func (self) {
@@ -237,7 +237,7 @@ BuiltinTest = @{
 			sb:cat(str(i))
 		}
 		var s = sb:get()
-		print ("end:", gc("used"))
+		print ("         end:", gc("used"))
 	},
 
 	test_file : func (self) {

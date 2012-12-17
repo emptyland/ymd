@@ -80,6 +80,18 @@ int vm_reached(struct ymd_mach *vm, const char *name) {
 	return count->u.i;
 }
 
+int vm_bool(const struct variable *lhs) {
+	switch (ymd_type(lhs)) {
+	case T_NIL:
+		return 0;
+	case T_BOOL:
+		return lhs->u.i;
+	default:
+		return 1;
+	}
+	return 0;
+}
+
 //------------------------------------------------------------------------
 // Generic mapping functions:
 // -----------------------------------------------------------------------
@@ -122,7 +134,7 @@ struct variable *vm_get(struct ymd_mach *vm, struct variable *var,
 		ymd_panic(l, "No any key will be `nil`");
 	switch (ymd_type(var)) {
 	case T_SKLS:
-		return skls_get(skls_x(var), key);
+		return skls_get(vm, skls_x(var), key);
 	case T_HMAP:
 		return hmap_get(hmap_x(var), key);
 	case T_DYAY:
@@ -130,7 +142,7 @@ struct variable *vm_get(struct ymd_mach *vm, struct variable *var,
 	case T_MAND:
 		if (!mand_x(var)->proto)
 			ymd_panic(l, "Management memory has no metatable yet");
-		return mand_get(mand_x(var), key);
+		return mand_get(vm, mand_x(var), key);
 	default:
 		ymd_panic(l, "Variable can not be index");
 		break;
@@ -194,7 +206,7 @@ struct variable *vm_mem(struct ymd_mach *vm, void *o, const char *field) {
 		break;
 	case T_SKLS:
 		setv_kstr(&k, kstr_fetch(vm, field, -1));
-		v = skls_get(o, &k);
+		v = skls_get(vm, o, &k);
 		break;
 	default:
 		assert(!"No reached.");

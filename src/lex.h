@@ -28,7 +28,6 @@
 	v(MATCH, "~=") \
 	v(EQ, "==") \
 	v(SYMBOL, "<id>") \
-	v(SKLS, "@{") \
 	v(LSHIFT, "<<") \
 	v(RSHIFT_A, ">>") \
 	v(RSHIFT_L, "|>") \

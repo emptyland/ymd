@@ -23,7 +23,7 @@
 #define I_SHIFT   120 // shift l|r, a|l
 #define I_CALL    125 // call a, n
 #define I_NEWMAP  130 // newmap n
-#define I_NEWSKL  135 // newskl
+#define I_NEWSKL  135 // newskl order, n
 #define I_NEWDYA  140 // newdya
 #define I_BIND    145 // bind n
 // 150 reserved
@@ -75,6 +75,11 @@
 #define F_XORB   9 // a ^ b
 #define F_INVB  10 // ~x
 #define F_NOT   11 // not x
+
+// skip list
+#define F_ASC   0 // order by asc
+#define F_DASC  1 // order by dasc
+#define F_USER  2 // order by user defined function
 
 static inline uint_t asm_build(
 	uchar_t op,

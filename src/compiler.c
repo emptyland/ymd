@@ -435,7 +435,30 @@ out:
 
 static void parse_map(struct ymd_parser *p, int ord) {
 	ushort_t count = 0;
-	ymc_match(p, ord ? SKLS : '{');
+	uchar_t order = F_ASC;
+	if (ord) { // is skip list
+		ymc_match(p, '@');
+		if (ymc_peek(p) == '[') {
+			ymc_next(p);
+			switch (ymc_peek(p)) {
+			case '<':
+				ymc_next(p);
+				order = F_ASC;
+				break;
+			case '>':
+				ymc_next(p);
+				order = F_DASC;
+				break;
+			default:
+				// Order by user defined function
+				parse_expr(p, 0);
+				order = F_USER;
+				break;
+			}
+			ymc_match(p, ']');
+		}
+	}
+	ymc_match(p, '{');
 	do {
 		switch (ymc_peek(p)) {
 		case '}':
@@ -465,7 +488,7 @@ static void parse_map(struct ymd_parser *p, int ord) {
 	} while(ymc_test(p, ','));
 out:
 	if (ord)
-		ymk_emitOP(p, I_NEWSKL, count);
+		ymk_emitOfP(p, I_NEWSKL, order, count);
 	else
 		ymk_emitOP(p, I_NEWMAP, count);
 }
@@ -591,7 +614,7 @@ static void parse_simple(struct ymd_parser *p) {
 	case '{':
 		parse_map(p, 0);
 		break;
-	case SKLS:
+	case '@':
 		parse_map(p, 1);
 		break;
 	case '[':
@@ -1040,7 +1063,7 @@ static void parse_local(struct ymd_parser *p) {
 
 static void parse_if(struct ymd_parser *p) {
 	ushort_t jnxt, jout[128];
-	int i = 0, nsub = 0;
+	int i = 0;
 	ymc_next(p); // Skip `if'
 	if (ymc_peek(p) == LET) {
 		ymc_next(p); // `if' `let' assign `;' cond
@@ -1057,21 +1080,20 @@ static void parse_if(struct ymd_parser *p) {
 	while (ymc_peek(p) == ELIF) { // `elif' expr { `block' }
 		ymc_next(p);
 		jout[i++] = ymk_hold(p);
-		ymk_hack_jmp(p, jnxt, I_JNE, 0);
+		ymk_hack_jmp(p, jnxt, I_JNE, 0); jnxt = 0;
 		parse_expr(p, 0);
 		jnxt = ymk_hold(p);
 		parse_block(p);
-		++nsub;
 	}
 	if (ymc_peek(p) == ELSE) { // `else' `{' block `}'
 		ymc_next(p);
 		jout[i++] = ymk_hold(p);
-		ymk_hack_jmp(p, jnxt, I_JNE, 0);
+		ymk_hack_jmp(p, jnxt, I_JNE, 0); jnxt = 0;
 		parse_block(p);
-		++nsub;
 	}
 	while (i--) ymk_hack_jmp(p, jout[i], I_JMP, 0);
-	if (nsub == 0) ymk_hack_jmp(p, jnxt, I_JNE, 0);
+	if (jnxt) // Is jnxt fill back finished?
+		ymk_hack_jmp(p, jnxt, I_JNE, 0);
 }
 
 static void parse_for(struct ymd_parser *p) {

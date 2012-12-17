@@ -19,6 +19,10 @@ static const char *kz_calc_op[] = {
 	"invb", "not",
 };
 
+static const char *kz_order[] = {
+	"asc", "dasc", "user",
+};
+
 static const char *fn_kz(const struct func *fn, int i) {
 	return kstr_k(fn->u.core->kval + i)->land;
 }
@@ -159,7 +163,8 @@ int dasm_inst(FILE *fp, const struct func *fn, uint_t inst) {
 		rv = fprintf(fp, "newmap %d", asm_param(inst));
 		break;
 	case I_NEWSKL:
-		rv = fprintf(fp, "newskl %d", asm_param(inst));
+		rv = fprintf(fp, "newskl %d, [%s]", asm_param(inst),
+				kz_order[asm_flag(inst)]);
 		break;
 	case I_NEWDYA:
 		rv = fprintf(fp, "newdya %d", asm_param(inst));

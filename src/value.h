@@ -118,10 +118,17 @@ struct sknd {
 	struct sknd *fwd[1]; // Forward list
 };
 
+#define SKLS_ASC  ((struct func *)0)
+#define SKLS_DASC ((struct func *)1)
+
 struct skls {
 	GC_HEAD;
 	int count;
 	unsigned short lv;
+	struct func *cmp; // user defined function
+	                  // (void*)0 : order by asc
+					  // (void*)1 : order by dasc
+					  // other    : order by user function
 	struct sknd *head;
 };
 
@@ -199,13 +206,14 @@ int hmap_remove(struct ymd_mach *vm, struct hmap *o,
                 const struct variable *k);
 
 // Skip list: `skls` functions:
-struct skls *skls_new(struct ymd_mach *vm);
+struct skls *skls_new(struct ymd_mach *vm, struct func *order);
 void skls_final(struct ymd_mach *vm, struct skls *o);
 struct variable *skls_put(struct ymd_mach *vm, struct skls *o,
-                          const struct variable *k);
-struct variable *skls_get(struct skls *o, const struct variable *k);
+		const struct variable *k);
+struct variable *skls_get(struct ymd_mach *vm, struct skls *o,
+		const struct variable *k);
 int skls_remove(struct ymd_mach *vm, struct skls *o,
-                const struct variable *k);
+		const struct variable *k);
 
 // Dynamic array: `dyay` functions:
 struct dyay *dyay_new(struct ymd_mach *vm, int count);
@@ -221,7 +229,8 @@ struct mand *mand_new(struct ymd_mach *vm, int size, ymd_final_t final);
 void mand_final(struct ymd_mach *vm, struct mand *o);
 
 // Proxy getting and putting
-struct variable *mand_get(struct mand *o, const struct variable *k);
+struct variable *mand_get(struct ymd_mach *vm, struct mand *o,
+		const struct variable *k);
 struct variable *mand_put(struct ymd_mach *vm, struct mand *o,
 		const struct variable *k);
 int mand_remove(struct ymd_mach *vm, struct mand *o,

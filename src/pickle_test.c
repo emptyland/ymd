@@ -221,7 +221,7 @@ static int test_dump_hmap (struct ymd_mach *vm) {
 }
 
 static int test_dump_skls (struct ymd_mach *vm) {
-	return dump_o (skls_new(vm), T_SKLS, vm);
+	return dump_o (skls_new(vm, SKLS_ASC), T_SKLS, vm);
 }
 
 static int test_load_simple (struct ymd_mach *vm) {

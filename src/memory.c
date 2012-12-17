@@ -540,7 +540,11 @@ static void gc_travel_obj(struct gc_node *o) {
 		} break;
 	case T_SKLS: {
 		struct sknd *i;
-		for (i = skls_f(o)->head->fwd[0]; i != NULL; i = i->fwd[0]) {
+		struct skls *x = skls_f(o);
+		if (x->cmp != SKLS_ASC && x->cmp != SKLS_DASC) {
+			gc_travelo(x->cmp);
+		}
+		for (i = x->head->fwd[0]; i != NULL; i = i->fwd[0]) {
 			gc_travelv(&i->k);
 			gc_travelv(&i->v);
 		}

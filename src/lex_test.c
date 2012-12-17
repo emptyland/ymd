@@ -11,7 +11,7 @@ static int test_sanity(void *p) {
 	struct ytoken token;
 	int rv;
 	(void)p;
-	lex_init(&lex, NULL, "!~+-=<>/\n\t .%^*(){}[]:==>=<=!=~=>>|><<@{|&");
+	lex_init(&lex, NULL, "!~+-=<>/\n\t .%^*(){}[]:==>=<=!=~=>>|><<|&");
 	ASSERT_TOKEN('!');
 	ASSERT_TOKEN('~');
 	ASSERT_TOKEN('+');
@@ -39,7 +39,6 @@ static int test_sanity(void *p) {
 	ASSERT_TOKEN(RSHIFT_A);
 	ASSERT_TOKEN(RSHIFT_L);
 	ASSERT_TOKEN(LSHIFT);
-	ASSERT_TOKEN(SKLS);
 	ASSERT_TOKEN('|');
 	ASSERT_TOKEN('&');
 	ASSERT_TOKEN(EOS);

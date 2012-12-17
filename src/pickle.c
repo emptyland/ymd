@@ -300,7 +300,7 @@ int ymd_load_hmap(struct zistream *is, int *ok) {
 int ymd_load_skls(struct zistream *is, int *ok) {
 	struct ymd_context *l = context(is);
 	int i, k = zis_u32(is);
-	ymd_skls(l);
+	ymd_skls(l, SKLS_ASC);
 	for (i = 0; i < k; ++i) {
 		ymd_parse(is, CHECK_OK);
 		ymd_parse(is, CHECK_OK);

@@ -15,7 +15,7 @@ static void teardown(struct ymd_mach *vm) {
 
 static int test_skls_creation_1 (struct ymd_mach *vm) {
 	struct variable k1, k2, *rv;
-	struct skls *ls = skls_new(vm);
+	struct skls *ls = skls_new(vm, SKLS_ASC);
 
 	setv_int(&k1, 1024);
 	setv_kstr(skls_put(vm, ls, &k1), kstr_fetch(vm, "1024", -1));
@@ -23,12 +23,12 @@ static int test_skls_creation_1 (struct ymd_mach *vm) {
 	setv_kstr(&k2, kstr_fetch(vm, "1024", -1));
 	setv_int(skls_put(vm, ls, &k2), 1024);
 
-	rv = skls_get(ls, &k1);
+	rv = skls_get(vm, ls, &k1);
 	ASSERT_NOTNULL(rv);
 	ASSERT_EQ(int, ymd_type(rv), T_KSTR);
 	ASSERT_STREQ(kstr_of(ioslate(vm), rv)->land, "1024");
 
-	rv = skls_get(ls, &k2);
+	rv = skls_get(vm, ls, &k2);
 	ASSERT_NOTNULL(rv);
 	ASSERT_EQ(int, ymd_type(rv), T_INT);
 	ASSERT_EQ(large, rv->u.i, 1024LL);
@@ -38,7 +38,7 @@ static int test_skls_creation_1 (struct ymd_mach *vm) {
 #define BENCHMARK_COUNT 100000
 
 static int test_skls_creation_2 (struct ymd_mach *vm) {
-	struct skls *ls = skls_new(vm);
+	struct skls *ls = skls_new(vm, SKLS_ASC);
 	int i = BENCHMARK_COUNT;
 	RAND_BEGIN(NORMAL)
 		while (i--) {
@@ -53,7 +53,7 @@ static int test_skls_creation_2 (struct ymd_mach *vm) {
 }
 
 static int test_skls_sequence (struct ymd_mach *vm) {
-	struct skls *ls = skls_new(vm);
+	struct skls *ls = skls_new(vm, SKLS_ASC);
 	struct sknd *x;
 	int i = BENCHMARK_COUNT;
 	while (i--) {
@@ -73,7 +73,7 @@ static int test_skls_sequence (struct ymd_mach *vm) {
 
 static struct skls *build_skls (const int *raw, long i,
 		struct ymd_mach *vm) {
-	struct skls *ls = skls_new(vm);
+	struct skls *ls = skls_new(vm, SKLS_ASC);
 	while (i--) {
 		struct variable k;
 		setv_int(&k, raw[i]);
@@ -99,14 +99,14 @@ static int test_skls_comparation (struct ymd_mach *vm) {
 	EXPECT_EQ(int, skls_compare(x, x), 0);
 	EXPECT_EQ(int, skls_compare(x, rhs), 0);
 
-	rhs = skls_new(vm);
+	rhs = skls_new(vm, SKLS_ASC);
 	EXPECT_FALSE(skls_equals(x, rhs));
 	EXPECT_GT(int, skls_compare(x, rhs), 0);
 	return 0;
 }
 
 static int test_skls_insertion_1 (struct ymd_mach *vm) {
-	struct skls *list = skls_new(vm);
+	struct skls *list = skls_new(vm, SKLS_ASC);
 	struct variable *rv;
 	int i = BENCHMARK_COUNT;
 	TIME_RECORD_BEGIN(insertion)
@@ -126,7 +126,7 @@ static int test_skls_insertion_2 (struct ymd_mach *vm) {
 	while (i--) {
 		int j = 16;
 		while (j--) {
-			struct skls *x = skls_new(vm);
+			struct skls *x = skls_new(vm, SKLS_ASC);
 			struct variable k;
 			setv_int(&k, i);
 			setv_int(skls_put(vm, x, &k), i);
@@ -137,7 +137,7 @@ static int test_skls_insertion_2 (struct ymd_mach *vm) {
 }
 
 static int test_skls_search_1 (struct ymd_mach *vm) {
-	struct skls *list = skls_new(vm);
+	struct skls *list = skls_new(vm, SKLS_ASC);
 	struct variable k, *rv;
 	char buf[32];
 	int i = BENCHMARK_COUNT;
@@ -153,7 +153,7 @@ static int test_skls_search_1 (struct ymd_mach *vm) {
 			unsigned int index = RAND_RANGE(uint, 0, BENCHMARK_COUNT);
 			snprintf(buf, sizeof(buf), "%u", index);
 			setv_kstr(&k, kstr_fetch(vm, buf, -1));
-			rv = skls_get(list, &k);
+			rv = skls_get(vm, list, &k);
 			ASSERT_EQ(int, rv->tt, T_INT);
 			ASSERT_EQ(large, rv->u.i, index);
 		}
@@ -165,7 +165,7 @@ static int test_skls_search_1 (struct ymd_mach *vm) {
 static int test_skls_search_2 (struct ymd_mach *vm) {
 	int i = 16;
 	struct variable k;
-	struct skls *map = skls_new(vm);
+	struct skls *map = skls_new(vm, SKLS_ASC);
 	while (i--) {
 		setv_int(&k, i);
 		setv_int(skls_put(vm, map, &k), i);
@@ -176,7 +176,7 @@ static int test_skls_search_2 (struct ymd_mach *vm) {
 		int j = 16;
 		while (j--) {
 			setv_int(&k, j);
-			ASSERT_EQ(large, skls_get(map, &k)->u.i, j);
+			ASSERT_EQ(large, skls_get(vm, map, &k)->u.i, j);
 		}
 	}
 	TIME_RECORD_END
@@ -184,7 +184,7 @@ static int test_skls_search_2 (struct ymd_mach *vm) {
 }
 
 static int test_skls_removing (struct ymd_mach *vm) {
-	struct skls *map = skls_new(vm);
+	struct skls *map = skls_new(vm, SKLS_ASC);
 	struct variable k;
 	setv_int(&k, 4);
 	setv_int(skls_put(vm, map, &k), 0);
@@ -195,22 +195,22 @@ static int test_skls_removing (struct ymd_mach *vm) {
 
 	setv_int(&k, 4);
 	ASSERT_TRUE(skls_remove(vm, map, &k));
-	ASSERT_TRUE(knil == skls_get(map, &k));
+	ASSERT_TRUE(knil == skls_get(vm, map, &k));
 	setv_int(&k, 1024);
 	ASSERT_TRUE(skls_remove(vm, map, &k));
-	ASSERT_TRUE(knil == skls_get(map, &k));
+	ASSERT_TRUE(knil == skls_get(vm, map, &k));
 	setv_int(&k, 14);
 	ASSERT_TRUE(skls_remove(vm, map, &k));
-	ASSERT_TRUE(knil == skls_get(map, &k));
+	ASSERT_TRUE(knil == skls_get(vm, map, &k));
 
 	setv_int(&k, 1024);
 	setv_int(skls_put(vm, map, &k), 1000);
-	ASSERT_EQ(int,  skls_get(map, &k)->tt, T_INT);
-	ASSERT_EQ(large, skls_get(map, &k)->u.i,  1000LL);
+	ASSERT_EQ(int,  skls_get(vm, map, &k)->tt, T_INT);
+	ASSERT_EQ(large, skls_get(vm, map, &k)->u.i,  1000LL);
 	setv_int(&k, 14);
 	setv_int(skls_put(vm, map, &k), 10);
-	ASSERT_EQ(int,  skls_get(map, &k)->tt, T_INT);
-	ASSERT_EQ(large, skls_get(map, &k)->u.i,  10LL);
+	ASSERT_EQ(int,  skls_get(vm, map, &k)->tt, T_INT);
+	ASSERT_EQ(large, skls_get(vm, map, &k)->u.i,  10LL);
 	setv_int(&k, 4);
 	ASSERT_FALSE(skls_remove(vm, map, &k));
 	return 0;

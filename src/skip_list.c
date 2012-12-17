@@ -10,6 +10,25 @@
 // -----------------------------------------------------------------
 #define MAX_LEVEL 16
 
+static ymd_int_t do_compare(struct ymd_mach *vm, const struct skls *o,
+		const struct variable *lhs, const struct variable *rhs) {
+	ymd_int_t rv;
+	struct ymd_context *l = ioslate(vm);
+	if (o->cmp == SKLS_ASC)
+		return compare(lhs, rhs);
+	if (o->cmp == SKLS_DASC)
+		return compare(rhs, lhs);
+	setv_func(ymd_push(l), o->cmp);
+	*ymd_push(l) = *lhs;
+	*ymd_push(l) = *rhs;
+	rv = ymd_call(l, o->cmp, 2, 0);
+	if (!rv)
+		ymd_panic(l, "do_compare() Bad comparing function");
+	rv = int4of(l, ymd_top(l, 0));
+	ymd_pop(l, 1);
+	return rv;
+}
+
 static unsigned int rand_range(unsigned int mod) {
 	unsigned int raw = (unsigned)rand();
 	unsigned int rv = 0;
@@ -32,20 +51,21 @@ static struct sknd *mknode(struct ymd_mach *vm, unsigned short lv) {
 	return x;
 }
 
-struct sknd *skposition(struct skls *o, const struct variable *k,
-                        struct sknd *update[MAX_LEVEL]) {
+static struct sknd *skposition(struct ymd_mach *vm, struct skls *o,
+		const struct variable *k, struct sknd *update[MAX_LEVEL]) {
 	struct sknd *x = o->head;
 	int i;
 	memset(update, 0, MAX_LEVEL * sizeof(struct sknd*));
 	for (i = o->lv - 1; i >= 0; --i) {
-		while (x->fwd[i] && compare(&x->fwd[i]->k, k) < 0)
+		while (x->fwd[i] && do_compare(vm, o, &x->fwd[i]->k, k) < 0)
 			x = x->fwd[i];
 		update[i] = x;
 	}
 	return x->fwd[0];
 }
 
-static struct sknd *append(struct ymd_mach *vm, struct skls *o, struct sknd *update[]) {
+static struct sknd *append(struct ymd_mach *vm, struct skls *o,
+		struct sknd *update[]) {
 	struct sknd *x;
 	unsigned short i, lvl = randlv();
 	if (lvl > o->lv) {
@@ -62,37 +82,39 @@ static struct sknd *append(struct ymd_mach *vm, struct skls *o, struct sknd *upd
 }
 
 static struct sknd *skindex(struct ymd_mach *vm, struct skls *o,
-                            const struct variable *k) {
-	/*struct sknd *x = o->head, *update[MAX_LEVEL];
-	int i;
-	memset(update, 0, sizeof(update));
-	for (i = o->lv - 1; i >= 0; --i) {
-		while (x->fwd[i] && compare(&x->fwd[i]->k, k) < 0) {
-			x = x->fwd[i];
-		}
-		update[i] = x;
-	}
-	x = x->fwd[0];*/
-	struct sknd *update[MAX_LEVEL], *x = skposition(o, k, update);
-	return (x && equals(&x->k, k)) ? x : append(vm, o, update);
+		const struct variable *k) {
+	struct sknd *update[MAX_LEVEL], *x = skposition(vm, o, k, update);
+	return (x && do_compare(vm, o, &x->k, k) == 0) ? x : append(vm, o, update);
 }
 
-static struct variable *skfind(const struct skls *o,
-                               const struct variable *k) {
+static struct variable *skfind(struct ymd_mach *vm, const struct skls *o,
+		const struct variable *k) {
 	struct sknd *x = o->head;
 	int i;
+	// For get/put 
+	if (vm) {
+		for (i = o->lv - 1; i >= 0; --i) {
+			while (x->fwd[i] && do_compare(vm, o, &x->fwd[i]->k, k) < 0) {
+				x = x->fwd[i];
+			}
+		}
+		x = x->fwd[0];
+		return (x && do_compare(vm, o, &x->k, k) == 0) ? &x->v : knil;
+	}
+	// For pure comparing
 	for (i = o->lv - 1; i >= 0; --i) {
 		while (x->fwd[i] && compare(&x->fwd[i]->k, k) < 0) {
 			x = x->fwd[i];
 		}
 	}
 	x = x->fwd[0];
-	return (x && equals(&x->k, k)) ? &x->v : knil; // `knil` means not found;
+	return (x && equals(&x->k, k)) ? &x->v : knil;
 }
 
-struct skls *skls_new(struct ymd_mach *vm) {
+struct skls *skls_new(struct ymd_mach *vm, struct func *order) {
 	struct skls *x = gc_new(vm, sizeof(struct skls), T_SKLS);
 	x->lv = 0;
+	x->cmp = order;
 	x->head = mknode(vm, MAX_LEVEL);
 	return x;
 }
@@ -123,7 +145,7 @@ int skls_equals(const struct skls *o, const struct skls *rhs) {
 		return 1;
 	assert(i != NULL);
 	while ((i = i->fwd[0]) != NULL) {
-		if (!equals(&i->v, skfind(rhs, &i->k)))
+		if (!equals(&i->v, skfind(NULL, rhs, &i->k)))
 			return 0;
 		++count;
 	}
@@ -137,7 +159,7 @@ int skls_compare(const struct skls *o, const struct skls *rhs) {
 		return 0;
 	assert(i != NULL);
 	while ((i = i->fwd[0]) != NULL)
-		rv += compare(&i->v, skfind(rhs, &i->k));
+		rv += compare(&i->v, skfind(NULL, rhs, &i->k));
 	return rv;
 }
 
@@ -150,16 +172,17 @@ struct variable *skls_put(struct ymd_mach *vm, struct skls *o,
 	return &x->v;
 }
 
-struct variable *skls_get(struct skls *o, const struct variable *k) {
+struct variable *skls_get(struct ymd_mach *vm, struct skls *o,
+		const struct variable *k) {
 	assert(!is_nil(k));
-	return skfind(o, k);
+	return skfind(vm, o, k);
 }
 
 int skls_remove(struct ymd_mach *vm, struct skls *o,
                 const struct variable *k) {
-	struct sknd *update[MAX_LEVEL], *x = skposition(o, k, update);
+	struct sknd *update[MAX_LEVEL], *x = skposition(vm, o, k, update);
 	int i;
-	if (!equals(&x->k, k))
+	if (do_compare(vm, o, &x->k, k) != 0)
 		return 0;
 	for (i = 0; i < o->lv; ++i) {
 		if (update[i]->fwd[i] != x) break;

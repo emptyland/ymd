@@ -69,18 +69,6 @@ static inline int vm_match(struct ymd_mach *vm,
 	return !err;
 }
 
-static inline int vm_bool(const struct variable *lhs) {
-	switch (ymd_type(lhs)) {
-	case T_NIL:
-		return 0;
-	case T_BOOL:
-		return lhs->u.i;
-	default:
-		return 1;
-	}
-	return 0;
-}
-
 static inline void do_put(struct ymd_mach *vm,
                           struct gc_node *raw,
 						  const struct variable *k,
@@ -314,7 +302,9 @@ retry:
 		l->vm->tick++;
 		switch (asm_op(inst)) {
 		case I_PANIC:
-			ymd_panic(l, "%s Panic!", func_proto(vm, fn)->land);
+			//assert (!"No reached. No panic instruction should be eval.");
+			ymd_panic(l, "%s Eval I_PANIC instruction",
+					func_proto(vm, fn)->land);
 			break;
 		case I_STORE:
 			switch (asm_flag(inst)) {
@@ -530,12 +520,30 @@ retry:
 			gc_step(vm);
 			} break;
 		case I_NEWSKL: {
-			struct skls *map = skls_new(vm);
+			struct skls *map;
 			int i, n = asm_param(inst) * 2;
+			switch (asm_flag(inst)) {
+			case F_ASC:
+				map = skls_new(vm, SKLS_ASC);
+				break;
+			case F_DASC:
+				map = skls_new(vm, SKLS_DASC);
+				break;
+			case F_USER:
+				map = skls_new(vm, func_of(l, ymd_top(l, n)));
+				break;
+			default:
+				assert (!"No reached.");
+				break;
+			}
+			map->marked = GC_FIXED;
 			for (i = 0; i < n; i += 2)
 				do_put(vm, gcx(map), ymd_top(l, i + 1), ymd_top(l, i));
 			ymd_pop(l, n);
+			if (map->cmp != SKLS_ASC && map->cmp != SKLS_DASC)
+				ymd_pop(l, 1); // pop the comparor.
 			setv_skls(ymd_push(l), map);
+			map->marked = l->vm->gc.white;
 			gc_step(vm);
 			} break;
 		case I_NEWDYA: {
