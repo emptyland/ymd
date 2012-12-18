@@ -56,11 +56,11 @@ RemovingTest = @{
 
 	all_remove : func (self, o) {
 		var k = 10000
-		for var i in range(0, k) {
+		for var i = 0, k {
 			o[i] = str(i)	
 		}
 		Assert:EQ(k, len(o))
-		for i in range(0, k) {
+		for i = 0, k {
 			o[i] = nil
 		}
 		Assert:EQ(0, len(o))

@@ -136,7 +136,7 @@ BuiltinTest = @{
 	test_range_container : func (self) {
 		var iter = range([])
 		var i
-		for i in range(0, rand(100, 200)) {
+		for i = 0, rand(100, 200) {
 			Assert:Nil(iter())
 		}
 
@@ -204,7 +204,7 @@ BuiltinTest = @{
 	test_strbuf : func (self) {
 		var s = strbuf()
 		var i, rv
-		for i in range(0, 8) {
+		for i = 0, 8 {
 			s:cat("a")
 		}
 		rv = s:get()
@@ -224,7 +224,7 @@ BuiltinTest = @{
 	test_strcat_benchmark : func (self) {
 		print ("Memory begin:", gc("used"))
 		var s = ""
-		for var i in range(0, 30000) {
+		for var i = 0, 30000 {
 			s = s + str(i)
 		}
 		print ("         end:", gc("used"))
@@ -233,7 +233,7 @@ BuiltinTest = @{
 	test_strbuf_benchmark : func (self) {
 		print ("Memory begin:", gc("used"))
 		var sb = strbuf()
-		for var i in range(0, 30000) {
+		for var i = 0, 30000 {
 			sb:cat(str(i))
 		}
 		var s = sb:get()
@@ -284,12 +284,7 @@ BuiltinTest = @{
 
 	test_rand : func (self) {
 		var i, n
-		//for i in range(0, 100) {
-		//	print("rand():",         rand(),
-		//	      "rand(k):",        rand(-10),
-		//		  "rank(min, max):", rand(100, 200))
-		//}
-		for i in range(0, 10000) {
+		for i = 0, 10000 {
 			Assert:EQ("int", typeof rand())
 			n = rand(10)
 			Assert:GE(n, 0)
@@ -327,14 +322,14 @@ BuiltinTest = @{
 	remove_run : func (self, o) {
 		var rv, i
 		Assert:True((typeof o) == "hashmap" or (typeof o) == "skiplist")
-		for i in range(0, self.kBenchCount) {
+		for i = 0, self.kBenchCount {
 			append(o, [i, "#" + str(i)])
 		}
 		Assert:EQ(self.kBenchCount, len(o))
 		Assert:EQ("#998", o[998])
 		Assert:EQ("#0",   o[0])
 		// Remove all!
-		for i in range(0, self.kBenchCount) {
+		for i = 0, self.kBenchCount {
 			rv = remove(o, i)
 			if rv == 0 {
 				Assert:Fail("Assert remove fail! index: " + str(i))

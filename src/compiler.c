@@ -278,7 +278,6 @@ static inline void ymk_fail_jmp(struct ymd_parser *p, ushort_t i_fail,
 	ymk_hack(p, i, asm_build(op, F_FORWARD, off));
 }
 
-
 static inline void ymk_emit_func(
 	struct ymd_parser *p,
 	const struct func_decl_desc *desc,
@@ -517,11 +516,6 @@ static void parse_callargs(struct ymd_parser *p, int adjust,
 		nargs += parse_args(p);
 		ymc_match(p, ')');
 		break;
-	/*case '{':
-		parse_map(p, 0);
-		nargs += 1;
-		ymc_match(p, '}');
-		break;*/
 	case STRING:
 		ymk_emit_kz(p, ymk_literal(p));
 		ymc_next(p);
@@ -1097,14 +1091,11 @@ static void parse_if(struct ymd_parser *p) {
 		ymk_hack_jmp(p, jnxt, I_JNE, 0);
 }
 
-static void parse_forstep(struct ymd_parser *p) {
-	const char *tmp;
+static void parse_forstep_partial(struct ymd_parser *p, const char *tmp) {
 	char step[64], end[64];
-	// Skip `let'
-	ymc_next(p);
-	// The i variable
-	tmp = ymk_symbol(p);
+	// Skip `='
 	ymc_match(p, '=');
+	// Initial expression:
 	parse_expr(p, 0);
 	ymk_emit_store(p, tmp);
 	ymc_match(p, ',');
@@ -1134,7 +1125,6 @@ static void parse_forstep(struct ymd_parser *p) {
 	// Set jcond for instruction
 	p->loop->i_jcond = ymk_hold(p);
 	p->for_id++;
-	p->loop->op = I_FORSTEP;
 	// `{' block `}'
 	parse_block(p); 
 	// Incrment i variable: tmp = tmp + step
@@ -1142,26 +1132,38 @@ static void parse_forstep(struct ymd_parser *p) {
 	ymk_emit_push(p, step);
 	ymk_emitOf(p, I_CALC, F_ADD);
 	ymk_emit_store(p, tmp);
-	// Finalize
-	ymk_loop_leave(p);
+	// Operator
+	p->loop->op = I_FORSTEP;
 }
 
-static void parse_foreach_partial(struct ymd_parser *p,
-		const char *tmp) {
+static void parse_foreach_partial(struct ymd_parser *p, const char *tmp) {
 	char iter[64];
-
-	ymc_match(p, IN); // in expr
+	// `in' token:
+	ymc_match(p, IN);
 	parse_expr(p, 0);
+	// Push iterator variable:
 	snprintf(iter, sizeof(iter), "__loop_iter_%d__", p->for_id++);
 	ymk_emitOfP(p, I_STORE, F_LOCAL, ymk_new_locvar(p, iter));
-
-	p->loop->i_retry = ymk_ipos(p); // set retry
-	ymk_emit_push(p, iter); // push iter
-	ymk_emit_call(p, I_CALL, 1, 0, 0); // call 0, ret:1
-	p->loop->i_jcond = ymk_hold(p); // set jcond foreach
-	ymk_emit_store(p, tmp); // store tmp
-
+	// Save loop entry:
+	p->loop->i_retry = ymk_ipos(p);
+	// Push then call iterator:
+	ymk_emit_push(p, iter);
+	ymk_emit_call(p, I_CALL, 1, 0, 0);
+	// Set jcond for foreach instruction:
+	p->loop->i_jcond = ymk_hold(p);
+	// Store i variable
+	ymk_emit_store(p, tmp);
+	// `{' block `}'
+	parse_block(p);
+	// Operator
 	p->loop->op = I_FOREACH;
+}
+
+static inline void parse_for_partial(struct ymd_parser *p, const char *tmp) {
+	if (ymc_peek(p) == '=')
+		parse_forstep_partial(p, tmp);
+	else
+		parse_foreach_partial(p, tmp);
 }
 
 static void parse_for(struct ymd_parser *p) {
@@ -1173,25 +1175,22 @@ static void parse_for(struct ymd_parser *p) {
 	case '{':
 		scope.death = 1;
 		p->loop->i_retry = ymk_ipos(p); // set retry
+		parse_block(p);
 		break;
 	case VAR:
 		ymc_next(p);
 		tmp = ymk_symbol(p);
 		ymk_new_locvar(p, tmp);
-		parse_foreach_partial(p, tmp);
+		parse_for_partial(p, tmp);
 		break;
 	case SYMBOL:
 		tmp = ymk_symbol(p);
-		parse_foreach_partial(p, tmp);
+		parse_for_partial(p, tmp);
 		break;
-	case LET: // `for' `let' assing `,' expr `,', expr
-		parse_forstep(p);
-		return;
 	default:
 		ymc_fail(p, "Syntax error.");
 		return;
 	}
-	parse_block(p); // `{' block `}'
 	ymk_loop_leave(p);
 }
 
