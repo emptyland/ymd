@@ -101,11 +101,11 @@ static void yut_fail2(L, const char *op,
 			   "Actual   : <${[purple]%s}$>\n",
 			   fn->u.core->file->land,
 			   fn->u.core->line[up->pc - 1],
-			   zos_buf(&os0),
+			   (const char *)zos_buf(&os0),
 			   op,
-			   zos_buf(&os1),
-			   zos_buf(&os0),
-			   zos_buf(&os1));
+			   (const char *)zos_buf(&os1),
+			   (const char *)zos_buf(&os0),
+			   (const char *)zos_buf(&os1));
 	zos_final(&os0);
 	zos_final(&os1);
 	yut_raise(l);
@@ -129,7 +129,7 @@ static void yut_fail0(L) {
 			   "Runtime error: %s\nBacktrace:\n%s",
 			   kstr_of(l, ymd_top(l, 1))->land,
 			   kstr_of(l, ymd_top(l, 2))->land,
-			   zos_buf(&os));
+			   (const char *)zos_buf(&os));
 	zos_final(&os);
 	ymd_pop(l, 3);
 }
