@@ -372,7 +372,7 @@ static void gc_final_kpool(struct ymd_mach *vm) {
 	struct gc_struct *gc = &vm->gc;
 
 	// Sweep objects step number
-	// We hope sweep 1k by one step:
+	// We hope sweep 100 variable size by one step:
 	gc->sweep_step = gc_delta(gc) / (sizeof(struct variable) * 100);
 	gc->sweep_step = gc->sweep_step <= 0 ? 1 : gc->sweep_step;
 	// Move alloced list to sweep list for sweeping.

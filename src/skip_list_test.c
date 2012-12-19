@@ -216,3 +216,43 @@ static int test_skls_removing (struct ymd_mach *vm) {
 	return 0;
 }
 
+static int test_skls_direct_by_asc (struct ymd_mach *vm) {
+	struct skls *map = skls_new(vm, SKLS_ASC);
+	struct variable k;
+	struct sknd *p;
+	int i, num[] = {0, 1, 2, 3, 4, 5, 7, 9, 100};
+	for (i = 0; i < (int)ARRAY_SIZEOF(num); ++i) {
+		setv_int(&k, num[i]);
+		setv_int(skls_put(vm, map, &k), i);
+	}
+	setv_int(&k, 3); i = 3;
+	for (p = skls_direct(vm, map, &k); p != NULL; p = p->fwd[0]) {
+		ASSERT_EQ(large, num[i++], p->k.u.i);
+	}
+	setv_int(&k, 6); i = 6;
+	for (p = skls_direct(vm, map, &k); p != NULL; p = p->fwd[0]) {
+		ASSERT_EQ(large, num[i++], p->k.u.i);
+	}
+	setv_int(&k, 101);
+	ASSERT_NULL(skls_direct(vm, map, &k));
+	return 0;
+}
+
+static int test_skls_direct_by_dasc (struct ymd_mach *vm) {
+	struct skls *map = skls_new(vm, SKLS_DASC);
+	struct variable k;
+	struct sknd *p, *e;
+	int i, num[] = {0, 1, 2, 3, 4, 5, 7, 9, 100}, exp[] = {7, 5, 4};
+	for (i = 0; i < (int)ARRAY_SIZEOF(num); ++i) {
+		setv_int(&k, num[i]);
+		setv_int(skls_put(vm, map, &k), i);
+	}
+	setv_int(&k, 3);
+	e = skls_direct(vm, map, &k);
+	setv_int(&k, 7); i = 0;
+	for (p = skls_direct(vm, map, &k); p != e; p = p->fwd[0]) {
+		ASSERT_EQ(large, exp[i++], p->k.u.i);
+	}
+	return 0;
+}
+

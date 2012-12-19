@@ -61,7 +61,7 @@ SkipListTest = @{
 	// Internal compare should be faster than user defined.
 	test_order_internal_benchmark : func (self) {
 		var o = @[>]{}
-		for var i in range(0, 30000) {
+		for var i = 0, 30000 {
 			o[str(i)] = i
 		}
 	},
@@ -77,8 +77,32 @@ SkipListTest = @{
 			return 0
 		}
 		var o = @[compare]{}
-		for var i in range(0, 30000) {
+		for var i = 0, 30000 {
 			o[str(i)] = i
 		}
+	},
+
+	test_slice : func (self) {
+		var o = @[<]{}
+		for var i = 0, 1000 {
+			o[i] = str(i)
+		}
+		Assert:EQ(@{[999] = "999"}, slice(o, 999))
+		Assert:EQ(@{}, slice(o, 1000))
+		Assert:EQ(@{[999] = "999"}, slice(o, 999, 1000))
+		Assert:EQ(@{[999] = "999"}, slice(o, 1000, 999))
+		Assert:EQ(@{
+			[997] = "997",
+			[998] = "998",
+			[999] = "999"}, slice(o, 997, 1000))
+
+		o = @[>]{}
+		for i = 0, 1000 {
+			o[i] = str(i)
+		}
+		Assert:EQ(@{[0] = "0"}, slice(o, 0))
+		Assert:EQ(@{}, slice(o, -1))
+		Assert:EQ(@{[1] = "1"}, slice(o, 0, 1))
+		Assert:EQ(@{[1] = "1"}, slice(o, 1, 0))
 	}
 }

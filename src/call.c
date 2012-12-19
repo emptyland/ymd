@@ -398,7 +398,6 @@ retry:
 				for (i = 0; i < k; i += 2)
 					vm_iput(vm, var, ymd_top(l, i + 1), ymd_top(l, i));
 				ymd_pop(l, k + 1);
-				gc_step(vm);
 				} break;
 			case F_FAST:
 				vm_iput(vm, ymd_top(l, 1), &core->kval[asm_param(inst)],
@@ -435,7 +434,6 @@ retry:
 			*ymd_push(l) = var;
 			} break;
 		case I_CLOSE: {
-			// TODO: like push instruction
 			struct variable *opd = &core->kval[asm_param(inst)];
 			struct func *copied = func_clone(vm, func_of(l, opd));
 			vm_close_upval(l, copied);
@@ -520,21 +518,24 @@ retry:
 			ymd_pop(l, 1);
 			} break;
 		case I_CALL: {
+			size_t point = vm->gc.used;
 			int adjust = asm_aret(inst);
 			int argc = asm_argc(inst);
 			struct func *called = func_of(l, ymd_top(l, argc));
 			ymd_adjust(l, adjust, ymd_call(l, called, argc, 0));
-			if (called->is_c) gc_step(vm);
+			if (called->is_c && point < vm->gc.used) // Is memory incrmental ?
+				gc_step(vm);
 			} break;
 		case I_SELFCALL: {
-			struct func *called;
+			size_t point = vm->gc.used;
 			int adjust = asm_aret(inst);
 			int argc = asm_argc(inst);
 			int imethod = asm_method(inst);
-			called = func_of(l, vm_get(vm, ymd_top(l, argc),
-			                            &core->kval[imethod]));
+			struct func *called = func_of(l, vm_get(vm, ymd_top(l, argc),
+						&core->kval[imethod]));
 			ymd_adjust(l, adjust, ymd_call(l, called, argc, 1));
-			if (called->is_c) gc_step(vm);
+			if (called->is_c && point < vm->gc.used) // Like I_CALL
+				gc_step(vm);
 			} break;
 		case I_NEWMAP: {
 			struct hmap *map = hmap_new(vm, asm_param(inst));

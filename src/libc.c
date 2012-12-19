@@ -808,33 +808,29 @@ static int libx_slice(L) {
 		}
 		} break;
 	case T_SKLS: {
-		struct skls *o = skls_of(l, arg0);
-		struct variable *begin, *end;
-		ymd_skls(l, SKLS_ASC);
+		const struct skls *o = skls_of(l, arg0);
+		const struct sknd *i, *k;
+		struct variable *arg1;
+		ymd_skls(l, o->cmp);
 		if (ymd_argv(l)->count == 2) {
-			struct sknd *i;
-			begin = ymd_argv_get(l, 1);
-			// Make [begin, ...) skip list:
-			for (i = o->head->fwd[0]; i != NULL; i = i->fwd[0]) {
-				if (compare(begin, &i->k) <= 0) {
-					*ymd_push(l) = i->k;
-					*ymd_push(l) = i->v;
-					ymd_putf(l);
-				}
-			}
+			arg1 = ymd_argv_get(l, 1);
+			k = NULL; // to end
 		} else {
-			struct sknd *i;
-			begin = ymd_argv_get(l, 1);
-			end   = ymd_argv_get(l, 2);
-			// Make [begin, end) skip list:
-			for (i = o->head->fwd[0]; i != NULL; i = i->fwd[0]) {
-				if (compare(begin, &i->k) <= 0 &&
-						compare(end, &i->k) > 0) {
-					*ymd_push(l) = i->k;
-					*ymd_push(l) = i->v;
-					ymd_putf(l);
-				}
+			struct variable *arg2 = ymd_argv_get(l, 2);
+			arg1 = ymd_argv_get(l, 1);
+			// arg1 must be front of arg2 in the skip list. 
+			if (skls_key_compare(l->vm, o, arg1, arg2) > 0) {
+				struct variable *tmp = arg1;
+				arg1 = arg2;
+				arg2 = tmp;
 			}
+			k = skls_direct(l->vm, o, arg2);
+		}
+		// Make [i, k) range new skip list.
+		for (i = skls_direct(l->vm, o, arg1); i != k; i = i->fwd[0]) {
+			*ymd_push(l) = i->k;
+			*ymd_push(l) = i->v;
+			ymd_putf(l);
 		}
 		} break;
 	default:

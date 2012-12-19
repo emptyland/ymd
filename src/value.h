@@ -206,6 +206,9 @@ int hmap_remove(struct ymd_mach *vm, struct hmap *o,
                 const struct variable *k);
 
 // Skip list: `skls` functions:
+// order: SKLS_ASC  -> order by asc
+//        SKLS_DASC -> order by dasc
+//        func      -> user defined
 struct skls *skls_new(struct ymd_mach *vm, struct func *order);
 void skls_final(struct ymd_mach *vm, struct skls *o);
 struct variable *skls_put(struct ymd_mach *vm, struct skls *o,
@@ -213,6 +216,14 @@ struct variable *skls_put(struct ymd_mach *vm, struct skls *o,
 struct variable *skls_get(struct ymd_mach *vm, struct skls *o,
 		const struct variable *k);
 int skls_remove(struct ymd_mach *vm, struct skls *o,
+		const struct variable *k);
+
+// Compare the skip list's key only.
+ymd_int_t skls_key_compare(struct ymd_mach *vm, const struct skls *o,
+		const struct variable *lhs, const struct variable *rhs);
+
+// Retrun first great or equal than key's node.
+struct sknd *skls_direct(struct ymd_mach *vm, const struct skls *o,
 		const struct variable *k);
 
 // Dynamic array: `dyay` functions:
