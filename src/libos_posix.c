@@ -50,7 +50,7 @@ static int desc2mode(const char *desc, mode_t *rv) {
 }*/
 
 static int libx_readdir(L) {
-	const char *dname = kstr_of(l, ymd_argv_get(l, 0))->land;
+	const char *dname = kstr_of(l, ymd_argv(l, 0))->land;
 	struct ymd_dirent *dir;
 	ymd_nafn(l, readdir_iter, "__readdir_iter__", 1);
 	dir = ymd_mand(l, T_DIRENT, sizeof(*dir), (ymd_final_t)dirent_final);
@@ -69,17 +69,16 @@ static int libx_fork(L) {
 }
 
 static int libx_remove(L) {
-	const char *path = kstr_of(l, ymd_argv_get(l, 0))->land;
+	const char *path = kstr_of(l, ymd_argv(l, 0))->land;
 	ymd_int(l, remove(path));
 	return 1;
 }
 
 static int libx_mkdir(L) {
-	const char *path = kstr_of(l, ymd_argv_get(l, 0))->land;
+	const char *path = kstr_of(l, ymd_argv(l, 0))->land;
 	mode_t mode = 0766;
-	if (ymd_argv_chk(l, 1)->count >= 2) {
-		if (desc2mode(kstr_of(l, ymd_argv_get(l, 1))->land,
-		              &mode) < 0) {
+	if (ymd_argc(l) >= 2) {
+		if (desc2mode(kstr_of(l, ymd_argv(l, 1))->land, &mode) < 0) {
 			ymd_int(l, -1);
 			return 1;
 		}
@@ -89,7 +88,7 @@ static int libx_mkdir(L) {
 }
 
 static int libx_stat(L) {
-	const char *name = kstr_of(l, ymd_argv_get(l, 0))->land;
+	const char *name = kstr_of(l, ymd_argv(l, 0))->land;
 	struct stat x;
 	memset(&x, 0, sizeof(x));
 	if (lstat(name, &x) < 0)

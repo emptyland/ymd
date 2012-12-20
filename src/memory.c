@@ -451,11 +451,12 @@ static int gc_mark_context(struct ymd_mach *vm) {
 	if (l->info) { // Mark all function in stack
 		struct call_info *i = l->info;
 		while (i) {
-			int n = i->argv.count;
-			while (n--)
-				gc_markv(i->argv.elem + n);
 			gc_marko(i->run);
-			count += (i->argv.count + 1);
+			if (func_argv(i->run)) {
+				gc_marko(i->u.argv);
+				++count;
+			}
+			++count;
 			i = i->chain;
 		}
 	}

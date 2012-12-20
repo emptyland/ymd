@@ -28,20 +28,20 @@ env.Library('yamada',
 	skip_list.c
 	closure.c
 	call.c
-	libc.c
-	libtest.c
 	encoding.c
 	compiler.c
 	lex.c
 	tostring.c
 	string.c
-	libos_posix.c
 	pickle.c
-	libpickle.c
 	print_posix.c
 	disassembly.c
 	keywords.c
 	flags.c
+	libc.c
+	libtest.c
+	libos_posix.c
+	libpickle.c
 	'''.split());
 env.Depends('libyamada.a', 'keywords.c')
 

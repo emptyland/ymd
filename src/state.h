@@ -63,7 +63,12 @@ static inline void vm_free(struct ymd_mach *vm, void *p) {
 struct call_info {
 	struct call_info *chain;
 	struct func *run;
-	struct dyay argv;
+	union {
+		struct dyay *argv; // Argv object, use in ymd function.
+		struct variable *lea; // Args stack frame, use in C function.
+	} u;
+	short argc; // Current calling's argc
+	short adjust; // Adjust for argc
 	int pc;
 	struct variable *loc;
 };
@@ -176,22 +181,6 @@ static inline struct func *ymd_called(L) {
 	assert(l->info);
 	assert(l->info->run);
 	return l->info->run;
-}
-
-static inline struct dyay *ymd_argv(L) {
-	assert(l->info);
-	return &l->info->argv;
-}
-
-static inline struct dyay *ymd_argv_chk(L, int need) {
-	if (need > 0 && (!ymd_argv(l) || ymd_argv(l)->count < need))
-		ymd_panic(l, "Bad argument, need > %d", need);
-	return ymd_argv(l);
-}
-
-static inline struct variable *ymd_argv_get(L, int i) {
-	struct dyay *argv = ymd_argv_chk(l, i + 1);
-	return argv->elem + i;
 }
 
 // Get upval by index, in context.
@@ -385,6 +374,25 @@ static inline void ymd_setmetatable(L) {
 
 // Push error info in stack! pcall() can use it.
 int ymd_error(L, const char *msg);
+
+// Get argc
+static inline int ymd_argc(L) {
+	assert(!func_argv(ymd_called(l)));
+	return l->info->argc;
+}
+
+// Gat args
+// print (1, 2, 3)
+// print [4]
+// 1 [3-1 2]
+// 2 [3-2 1]
+// 3 [3-3 0]
+static inline struct variable *ymd_argv(L, int i) {
+	int k = ymd_argc(l);
+	if (i < 0 || i >= k)
+		ymd_panic(l, "Argv index[%d] out of range[0, %d)", i, k);
+	return l->info->u.lea + i;
+}
 
 #undef L
 #endif // YMD_STATE_H

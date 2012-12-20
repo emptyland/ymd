@@ -5,7 +5,7 @@
 #define L struct ymd_context *l
 
 static int libx_dump(L) {
-	struct variable *arg0 = ymd_argv_get(l, 0);
+	struct variable *arg0 = ymd_argv(l, 0);
 	*ymd_push(l) = *arg0;
 	if (ymd_pdump(l) == 0) {
 		ymd_error(l, "pickle.pdump failed!");
@@ -15,7 +15,7 @@ static int libx_dump(L) {
 }
 
 static int libx_load(L) {
-	struct kstr *arg0 = kstr_of(l, ymd_argv_get(l, 0));
+	struct kstr *arg0 = kstr_of(l, ymd_argv(l, 0));
 	if (ymd_pload(l, arg0->land, arg0->len) == 0) {
 		ymd_error(l, "pickle.load failed!");
 		ymd_raise(l);

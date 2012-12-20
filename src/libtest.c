@@ -82,7 +82,7 @@ static inline struct yut_cookie *yut_jpt(L, struct variable *self) {
 }
 
 static inline void yut_raise(L) {
-	struct yut_cookie *cookie = yut_jpt(l, ymd_argv_get(l, 0));
+	struct yut_cookie *cookie = yut_jpt(l, ymd_argv(l, 0));
 	longjmp(cookie->jpt, 1);
 }
 
@@ -162,7 +162,7 @@ static const char *format_interval(
 }
 
 static int libx_Fail(L) {
-	const struct kstr *arg0 = kstr_of(l, ymd_argv_get(l, 1));
+	const struct kstr *arg0 = kstr_of(l, ymd_argv(l, 1));
 	struct call_info *up = l->info->chain;
 	struct func *fn = up->run;
 	ymd_printf("${[yellow][   INFO   ] %s:%d Fail: %s}$\n",
@@ -174,7 +174,7 @@ static int libx_Fail(L) {
 }
 
 static int libx_True(L) {
-	struct variable *arg0 = ymd_argv_get(l, 1);
+	struct variable *arg0 = ymd_argv(l, 1);
 	if (is_nil(arg0))
 		yut_fail1(l, "not nil", arg0);
 	if (ymd_type(arg0) == T_BOOL && !arg0->u.i)
@@ -183,21 +183,21 @@ static int libx_True(L) {
 }
 
 static int libx_False(L) {
-	struct variable *arg0 = ymd_argv_get(l, 1);
+	struct variable *arg0 = ymd_argv(l, 1);
 	if (!is_nil(arg0) && (ymd_type(arg0) == T_BOOL && arg0->u.i))
 		yut_fail1(l, "false or nil", arg0);
 	return 0;
 }
 
 static int libx_Nil(L) {
-	struct variable *arg0 = ymd_argv_get(l, 1);
+	struct variable *arg0 = ymd_argv(l, 1);
 	if (!is_nil(arg0))
 		yut_fail1(l, "nil", arg0);
 	return 0;
 }
 
 static int libx_NotNil(L) {
-	struct variable *arg0 = ymd_argv_get(l, 1);
+	struct variable *arg0 = ymd_argv(l, 1);
 	if (is_nil(arg0))
 		yut_fail1(l, "not nil", arg0);
 	return 0;
@@ -212,8 +212,8 @@ static int libx_NotNil(L) {
 #define GE_LITERAL ">="
 #define DEFINE_BIN_ASSERT(name, func, cond) \
 static int libx_##name(L) { \
-	struct variable *arg0 = ymd_argv_get(l, 1), \
-					*arg1 = ymd_argv_get(l, 2); \
+	struct variable *arg0 = ymd_argv(l, 1), \
+					*arg1 = ymd_argv(l, 2); \
 	if (func(arg0, arg1) cond) \
 		yut_fail2(l, name##_LITERAL, arg0, arg1); \
 	return 0; \

@@ -331,12 +331,28 @@ void ymd_panic(struct ymd_context *l, const char *fmt, ...) {
 	return do_panic(l, buf);
 }
 
+// Stack Adjust:
+// print (1, 2, 3)
+// print [4] 
+// 1 [3]     <- curr->u.lea
+// 2 [2]
+// 3 [1]
+// (error info) [0]
 void ymd_raise(struct ymd_context *l) {
+	int i;
+	struct call_info *curr = l->info;
+	int balance = curr->argc + (curr->adjust ? 0 : 1);
+	struct variable info[3];
 	assert (l->jpt);
-	// NOTE: Call chain back and cleanup argv!
-	if (func_argv(l->info->run))
-		dyay_final(l->vm, ymd_argv(l));
-	l->info = l->info->chain;
+	assert (curr->run->is_c);
+	// FIXME: Save the error information
+	for (i = 0; i < 3; ++i)
+		info[3 - i - 1] = *ymd_top(l, i);
+	ymd_pop(l, 3 + balance);
+	for (i = 0; i < 3; ++i)
+		*ymd_push(l) = info[i];
+	// Jump to near point
+	l->info = curr->chain;
 	l->jpt->panic = 0;
 	longjmp(l->jpt->core, l->jpt->level);
 }

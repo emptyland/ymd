@@ -25,12 +25,11 @@ static const char *T_STREAM = "stream";
 #define L struct ymd_context *l
 
 static int libx_print(L) {
-	int i;
+	int i, argc = ymd_argc(l);
 	struct zostream os = ZOS_INIT;
-	struct dyay *argv = ymd_argv(l);
-	if (!argv) { puts(""); return 0; }
-	for (i = 0; i < argv->count; ++i) {
-		const char *raw = tostring(&os, argv->elem + i);
+	if (!argc) { puts(""); return 0; }
+	for (i = 0; i < argc; ++i) {
+		const char *raw = tostring(&os, ymd_argv(l, i));
 		if (i > 0) printf(PRINT_SPLIT);
 		fwrite(raw, os.last, 1, stdout);
 		zos_final(&os);
@@ -41,9 +40,9 @@ static int libx_print(L) {
 
 static void do_insert(L, struct dyay *self) {
 	struct variable *elem;
-	switch (ymd_argv_chk(l, 2)->count) {
+	switch (ymd_argc(l)) {
 	case 2:
-		elem = ymd_argv_get(l, 1);
+		elem = ymd_argv(l, 1);
 		if (is_nil(elem))
 			ymd_panic(l, "Element of array can not be `nil`");
 		setv_dyay(ymd_push(l), self);
@@ -51,16 +50,16 @@ static void do_insert(L, struct dyay *self) {
 		ymd_pop(l, 1);
 		break;
 	case 3: {
-		ymd_int_t i = int_of(l, ymd_argv_get(l, 1));
+		ymd_int_t i = int_of(l, ymd_argv(l, 1));
 		if (i < 0 || i >= self->count)
 			ymd_panic(l, "array index out of range, %lld", i);
-		elem = ymd_argv_get(l, 2);
+		elem = ymd_argv(l, 2);
 		if (is_nil(elem))
 			ymd_panic(l, "Element in array can not be `nil`");
 		*dyay_insert(l->vm, self, i) = *elem;
 		} break;
 	default:
-		ymd_panic(l, "Too many arguments, %d", ymd_argv(l)->count);
+		ymd_panic(l, "Too many arguments, %d", ymd_argc(l));
 		break;
 	}
 }
@@ -91,13 +90,13 @@ static void checked_put(L, struct variable *arg0,
 //     insert(map, key, value)
 //
 static int libx_insert(L) {
-	struct variable *arg0 = ymd_argv_get(l, 0);
+	struct variable *arg0 = ymd_argv(l, 0);
 	switch (ymd_type(arg0)) {
 	case T_DYAY:
 		do_insert(l, dyay_x(arg0));
 		break;
 	default:
-		checked_put(l, arg0, ymd_argv_get(l, 1), ymd_argv_get(l, 2));
+		checked_put(l, arg0, ymd_argv(l, 1), ymd_argv(l, 2));
 		break;
 	}
 	return 0;
@@ -105,21 +104,21 @@ static int libx_insert(L) {
 
 static int libx_append(L) {
 	int i;
-	struct variable *arg0 = ymd_argv_get(l, 0);
+	struct variable *arg0 = ymd_argv(l, 0);
 	switch (ymd_type(arg0)) {
 	case T_DYAY:
-		for (i = 1; i < ymd_argv_chk(l, 2)->count; ++i)
-			*dyay_add(l->vm, dyay_x(arg0)) = ymd_argv(l)->elem[i];
+		for (i = 1; i < ymd_argc(l); ++i)
+			*dyay_add(l->vm, dyay_x(arg0)) = *ymd_argv(l, i);
 		break;
 	case T_HMAP:
-		for (i = 1; i < ymd_argv_chk(l, 2)->count; ++i) {
-			struct dyay *pair = dyay_of(l, ymd_argv_get(l, i));
+		for (i = 1; i < ymd_argc(l); ++i) {
+			struct dyay *pair = dyay_of(l, ymd_argv(l, i));
 			*hmap_put(l->vm, hmap_x(arg0), pair->elem) = pair->elem[1];
 		}
 		break;
 	case T_SKLS:
-		for (i = 1; i < ymd_argv_chk(l, 2)->count; ++i) {
-			struct dyay *pair = dyay_of(l, ymd_argv_get(l, i));
+		for (i = 1; i < ymd_argc(l); ++i) {
+			struct dyay *pair = dyay_of(l, ymd_argv(l, i));
 			*skls_put(l->vm, skls_x(arg0), pair->elem) = pair->elem[1];
 		}
 		break;
@@ -133,9 +132,9 @@ static int libx_append(L) {
 
 static int libx_remove(L) {
 	int i, count = 0;
-	struct variable *arg0 = ymd_argv_get(l, 0);
-	for (i = 1; i < ymd_argv_chk(l, 2)->count; ++i)
-		count += vm_remove(l->vm, arg0, ymd_argv(l)->elem + i);
+	struct variable *arg0 = ymd_argv(l, 0);
+	for (i = 1; i < ymd_argc(l); ++i)
+		count += vm_remove(l->vm, arg0, ymd_argv(l, i));
 	ymd_int(l, count);
 	return 1;
 }
@@ -148,7 +147,7 @@ static int libx_remove(L) {
 // hashmap  : number of k-v pairs;
 // skiplist : number of k-v pairs;
 static int libx_len(L) {
-	const struct variable *arg0 = ymd_argv_get(l, 0);
+	const struct variable *arg0 = ymd_argv(l, 0);
 	switch (ymd_type(arg0)) {
 	case T_NIL:
 		ymd_int(l, 0);
@@ -193,7 +192,7 @@ static int libx_len(L) {
 // skiplist -> "@{name:John, content:{1,2,3}}"
 // managed  -> "(stream)[24@0x08067FF]"
 static int libx_str(L) {
-	const struct variable *arg0 = ymd_argv_get(l, 0);
+	const struct variable *arg0 = ymd_argv(l, 0);
 	struct zostream os = ZOS_INIT;
 	const char *z = tostring(&os, arg0);
 	ymd_kstr(l, z, os.last);
@@ -404,19 +403,18 @@ static int new_contain_iter(L, const struct variable *obj, int flag) {
 // range(1,100,2) = 1,3,5,...99
 // range([9,8,7]) = 9,8,7
 static int libx_range(L) {
-	const struct dyay *argv = ymd_argv_chk(l, 1);
-	switch (argv->count) {
+	switch (ymd_argc(l)) {
 	case 1:
-		return new_contain_iter(l, argv->elem, ITER_VALUE);
+		return new_contain_iter(l, ymd_argv(l, 0), ITER_VALUE);
 	case 2: {
-		ymd_int_t i = int_of(l, argv->elem),
-				  m = int_of(l, argv->elem + 1);
+		ymd_int_t i = int_of(l, ymd_argv(l, 0)),
+				  m = int_of(l, ymd_argv(l, 1));
 		return new_step_iter(l, i, m, i > m ? -1 : +1);
 		}
 	case 3:
-		return new_step_iter(l, int_of(l, argv->elem),
-		                     int_of(l, argv->elem + 1),
-		                     int_of(l, argv->elem + 2));
+		return new_step_iter(l, int_of(l, ymd_argv(l, 0)),
+		                     int_of(l, ymd_argv(l, 1)),
+		                     int_of(l, ymd_argv(l, 2)));
 	default:
 		ymd_panic(l, "Bad arguments, need 1 to 3");
 		break;
@@ -425,22 +423,21 @@ static int libx_range(L) {
 }
 
 static int libx_rank(L) {
-	return new_contain_iter(l, ymd_argv_get(l, 0), ITER_KV);
+	return new_contain_iter(l, ymd_argv(l, 0), ITER_KV);
 }
 
 static int libx_ranki(L) {
-	return new_contain_iter(l, ymd_argv_get(l, 0), ITER_KEY);
+	return new_contain_iter(l, ymd_argv(l, 0), ITER_KEY);
 }
 
 static int libx_panic(L) {
-	int i;
-	struct dyay *argv = ymd_argv(l);
+	int i, argc = ymd_argc(l);
 	struct zostream os = ZOS_INIT;
-	if (!argv || argv->count == 0)
+	if (!argc)
 		ymd_panic(l, "Unknown");
-	for (i = 0; i < argv->count; ++i) {
+	for (i = 0; i < argc; ++i) {
 		if (i > 0) zos_append(&os, " ", 1);
-		tostring(&os, argv->elem + i);
+		tostring(&os, ymd_argv(l, i));
 	}
 	ymd_panic(l, zos_buf(&os));
 	zos_final(&os);
@@ -456,17 +453,18 @@ static int strbuf_final(struct zostream *sb) {
 }
 
 static int libx_cat(L) {
-	int i;
-	struct zostream *self = mand_land(l, ymd_argv_get(l, 0), T_STRBUF);
-	struct dyay *argv = ymd_argv_chk(l, 2);
-	for (i = 1; i < argv->count; ++i)
-		tostring(self, argv->elem + i);
-	*ymd_push(l) = *ymd_argv_get(l, 0);
+	int i, argc = ymd_argc(l);
+	struct zostream *self = mand_land(l, ymd_argv(l, 0), T_STRBUF);
+	if (argc < 2)
+		ymd_panic(l, "strbuf:cat() need more than 2 arguments.");
+	for (i = 1; i < argc; ++i)
+		tostring(self, ymd_argv(l, i));
+	*ymd_push(l) = *ymd_argv(l, 0);
 	return 1;
 }
 
 static int libx_get(L) {
-	struct zostream *self = mand_land(l, ymd_argv_get(l, 0), T_STRBUF);
+	struct zostream *self = mand_land(l, ymd_argv(l, 0), T_STRBUF);
 	if (self->last == 0)
 		return 0;
 	ymd_kstr(l, zos_buf(self), self->last);
@@ -474,7 +472,7 @@ static int libx_get(L) {
 }
 
 static int libx_clear(L) {
-	strbuf_final(mand_land(l, ymd_argv_get(l, 0), T_STRBUF));
+	strbuf_final(mand_land(l, ymd_argv(l, 0), T_STRBUF));
 	return 0;
 }
 
@@ -536,11 +534,11 @@ static int ansic_file_readline(L, struct ansic_file *self) {
 
 static int libx_read(L) {
 	struct variable *arg1;
-	struct ansic_file *self = mand_land(l, ymd_argv_get(l, 0),
+	struct ansic_file *self = mand_land(l, ymd_argv(l, 0),
 	                                    T_STREAM);
-	if (ymd_argv_chk(l, 1)->count == 1)
+	if (ymd_argc(l) == 1)
 		return ansic_file_readn(l, self, 128);
-	arg1 = ymd_argv_get(l, 1);
+	arg1 = ymd_argv(l, 1);
 	switch (ymd_type(arg1)) {
 	case T_KSTR:
 		if (strcmp(kstr_k(arg1)->land, "*all") == 0)
@@ -552,7 +550,7 @@ static int libx_read(L) {
 		break;
 	case T_INT:
 		return ansic_file_readn(l, self,
-		                        int_of(l, ymd_argv_get(l, 1)));
+		                        int_of(l, ymd_argv(l, 1)));
 	default:
 		ymd_panic(l, "Bad read() option");
 		break;
@@ -562,11 +560,11 @@ static int libx_read(L) {
 
 static int libx_write(L) {
 	struct kstr *bin = NULL;
-	struct ansic_file *self = mand_land(l, ymd_argv_get(l, 0),
+	struct ansic_file *self = mand_land(l, ymd_argv(l, 0),
 	                                    T_STREAM);
-	if (is_nil(ymd_argv_get(l, 1)))
+	if (is_nil(ymd_argv(l, 1)))
 		return 0;
-	bin = kstr_of(l, ymd_argv_get(l, 1));
+	bin = kstr_of(l, ymd_argv(l, 1));
 	int rv = fwrite(bin->land, 1, bin->len, self->fp);
 	if (rv < 0)
 		ymd_panic(l, "Write file failed!");
@@ -574,7 +572,7 @@ static int libx_write(L) {
 }
 
 static int libx_close(L) {
-	struct ansic_file *self = mand_land(l, ymd_argv_get(l, 0),
+	struct ansic_file *self = mand_land(l, ymd_argv(l, 0),
 	                                    T_STREAM);
 	ansic_file_final(self);
 	return 0;
@@ -591,9 +589,9 @@ static int libx_open(L) {
 	struct ansic_file *self;
 	self = ymd_mand(l, T_STREAM, sizeof(*self),
 	                (ymd_final_t)ansic_file_final);
-	if (ymd_argv_chk(l, 1)->count > 1)
-		mod = kstr_of(l, ymd_argv_get(l, 1))->land;
-	self->fp = fopen(kstr_of(l, ymd_argv_get(l, 0))->land, mod);
+	if (ymd_argc(l) > 1)
+		mod = kstr_of(l, ymd_argv(l, 1))->land;
+	self->fp = fopen(kstr_of(l, ymd_argv(l, 0))->land, mod);
 	if (!self->fp) {
 		ymd_pop(l, 1);
 		return 0;
@@ -618,15 +616,15 @@ static int posix_regex_final(struct posix_regex *self) {
 // print(result)
 static int libx_pattern(L) {
 	int err = 0, cflag = REG_EXTENDED;
-	struct kstr *arg0 = kstr_of(l, ymd_argv_get(l, 0));
+	struct kstr *arg0 = kstr_of(l, ymd_argv(l, 0));
 	struct posix_regex *rv = ymd_mand(l, T_REGEX, sizeof(*rv),
 		(ymd_final_t)posix_regex_final);
-	switch (ymd_argv(l)->count) {
+	switch (ymd_argc(l)) {
 	case 1:
 		cflag = REG_NOSUB;
 		break;
 	case 2: {
-		struct kstr *arg1 = kstr_of(l, ymd_argv_get(l, 1));
+		struct kstr *arg1 = kstr_of(l, ymd_argv(l, 1));
 		if (strcmp(arg1->land, "*nosub") == 0)
 			cflag |= REG_NOSUB;
 		else if (strcmp(arg1->land, "*sub") == 0)
@@ -635,7 +633,7 @@ static int libx_pattern(L) {
 			ymd_panic(l, "Bad regex option: %s", arg1->land);
 		} break;
 	default:
-		ymd_panic(l, "Too many args, %d", ymd_argv(l)->count);
+		ymd_panic(l, "Too many args, %d", ymd_argc(l));
 		break;
 	}
 	err = regcomp(&rv->core, arg0->land, cflag);
@@ -647,9 +645,9 @@ static int libx_pattern(L) {
 }
 
 static int libx_match(L) {
-	struct posix_regex *self = mand_land(l, ymd_argv_get(l, 0),
+	struct posix_regex *self = mand_land(l, ymd_argv(l, 0),
 	                                     T_REGEX);
-	struct kstr *arg1 = kstr_of(l, ymd_argv_get(l, 1));
+	struct kstr *arg1 = kstr_of(l, ymd_argv(l, 1));
 	int err = 0;
 	if (self->sub) {
 		regmatch_t matched[128];
@@ -702,7 +700,7 @@ static int libx_import(L) {
 	int i;
 	FILE *fp;
 	char blknam[MAX_BLOCK_NAME_LEN];
-	struct kstr *name = kstr_of(l, ymd_argv_get(l, 0));
+	struct kstr *name = kstr_of(l, ymd_argv(l, 0));
 	if (vm_reached(l->vm, name->land))
 		return 0;
 	fp = fopen(name->land, "r");
@@ -714,33 +712,33 @@ static int libx_import(L) {
 	if (i < 0)
 		ymd_panic(l, "Import fatal, syntax error in file: `%s`",
 		       name->land);
-	for (i = 1; i < ymd_argv(l)->count; ++i)
-		*ymd_push(l) = *ymd_argv_get(l, i);
+	for (i = 1; i < ymd_argc(l); ++i)
+		*ymd_push(l) = *ymd_argv(l, i);
 	return ymd_call(l, func_of(l, ymd_top(l, 0)),
-	                ymd_argv(l)->count - 1, 0);
+	                ymd_argc(l) - 1, 0);
 }
 
 static int libx_eval(L) {
 	int i;
 	struct func *fn;
-	struct kstr *script = kstr_of(l, ymd_argv_get(l, 0));
+	struct kstr *script = kstr_of(l, ymd_argv(l, 0));
 	i = ymd_compile(l, "__blk_eval__", "[chunk]", script->land);
 	if (i < 0)
 		return 0;
 	fn = func_of(l, ymd_top(l, 0));
-	for (i = 1; i < ymd_argv(l)->count; ++i)
-		*ymd_push(l) = *ymd_argv_get(l, i);
-	return ymd_call(l, fn, ymd_argv(l)->count - 1, 0);
+	for (i = 1; i < ymd_argc(l); ++i)
+		*ymd_push(l) = *ymd_argv(l, i);
+	return ymd_call(l, fn, ymd_argc(l) - 1, 0);
 }
 
 static int libx_compile(L) {
-	struct kstr *script = kstr_of(l, ymd_argv_get(l, 0));
+	struct kstr *script = kstr_of(l, ymd_argv(l, 0));
 	int i = ymd_compile(l, "__blk_compile__", "[chunk]", script->land);
 	return (i < 0) ? 0 : 1;
 }
 
 static int libx_env(L) {
-	struct kstr *which = kstr_of(l, ymd_argv_get(l, 0));
+	struct kstr *which = kstr_of(l, ymd_argv(l, 0));
 	if (strcmp(which->land, "*global") == 0)
 		setv_hmap(ymd_push(l), l->vm->global);
 	else if (strcmp(which->land, "*current") == 0)
@@ -751,7 +749,7 @@ static int libx_env(L) {
 }
 
 static int libx_atoi(L) {
-	struct kstr *arg0 = kstr_of(l, ymd_argv_get(l, 0));
+	struct kstr *arg0 = kstr_of(l, ymd_argv(l, 0));
 	int ok = 1;
 	ymd_int_t i = dtoll(arg0->land, &ok);
 	if (!ok)
@@ -761,7 +759,7 @@ static int libx_atoi(L) {
 }
 
 static int libx_atof(L) {
-	struct kstr *arg0 = kstr_of(l, ymd_argv_get(l, 0));
+	struct kstr *arg0 = kstr_of(l, ymd_argv(l, 0));
 	ymd_float(l, atof(arg0->land));
 	return 1;
 }
@@ -773,17 +771,17 @@ static int libx_atof(L) {
 // slice(array, start) == slice(array, start, len(array) - start)
 // slice(skip_list, begin, end) -> skip_list[begin, end) 
 static int libx_slice(L) {
-	struct variable *arg0 = ymd_argv_get(l, 0);
+	struct variable *arg0 = ymd_argv(l, 0);
 	switch (ymd_type(arg0)) {
 	case T_KSTR: {
 		struct kstr *o = kstr_of(l, arg0);
 		ymd_int_t start, count;
-		if (ymd_argv(l)->count == 2) {
-			start = int4of(l, ymd_argv_get(l, 1));
+		if (ymd_argc(l) == 2) {
+			start = int4of(l, ymd_argv(l, 1));
 			count = o->len - start;
 		} else {
-			start = int4of(l, ymd_argv_get(l, 1));
-			count = int4of(l, ymd_argv_get(l, 2));
+			start = int4of(l, ymd_argv(l, 1));
+			count = int4of(l, ymd_argv(l, 2));
 		}
 		count = YMD_MIN(count, o->len - start);
 		if (count <= 0)
@@ -794,12 +792,12 @@ static int libx_slice(L) {
 	case T_DYAY: {
 		struct dyay *o = dyay_of(l, arg0);
 		ymd_int_t i, start, count;
-		if (ymd_argv(l)->count == 2) {
-			start = int4of(l, ymd_argv_get(l, 1));
+		if (ymd_argc(l) == 2) {
+			start = int4of(l, ymd_argv(l, 1));
 			count = o->count - start;
 		} else {
-			start = int4of(l, ymd_argv_get(l, 1));
-			count = int4of(l, ymd_argv_get(l, 2));
+			start = int4of(l, ymd_argv(l, 1));
+			count = int4of(l, ymd_argv(l, 2));
 		}
 		count = YMD_MIN(count, o->count - start);
 		ymd_dyay(l, 0);
@@ -815,12 +813,12 @@ static int libx_slice(L) {
 		const struct sknd *i, *k;
 		struct variable *arg1;
 		ymd_skls(l, o->cmp);
-		if (ymd_argv(l)->count == 2) {
-			arg1 = ymd_argv_get(l, 1);
+		if (ymd_argc(l) == 2) {
+			arg1 = ymd_argv(l, 1);
 			k = NULL; // to end
 		} else {
-			struct variable *arg2 = ymd_argv_get(l, 2);
-			arg1 = ymd_argv_get(l, 1);
+			struct variable *arg2 = ymd_argv(l, 2);
+			arg1 = ymd_argv(l, 1);
 			// arg1 must be front of arg2 in the skip list. 
 			if (skls_key_compare(l->vm, o, arg1, arg2) > 0) {
 				struct variable *tmp = arg1;
@@ -858,14 +856,13 @@ static int libx_exit(L) {
 //     random range [min, max)
 static int libx_rand(L) {
 	ymd_int_t rv = 0;
-	struct dyay *argv = ymd_argv(l);
-	int argc = !argv ? 0 : argv->count;
+	int argc = ymd_argc(l);
 	switch (argc) {
 	case 0:
 		rv = rand();
 		break;
 	case 1: {
-		ymd_int_t limit = int_of(l, ymd_argv_get(l, 0));
+		ymd_int_t limit = int_of(l, ymd_argv(l, 0));
 		if (limit > 0)
 			rv = rand() % limit;
 		else
@@ -873,8 +870,8 @@ static int libx_rand(L) {
 		} break;
 	case 2:
 	default: {
-		ymd_int_t arg0 = int_of(l, ymd_argv_get(l, 0)),
-				  arg1 = int_of(l, ymd_argv_get(l, 1));
+		ymd_int_t arg0 = int_of(l, ymd_argv(l, 0)),
+				  arg1 = int_of(l, ymd_argv(l, 1));
 		ymd_int_t min, max;
 		if (arg0 < arg1)
 			min = arg0, max = arg1;
@@ -900,7 +897,7 @@ static const char *gc_state_str[] = {
 };
 
 static int libx_gc(L) {
-	const struct kstr *arg0 = kstr_of(l, ymd_argv_get(l, 0));
+	const struct kstr *arg0 = kstr_of(l, ymd_argv(l, 0));
 	if (strcmp(arg0->land, "pause") == 0) {
 		gc_active(l->vm, +1);
 		return 0;
@@ -927,16 +924,16 @@ static int libx_gc(L) {
 }
 
 static int libx_setmetatable(L) {
-	struct mand *o = mand_of(l, ymd_argv_get(l, 0));
-	if (ymd_type(ymd_argv_get(l, 1)) != T_HMAP &&
-		ymd_type(ymd_argv_get(l, 1)) != T_SKLS)
+	struct mand *o = mand_of(l, ymd_argv(l, 0));
+	if (ymd_type(ymd_argv(l, 1)) != T_HMAP &&
+		ymd_type(ymd_argv(l, 1)) != T_SKLS)
 		ymd_panic(l, "Not metatable type!");
-	mand_proto(o, ymd_argv_get(l, 1)->u.ref);
+	mand_proto(o, ymd_argv(l, 1)->u.ref);
 	return 0;
 }
 
 static int libx_metatable(L) {
-	struct mand *o = mand_of(l, ymd_argv_get(l, 0));
+	struct mand *o = mand_of(l, ymd_argv(l, 0));
 	if (mand_proto(o, NULL))
 		setv_ref(ymd_push(l), mand_proto(o, NULL));
 	else
@@ -946,13 +943,12 @@ static int libx_metatable(L) {
 
 
 static int libx_error(L) {
-	struct dyay *argv = ymd_argv(l);
-	int i;
-	if (argv->count > 0) {
+	int i, argc = ymd_argc(l);
+	if (argc > 0) {
 		struct zostream os = ZOS_INIT;
-		for (i = 0; i < argv->count; ++i) {
+		for (i = 0; i < argc; ++i) {
 			if (i) zos_append(&os, " ", 1);
-			tostring(&os, argv->elem + i);
+			tostring(&os, ymd_argv(l, i));
 		}
 		ymd_kstr(l, zos_buf(&os), os.last);
 		zos_final(&os);
@@ -965,13 +961,12 @@ static int libx_error(L) {
 }
 
 static int libx_pcall(L) {
-	struct dyay *argv = ymd_argv_chk(l, 1);
-	struct func *fn = func_of(l, argv->elem);
-	int i;
+	int i, argc = ymd_argc(l);
+	struct func *fn = func_of(l, ymd_argv(l, 0));
 	setv_func(ymd_push(l), fn);
-	for (i = 1; i < argv->count; ++i)
-		*ymd_push(l) = argv->elem[i];
-	i = ymd_pcall(l, fn, argv->count - 1);
+	for (i = 1; i < argc; ++i)
+		*ymd_push(l) = *ymd_argv(l, i);
+	i = ymd_pcall(l, fn, argc - 1);
 	ymd_skls(l, SKLS_ASC);
 	if (i < 0) {
 		ymd_move(l, 1);

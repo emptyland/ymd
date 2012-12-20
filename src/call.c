@@ -434,7 +434,7 @@ retry:
 				var = fn->upval[asm_param(inst)];
 				break;
 			case F_ARGV: // Push Argv
-				setv_dyay(&var, &l->info->argv);
+				setv_dyay(&var, l->info->u.argv);
 				break;
 			}
 			*ymd_push(l) = var;
@@ -598,7 +598,8 @@ retry:
 }
 #undef IMPL_JUMP
 
-static void vm_copy_args(struct ymd_context *l, struct func *fn, int argc) {
+static void vm_copy_args(struct ymd_context *l, struct func *fn, int argc,
+		int adjust) {
 	int i;
 	if (!fn->is_c) {
 		struct chunk *core = fn->u.core;
@@ -607,34 +608,63 @@ static void vm_copy_args(struct ymd_context *l, struct func *fn, int argc) {
 		while (i--) // Copy to local variable
 			l->info->loc[k - i - 1] = *ymd_top(l, i);
 	}
-	if (argc > 0 && func_argv(fn)) {
-		l->info->argv.marked = GC_FIXED;
-		l->info->argv.type   = T_DYAY;
-		i = argc;
-		while (i--) // Copy to array: argv
-			*dyay_add(l->vm, &l->info->argv) = *ymd_top(l, i);
+	if (func_argv(fn))
+		l->info->u.argv = dyay_new(l->vm, argc);
+	if (argc > 0) {
+		// Make argv object, type == dyay
+		if (func_argv(fn)) {
+			i = argc;
+			while (i--) // Copy to array: argv
+				*dyay_add(l->vm, l->info->u.argv) = *ymd_top(l, i);
+		} else if (fn->is_c) {
+			// Record the number of argument for C function.
+			// print (1, 2, 3)
+			// print [3]
+			// 1 [2]  <- lea
+			// 2 [1]
+			// 3 [0]
+			l->info->u.lea = ymd_top(l, argc - 1);
+		}
 	}
+	l->info->argc = argc;
+	l->info->adjust = adjust;
+}
+
+static void vm_balance(struct ymd_context *l, int n, int rv) {
+	if (rv) {
+		struct variable ret = *ymd_top(l, 0);
+		ymd_pop(l, n + 1);
+		*ymd_push(l) = ret;
+	} else {
+		ymd_pop(l, n);
+	}
+	l->info->u.lea = NULL;
+	l->info->argc  = 0;
 }
 
 static int vm_call(struct ymd_context *l, struct call_info *ci,
 	               struct func *fn, int argc, int method) {
-	int rv;
+	int rv, balance = 0;
 	if (method) ++argc; // Extra arg0: self
+	balance = argc + (method ? 0 : 1);
 	// Link the call info
 	ci->pc = 0;
 	ci->run = fn;
 	ci->chain = l->info;
 	l->info = ci;
-	vm_copy_args(l, fn, argc);
-	// Pop all args
-	ymd_pop(l, argc + (method ? 0 : 1));
+	vm_copy_args(l, fn, argc, method);
 	// Run this function
-	if (fn->is_c)
+	if (fn->is_c) {
+		// Pop args after calling.
 		rv = (*fn->u.nafn)(l);
-	else
+		vm_balance(l, balance, rv);
+	} else {
+		// Pop all args
+		ymd_pop(l, balance);
 		rv = vm_run(l, fn, argc);
+	}
 	if (func_argv(fn))
-		dyay_final(l->vm, &l->info->argv);
+		dyay_final(l->vm, l->info->u.argv);
 	call_final(l);
 	return rv;
 }
