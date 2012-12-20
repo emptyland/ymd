@@ -62,13 +62,13 @@ struct chunk {
 	unsigned short klz;
 	unsigned short kuz;
 	unsigned short kargs; // Prototype number of arguments
+	unsigned short argv; // has argv ?
 };
 
 struct func {
 	GC_HEAD;
 	struct kstr *name; // Function name
 	struct variable *upval; // Up values
-	struct dyay *argv;  // Arguments
 	unsigned short is_c; // Is native C function?
 	unsigned short n_upval; // Natvie function use it for upval;
 	union {

@@ -451,8 +451,11 @@ static int gc_mark_context(struct ymd_mach *vm) {
 	if (l->info) { // Mark all function in stack
 		struct call_info *i = l->info;
 		while (i) {
+			int n = i->argv.count;
+			while (n--)
+				gc_markv(i->argv.elem + n);
 			gc_marko(i->run);
-			++count;
+			count += (i->argv.count + 1);
 			i = i->chain;
 		}
 	}
@@ -560,9 +563,6 @@ static int gc_travel_func(struct func *o) {
 	int i;
 	struct chunk *core;
 	gc_travelo(o->name);
-	if (o->argv) {
-		gc_travelo(o->argv);
-	}
 	if (o->upval) {
 		for (i = 0; i < o->n_upval; ++i) {
 			gc_travelv(o->upval + i);

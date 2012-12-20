@@ -10,4 +10,4 @@ before_script:
 script:
     - scons -Q
     - src/all_test
-    - bin/sanity.sh
+    - cd src && ./yamada --test testing/all_test.ymd

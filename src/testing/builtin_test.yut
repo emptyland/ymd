@@ -2,7 +2,7 @@ BuiltinTest = @{
 	kTestFile1: "testing/test1.log",
 	kTestFile2: "testing/test2.log",
 
-	test_len : func (self) {
+	testLen : func (self) {
 		Assert:EQ(0, len(""))
 		Assert:EQ(1, len("0"))
 		Assert:EQ(2, len("\n\r"))
@@ -32,7 +32,7 @@ BuiltinTest = @{
 		Assert:EQ(14, len(val))
 	},
 
-	test_insert : func (self) {
+	testInsert : func (self) {
 		var val = []
 		Assert:EQ(0, len(val))
 
@@ -65,7 +65,7 @@ BuiltinTest = @{
 		Assert:EQ(@{}, val[6])
 	},
 
-	test_insert_ordered : func (self) {
+	testInsertOrdered : func (self) {
 		var val = [0, 1, 2, 3, 4, 5, 6, 7]
 		var i = len(val);
 		Assert:EQ(0, val[0])
@@ -88,7 +88,7 @@ BuiltinTest = @{
 		Assert:EQ(1, val[3])
 	},
 
-	test_append : func (self) {
+	testAppend : func (self) {
 		var val = []
 		append(val, 0, 1, 2, 3)
 		Assert:EQ(4, len(val))
@@ -102,7 +102,7 @@ BuiltinTest = @{
 		Assert:EQ(0, val[4])
 	},
 
-	test_range : func (self) {
+	testRange : func (self) {
 		var iter = range(0, 0)
 		Assert:Nil(iter())
 		Assert:Nil(iter()) // Again
@@ -133,7 +133,7 @@ BuiltinTest = @{
 		Assert:Nil(iter())
 	},
 
-	test_range_container : func (self) {
+	testRangeContainer : func (self) {
 		var iter = range([])
 		var i
 		for i = 0, rand(100, 200) {
@@ -163,7 +163,7 @@ BuiltinTest = @{
 		Assert:Nil(iter())
 	},
 
-	test_rank : func (self) {
+	testRank : func (self) {
 		var iter = rank([])
 		Assert:Nil(iter())
 		Assert:Nil(iter())
@@ -187,21 +187,19 @@ BuiltinTest = @{
 		Assert:Nil(iter())
 	},
 
-	test_import : func (self) {
+	testImport : func (self) {
 		var lib = import "testing/imported1.ymd"
 		Assert:EQ("imported1", lib)
 		lib = import "testing/imported2.ymd"
 		Assert:EQ("imported2", lib)
-		print(__reached__)
 
 		lib = import "testing/imported1.ymd"
 		Assert:Nil(lib)
 		lib = import "testing/imported2.ymd"
 		Assert:Nil(lib)
-		print(__reached__)
 	},
 
-	test_strbuf : func (self) {
+	testStrbuf : func (self) {
 		var s = strbuf()
 		var i, rv
 		for i = 0, 8 {
@@ -221,7 +219,7 @@ BuiltinTest = @{
 		Assert:EQ("abc", s:get())
 	},
 
-	test_strcat_benchmark : func (self) {
+	testStrcatBenchmark : func (self) {
 		print ("Memory begin:", gc("used"))
 		var s = ""
 		for var i = 0, 30000 {
@@ -230,7 +228,7 @@ BuiltinTest = @{
 		print ("         end:", gc("used"))
 	},
 
-	test_strbuf_benchmark : func (self) {
+	testStrbufBenchmark : func (self) {
 		print ("Memory begin:", gc("used"))
 		var sb = strbuf()
 		for var i = 0, 30000 {
@@ -240,7 +238,7 @@ BuiltinTest = @{
 		print ("         end:", gc("used"))
 	},
 
-	test_file : func (self) {
+	testFile : func (self) {
 		var f = open(self.kTestFile1, "w")
 		var buf
 		Assert:NotNil(f);
@@ -262,7 +260,7 @@ BuiltinTest = @{
 		os.remove(self.kTestFile1)
 	},
 
-	test_regex : func (self) {
+	testRegex : func (self) {
 		var regex = pattern("a=([0-9]*)", "*sub")
 		var fast_match = env("*global").match
 		//var match = func [fast_match] (r, s) {
@@ -282,7 +280,7 @@ BuiltinTest = @{
 		Assert:EQ("", match(regex, "name=")[1])
 	},
 
-	test_rand : func (self) {
+	testRand : func (self) {
 		var i, n
 		for i = 0, 10000 {
 			Assert:EQ("int", typeof rand())
@@ -298,7 +296,7 @@ BuiltinTest = @{
 		}
 	},
 
-	test_eval : func (self) {
+	testEval : func (self) {
 		var n = eval("return 1111 + 256 / 2")
 		Assert:EQ(1111 + 256 / 2, n)
 
@@ -319,7 +317,7 @@ BuiltinTest = @{
 
 	kBenchCount: 1000,
 
-	remove_run : func (self, o) {
+	removeRun : func (self, o) {
 		var rv, i
 		Assert:True((typeof o) == "hashmap" or (typeof o) == "skiplist")
 		for i = 0, self.kBenchCount {
@@ -340,12 +338,12 @@ BuiltinTest = @{
 		Assert:Nil(o[0])
 	},
 
-	test_remove : func (self) {
-		self:remove_run({})
-		self:remove_run(@{})
+	testRemove : func (self) {
+		self:removeRun({})
+		self:removeRun(@{})
 	},
 
-	test_slice : func (self) {
+	testSlice : func (self) {
 		var k = "0123456789"
 		Assert:EQ("123456789", slice(k, 1))
 		Assert:EQ("123456789", slice(k, 1, 9))

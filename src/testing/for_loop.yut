@@ -1,7 +1,7 @@
 ForLoopTest = @{
 	benchmark : 3000000,
 
-	test_forstep_sanity : func (self) {
+	testForstepSanity : func (self) {
 		var c = 0, k = 10000
 		for var i = 0, k {
 			c = c + 1
@@ -22,7 +22,7 @@ ForLoopTest = @{
 		Assert:Fail("For loop fail, can not go to here.")
 	},
 
-	test_foreach_sanity : func (self) {
+	testForeachSanity : func (self) {
 		var c = 0, k = 10000
 		for var i in range(0, k) {
 			c = c + 1
@@ -43,7 +43,7 @@ ForLoopTest = @{
 		Assert:Fail("For loop fail, can not go to here.")
 	},
 
-	test_forstep_step : func (self) {
+	testForstepStep : func (self) {
 		var i, c = 0
 		for i = 0, 100, 2 {
 			c = c + 1
@@ -75,7 +75,7 @@ ForLoopTest = @{
 		Assert:EQ(7, c)
 	},
 
-	test_forstep_once : func (self) {
+	testForstepOnce : func (self) {
 		var n = 0
 		var func initial() {
 			var r = n
@@ -103,12 +103,12 @@ ForLoopTest = @{
 		Assert:EQ(3, c)
 	},
 
-	test_foreach_benchmark : func (self) {
+	testForeachBenchmark : func (self) {
 		for var i in range(0, self.benchmark) {
 		}
 	},
 
-	test_foreach_benchmark_user : func (self) {
+	testForeachBenchmarkUser : func (self) {
 		var func range(i, end) {
 			return func () {
 				if i > end {
@@ -122,13 +122,13 @@ ForLoopTest = @{
 		}
 	},
 
-	test_forstep_benchmark : func (self) {
+	testForstepBenchmark : func (self) {
 		var i
 		for i = 0, self.benchmark {
 		}
 	},
 
-	test_fail_sanity : func (self) {
+	testFailSanity : func (self) {
 		for {
 			break
 		} fail {
@@ -137,7 +137,7 @@ ForLoopTest = @{
 		Assert:Fail("Can not goto here, `fail' not work!")
 	},
 
-	test_fail_range : func (self) {
+	testFailRange : func (self) {
 		var k = 1000
 		for var i = 0, 10000 {
 			if i == k {
@@ -150,7 +150,7 @@ ForLoopTest = @{
 		Assert:Fail("Can not goto here, `fail' not work!")
 	},
 
-	test_range_counting : func (self) {
+	testRangeCounting : func (self) {
 		var c = 0 // counter
 		var k = 65535 // max number
 		for var i = 0, k {
@@ -162,7 +162,7 @@ ForLoopTest = @{
 		Assert:EQ(k, c)
 	},
 
-	test_fail_range_negative : func (self) {
+	testFailRangeNegative : func (self) {
 		for var i = 0, 100 {
 
 		} fail {

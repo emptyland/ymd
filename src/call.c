@@ -317,6 +317,9 @@ retry:
 			case F_OFF:
 				vm_iputg(vm, asm_param(inst), ymd_top(l, 0));
 				break;
+			default:
+				assert(!"No reached.");
+				break;
 			}
 			ymd_pop(l, 1);
 			break;  
@@ -429,6 +432,9 @@ retry:
 				break;
 			case F_UP: // Push Upval
 				var = fn->upval[asm_param(inst)];
+				break;
+			case F_ARGV: // Push Argv
+				setv_dyay(&var, &l->info->argv);
 				break;
 			}
 			*ymd_push(l) = var;
@@ -594,24 +600,19 @@ retry:
 
 static void vm_copy_args(struct ymd_context *l, struct func *fn, int argc) {
 	int i;
-	struct variable *argv = NULL;
-	// Lazy creating
-	fn->argv = !fn->argv ? dyay_new(l->vm, argc) : fn->argv;
 	if (!fn->is_c) {
 		struct chunk *core = fn->u.core;
 		const int k = core->kargs < argc ? core->kargs : argc;
-		argv = vm_find_local(l, fn, "argv");
-		setv_nil(argv);
 		i = k;
 		while (i--) // Copy to local variable
 			l->info->loc[k - i - 1] = *ymd_top(l, i);
 	}
-	if (argc > 0) {
+	if (argc > 0 && func_argv(fn)) {
+		l->info->argv.marked = GC_FIXED;
+		l->info->argv.type   = T_DYAY;
 		i = argc;
 		while (i--) // Copy to array: argv
-			*dyay_add(l->vm, fn->argv) = *ymd_top(l, i);
-		if (!fn->is_c)
-			setv_dyay(argv, fn->argv);
+			*dyay_add(l->vm, &l->info->argv) = *ymd_top(l, i);
 	}
 }
 
@@ -628,14 +629,12 @@ static int vm_call(struct ymd_context *l, struct call_info *ci,
 	// Pop all args
 	ymd_pop(l, argc + (method ? 0 : 1));
 	// Run this function
-	if (fn->is_c) {
+	if (fn->is_c)
 		rv = (*fn->u.nafn)(l);
-		goto ret;
-	}
-	rv = vm_run(l, fn, argc);
-ret:
-	if (fn->argv)
-		dyay_final(l->vm, fn->argv);
+	else
+		rv = vm_run(l, fn, argc);
+	if (func_argv(fn))
+		dyay_final(l->vm, &l->info->argv);
 	call_final(l);
 	return rv;
 }

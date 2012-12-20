@@ -95,4 +95,8 @@ static inline int func_line(const struct func *fn) {
 	return fn->u.core->line[0];
 }
 
+static inline int func_argv(const struct func *fn) {
+	return fn->is_c ? 1 : fn->u.core->argv;
+}
+
 #endif // YMD_VALUE_INL_H

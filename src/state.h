@@ -63,6 +63,7 @@ static inline void vm_free(struct ymd_mach *vm, void *p) {
 struct call_info {
 	struct call_info *chain;
 	struct func *run;
+	struct dyay argv;
 	int pc;
 	struct variable *loc;
 };
@@ -178,7 +179,8 @@ static inline struct func *ymd_called(L) {
 }
 
 static inline struct dyay *ymd_argv(L) {
-	return ymd_called(l)->argv;
+	assert(l->info);
+	return &l->info->argv;
 }
 
 static inline struct dyay *ymd_argv_chk(L, int need) {
@@ -209,9 +211,9 @@ static inline struct variable *ymd_top(L, int i) {
 	if (l->top == l->stk)
 		ymd_panic(l, "Stack empty!");
 	if (i < 0 && 1 - i >= l->top - l->stk)
-		ymd_panic(l, "Stack out of range");
+		ymd_panic(l, "Stack out of range [%d]", i);
 	if (i > 0 &&     i >= l->top - l->stk)
-		ymd_panic(l, "Stack out of range");
+		ymd_panic(l, "Stack out of range [%d]", i);
 	return i < 0 ? l->stk + 1 - i : l->top - 1 - i;
 }
 

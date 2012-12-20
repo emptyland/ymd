@@ -321,7 +321,8 @@ static struct yut_case_entry *yut_ordered_case(struct ymd_context *l,
 				(fn = func_x(&i->v)) == NULL ||
 				fn->is_c) // It's C function?
 			continue;
-		yut_ordered_insert(name, fn, ord, k);
+		// `name + 4' means skip "test" prefix.
+		yut_ordered_insert(name + 4, fn, ord, k);
 	}
 	return ord;
 }
@@ -423,7 +424,7 @@ int ymd_test(struct ymd_context *l, const char *pattern, int repeated,
 					rv = 1;
 					goto final;
 				}
-				break;
+				//break;
 			}
 		}
 	}

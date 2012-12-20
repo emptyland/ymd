@@ -35,3 +35,4 @@ typeof, TYPEOF
 in, IN
 fail, FAIL
 let, LET
+argv, ARGV

@@ -21,7 +21,7 @@ var func lfunc (a, b, c, d, e, f) {
 }
 
 CallTest = @{
-	test_argv : func (self) {
+	testArgv : func (self) {
 		Assert:EQ("function", typeof gfunc)
 		Assert:EQ("function", typeof lfunc)
 		var k = "gfunc"
@@ -33,7 +33,7 @@ CallTest = @{
 		Assert:EQ(k, gfunc(1, "2", [], {}, func () {}))
 	},
 
-	test_nested : func (self) {
+	testNested : func (self) {
 		var func foo () {
 			var k = len(argv)
 			if k > 0 { Assert:EQ(0, argv[0]) }
@@ -48,7 +48,7 @@ CallTest = @{
 		Assert:EQ(3, foo(0, 1, 2, 3))
 	},
 
-	test_method : func (self) {
+	testMethod : func (self) {
 		var o = {}
 		func o.init () {
 			self.num = 1024
@@ -63,7 +63,7 @@ CallTest = @{
 		Assert:EQ(2048, o.num)
 	},
 
-	test_closure : func (self) {
+	testClosure : func (self) {
 		var func build (i) {
 			return func () {
 				i = i + 1
@@ -86,7 +86,7 @@ CallTest = @{
 		}
 	},
 
-	test_func_closed_levels : func (self) {
+	testFuncClosedLevels : func (self) {
 		var top = "top guys"
 		var func build(i) {
 			var j = 5
@@ -125,7 +125,7 @@ CallTest = @{
 		Assert:EQ("xx", f.x)
 	},
 
-	test_0_return : func (self) {
+	test0Return : func (self) {
 		var func zerof(isz) {
 			if isz {
 				return

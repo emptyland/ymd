@@ -1,5 +1,5 @@
 RemovingTest = @{
-	test_sanity : func (self) {
+	testSanity : func (self) {
 		var o = {
 			i: 0,
 			j: 1,
@@ -46,15 +46,15 @@ RemovingTest = @{
 		}
 	},
 
-	test_skls : func (self) {
-		self:all_remove(@{})
+	testSkls : func (self) {
+		self:allRemove(@{})
 	},
 
-	test_hmap : func (self) {
-		self:all_remove({})
+	testHmap : func (self) {
+		self:allRemove({})
 	},
 
-	all_remove : func (self, o) {
+	allRemove : func (self, o) {
 		var k = 10000
 		for var i = 0, k {
 			o[i] = str(i)	

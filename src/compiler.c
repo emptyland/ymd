@@ -67,8 +67,9 @@ static inline struct chunk *ymk_chunk(struct ymd_parser *p) {
 
 static inline void ymk_chunk_reserved(struct ymd_parser *p,
                                       struct chunk *x) {
-	blk_add_lz(p->vm, x, "argv");
-	// blk_add_lz(x, "self");
+	(void)p;
+	(void)x;
+	// TODO:
 }
 
 static inline void ymk_enter(struct ymd_parser *p, struct chunk *x) {
@@ -541,6 +542,11 @@ static void parse_primary(struct ymd_parser *p) {
 		break;
 	case SYMBOL:
 		ymk_emit_push(p, ymk_symbol(p));
+		break;
+	case ARGV:
+		ymc_next(p);
+		ymk_emitOf(p, I_PUSH, F_ARGV);
+		++(p->blk->argv); // Record argv number of referenced.
 		break;
 	default:
 		ymc_fail(p, "Unexpected symbol");

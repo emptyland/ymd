@@ -47,13 +47,16 @@ static const char *address(const struct func *fn, uint_t inst,
 		snprintf(buf, n, asm_param(inst) == 0 ? "false" : "true");
 		break;
 	case F_NIL:
-		snprintf(buf, n, "nil");
+		strncpy(buf, "nil", n);
 		break;
 	case F_OFF:
 		snprintf(buf, n, "[global]:@%s", fn_kz(fn, asm_param(inst)));
 		break;
 	case F_UP:
 		snprintf(buf, n, "[upval]:@%s", fn_uz(fn, asm_param(inst)));
+		break;
+	case F_ARGV:
+		strncpy(buf, "[argv]", n);
 		break;
 	default:
 		assert(!"No reached.");

@@ -43,6 +43,7 @@
 #define F_NIL     4 // param: Ignore
 #define F_OFF     5 // param: `kz` offset
 #define F_UP      6 // param: `bind' offset closure's upval
+#define F_ARGV    7 // param: Ignore
 
 // test
 // param: Ignore all

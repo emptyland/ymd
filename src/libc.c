@@ -685,6 +685,9 @@ static const char *file2blknam(const char *name, char *buf, int len) {
 		if (ch == '.') { // Transform `.` to `_2d_`
 			strcat(tran + i, "_2d_");
 			i += 4;
+		} else if (ch == '/') {
+			strcat(tran + i, "_4d_");
+			i += 4;
 		} else {
 			tran[i] = ch;
 			++i;

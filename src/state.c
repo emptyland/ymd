@@ -334,8 +334,8 @@ void ymd_panic(struct ymd_context *l, const char *fmt, ...) {
 void ymd_raise(struct ymd_context *l) {
 	assert (l->jpt);
 	// NOTE: Call chain back and cleanup argv!
-	if (ymd_called(l)->argv)
-		dyay_final(l->vm, ymd_called(l)->argv);
+	if (func_argv(l->info->run))
+		dyay_final(l->vm, ymd_argv(l));
 	l->info = l->info->chain;
 	l->jpt->panic = 0;
 	longjmp(l->jpt->core, l->jpt->level);
