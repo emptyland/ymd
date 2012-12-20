@@ -140,7 +140,7 @@ static void yut_fail1(L, const char *expected,
 	struct func *fn = up->run;
 	struct zostream os = ZOS_INIT;
 	ymd_printf("${[yellow][   INFO   ] %s:%d Assert fail, expected}$"
-	           "${[purple]<%s>, unexpected}$${[purple]<%s>}$;\n",
+	           "${[purple]<%s>}$, ${[yellow]unexpected}$${[purple]<%s>}$;\n",
 			   fn->u.core->file->land,
 	           fn->u.core->line[up->pc - 1],
 	           expected,
@@ -176,9 +176,9 @@ static int libx_Fail(L) {
 static int libx_True(L) {
 	struct variable *arg0 = ymd_argv(l, 1);
 	if (is_nil(arg0))
-		yut_fail1(l, "not nil", arg0);
+		yut_fail1(l, "!nil", arg0);
 	if (ymd_type(arg0) == T_BOOL && !arg0->u.i)
-		yut_fail1(l, "true or not nil", arg0);
+		yut_fail1(l, "true or !nil", arg0);
 	return 0;
 }
 
@@ -333,6 +333,7 @@ static int yut_test(struct ymd_mach *vm, const struct filter *filter,
 	struct yut_case_entry *ord;
 	struct func *setup, *teardown, *init, *final;
 	struct ymd_context *l = ioslate(vm);
+	struct call_info *curr = l->info;
 	if (ymd_type(test) != T_SKLS || !ftest(filter, clazz))
 		return 0;
 	// Get all of environmord functions.
@@ -341,6 +342,7 @@ static int yut_test(struct ymd_mach *vm, const struct filter *filter,
 	init     = yut_method(vm, test->u.ref, "init");
 	final    = yut_method(vm, test->u.ref, "final");
 	if (setjmp(yut_jpt(l, vm_getg(vm, "Assert"))->jpt)) {
+		l->info = curr;
 		yut_fault(); // Print failed message
 		return -1; // Test Fail
 	}

@@ -134,5 +134,26 @@ CallTest = @{
 		}
 		Assert:EQ(0, zerof(false))
 		Assert:Nil(zerof(true))
+	},
+
+	testRecursiveCall : func (self) {
+		Assert:EQ(0, loopFor(10))
+		Assert:EQ(0, loopFor(100))
+		Assert:EQ(0, self:loopFor(10))
+		Assert:EQ(0, self:loopFor(100))
+	},
+
+	loopFor : func (self, n) {
+		if n == 0 {
+			return n
+		}
+		return self:loopFor(n - 1)
 	}
+}
+
+func loopFor(n) {
+	if n == 0 {
+		return n
+	}
+	return loopFor(n - 1)
 }

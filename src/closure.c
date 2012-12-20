@@ -228,8 +228,7 @@ void func_dump(struct func *fn, FILE *fp) {
 	struct chunk *core = fn->u.core;
 	assert(!fn->is_c);
 	fprintf(fp, "Constant string:\n");
-	//for (i = 0; i < core->kkval; ++i)
-		// TODO:
+	// TODO:
 	fprintf(fp, "Local variable:\n");
 	for (i = 0; i < core->klz; ++i)
 		fprintf(fp, "[%d] %s\n", i, core->lz[i]->land);

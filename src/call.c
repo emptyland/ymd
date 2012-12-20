@@ -639,7 +639,6 @@ static void vm_balance(struct ymd_context *l, int n, int rv) {
 		ymd_pop(l, n);
 	}
 	l->info->u.lea = NULL;
-	l->info->argc  = 0;
 }
 
 static int vm_call(struct ymd_context *l, struct call_info *ci,
