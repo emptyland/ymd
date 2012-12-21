@@ -19,6 +19,11 @@ LiteralTest = @{
 		Assert:EQ(0, 0x0)
 		Assert:EQ(1, 0x1)
 		Assert:EQ(2, 0x2)
+
+		Assert:EQ(0.0, 0.0)
+		Assert:EQ(0.1, 0.1)
+		Assert:EQ(3.141516927, 3.141516927)
+		Assert:EQ(2.14, 2.14)
 	},
 
 	testBool : func (self) {

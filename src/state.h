@@ -19,15 +19,15 @@ struct kpool {
 };
 
 struct ymd_mach {
-	struct hmap *global;
-	struct kpool kpool;
-	struct gc_struct gc;
+	struct kpool kpool; // String pool
+	struct gc_struct gc; // GC
 	// Internal memory function:
 	void *(*zalloc)(struct ymd_mach *, void *, size_t);
 	void (*free)(struct ymd_mach *, void *);
 	void *cookie;
-	ymd_int_t tick;
-	struct ymd_context *curr;
+	ymd_int_t tick; // Instruction tick
+	struct hmap *global; // Global environment
+	struct ymd_context *curr; // Current context
 	struct variable knil; // nil flag
 };
 
@@ -62,7 +62,7 @@ static inline void vm_free(struct ymd_mach *vm, void *p) {
 
 struct call_info {
 	struct call_info *chain;
-	struct func *run;
+	struct func *run; // Current function
 	union {
 		struct dyay *argv; // Argv object, use in ymd function.
 		struct variable *lea; // Args stack frame, use in C function.
@@ -98,15 +98,19 @@ struct call_info *vm_nearcall(L);
 
 static inline const char *vm_file(const struct call_info *i) {
 	assert(i != NULL);
+	assert(i->run);
+	assert(!i->run->is_c);
 	return i->run->u.core->file->land;
 }
 
 static inline int vm_line(const struct call_info *i) {
 	assert(i != NULL);
+	assert(i->run);
+	assert(!i->run->is_c);
 	return i->run->u.core->line[i->pc - 1];
 }
 
-int vm_reached(struct ymd_mach *vm, const char *name);
+int vm_loaded(struct ymd_mach *vm, const char *name);
 
 //-----------------------------------------------------------------------------
 // Call and run:

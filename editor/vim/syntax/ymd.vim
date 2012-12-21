@@ -5,13 +5,15 @@ syntax keyword ymdKeyword typeof var and or not func with "@"
 syntax keyword ymdFunc panic open len strbuf __g__ error pcall
 syntax keyword ymdFunc end range rank ranki print str insert remove slice
 syntax keyword ymdFunc append match pattern argv self import env atoi atof
-syntax keyword ymdFunc exit eval compile echo rand gc __reached__
+syntax keyword ymdFunc exit eval compile echo rand gc __loaded__
 syntax keyword ymdTest Assert Fail True False Nil NotNil EQ NE LT LE GT GE
 
 syntax match ymdInteger "\<\d\+\>"
 syntax match ymdInteger "\<\-\d\+\>"
+syntax match ymdInteger "\<\+\d\+\>"
+syntax match ymdFloat "\<\d\*\.\d\+\>"
 syntax match ymdHex "\<0x\x\+\>"
-syntax match ymdFix "FIX\|FIXME\|TODO"
+syntax match ymdFix "FIX\|FIXME\|TODO\|XXX"
 syntax match ymdOperator "\^\|@"
 
 syntax region ymdComment start="//" skip="\\$" end="$"
@@ -30,6 +32,7 @@ hi def link ymdKeyword   Type
 hi ymdFix ctermfg=6 cterm=bold guifg=#0000FF
 hi ymdOperator ctermfg=1
 hi ymdInteger ctermfg=5
+hi ymdFloat ctermfg=5
 hi ymdHex ctermfg=5
 hi ymdString ctermfg=5
 hi ymdComment ctermfg=2

@@ -63,6 +63,7 @@ SETV_DECL(ref, struct gc_node *) {
 #undef SETV_DECL
 #define DEFINE_SETTER(name, ty) \
 static inline void setv_##name(struct variable *v, struct name *o) { \
+	assert(o != NULL && #name" setter to NULL."); \
 	v->tt = T_REF; \
 	v->u.ref = gcx(o); \
 }

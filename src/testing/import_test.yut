@@ -44,6 +44,6 @@ ImportTest = @{
 	testImportReached : func (self) {
 		var ok = import("testing/im_external.ymd")
 		Assert:Nil(ok)
-		print(__reached__)
+		print(__loaded__)
 	}
 }

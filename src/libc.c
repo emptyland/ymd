@@ -701,7 +701,7 @@ static int libx_import(L) {
 	FILE *fp;
 	char blknam[MAX_BLOCK_NAME_LEN];
 	struct kstr *name = kstr_of(l, ymd_argv(l, 0));
-	if (vm_reached(l->vm, name->land))
+	if (vm_loaded(l->vm, name->land))
 		return 0;
 	fp = fopen(name->land, "r");
 	if (!fp)

@@ -1,4 +1,6 @@
 #include "core.h"
+#include "tostring.h"
+#include "zstream.h"
 #include "print.h"
 #include <stdarg.h>
 #include <stdio.h>
@@ -7,6 +9,25 @@
 #include <assert.h>
 
 #define MAX_MSG_LEN 1024
+
+#define K_DECL(v) \
+	v(GLOBAL, "__G__") \
+	v(LOADED, "__loaded__") \
+	v(STAR_ALL, "*all") \
+	v(STAR_LINE, "*line") \
+	v(STAR_NOSUB, "*nosub") \
+	v(STAR_SUB, "*sub") \
+	v(RESUME, "resume") \
+	v(STEP, "step") \
+	v(USED, "used") \
+	v(THRESHOLD, "threshold") \
+	v(STATE, "state") \
+	v(PAUSE, "pause") \
+	v(SWEEPSTEP, "sweepstep") \
+	v(PROPAGATE, "propagate") \
+	v(SWEEPSTRING, "sweepstring") \
+	v(SWEEP, "sweep") \
+	v(FINALIZE, "finalize")
 
 static void vm_backtrace(struct ymd_context *l, int max);
 static int vm_init_context(struct ymd_mach *vm);
@@ -41,6 +62,7 @@ static void vm_final_context(struct ymd_mach *vm) {
 	vm->curr = NULL;
 }
 
+// Dump backtrace information
 static void vm_backtrace(struct ymd_context *l, int max) {
 	struct call_info *i = l->info;
 	assert(max >= 0);
@@ -59,6 +81,18 @@ static void vm_backtrace(struct ymd_context *l, int max) {
 		ymd_fprintf(stderr, " ${[green]>}$ ... more calls ...\n");
 }
 
+// Dump stack information
+static void vm_stack(struct ymd_context *l, int max) {
+	const struct variable *i = ymd_top(l, 0);
+	while (i >= l->stk && max--) {
+		struct zostream os = ZOS_INIT;
+		ymd_fprintf(stderr, " ${[green][%zd]}$ %s\n", ymd_top(l, 0) - i,
+				tostring(&os, i));
+		--i;
+		zos_final(&os);
+	}
+}
+
 struct call_info *vm_nearcall(struct ymd_context *l) {
 	struct call_info *i = l->info;
 	if (!i || !i->run)
@@ -69,8 +103,8 @@ struct call_info *vm_nearcall(struct ymd_context *l) {
 	return i;
 }
 
-int vm_reached(struct ymd_mach *vm, const char *name) {
-	struct hmap *lib = hmap_of(ioslate(vm), vm_getg(vm, "__reached__"));
+int vm_loaded(struct ymd_mach *vm, const char *name) {
+	struct hmap *lib = hmap_of(ioslate(vm), vm_getg(vm, "__loaded__"));
 	struct variable *count = vm_mem(vm, lib, name);
 	if (is_nil(count)) {
 		setv_int(vm_def(vm, lib, name), 0);
@@ -287,9 +321,9 @@ struct ymd_mach *ymd_init() {
 	// Init context
 	vm_init_context(vm);
 	// Load symbols
-	// `__reached__' variable: for all of loaded chunks
+	// `__loaded__' variable: for all of loaded chunks
 	ymd_hmap(ioslate(vm), 1);
-	ymd_putg(ioslate(vm), "__reached__");
+	ymd_putg(ioslate(vm), "__loaded__");
 	// `__g__' is global map
 	setv_hmap(ymd_push(ioslate(vm)), vm->global);
 	ymd_putg(ioslate(vm), "__g__");
@@ -315,6 +349,8 @@ static void do_panic(struct ymd_context *l, const char *msg) {
 				i->run->u.core->line[i->pc - 1], msg);
 	else
 		ymd_fprintf(stderr, "[none] ${[red]panic:}$ %s\n", msg);
+	fprintf(stderr, "-- Stack:\n");
+	vm_stack(l, 6);
 	fprintf(stderr, "-- Back trace:\n");
 	vm_backtrace(l, 6);
 	assert(l->jpt);
