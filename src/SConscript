@@ -97,7 +97,7 @@ def AllTest(name):
 	env.Program('all_test',
 		[units, yut_o, yut_rand_o, 'test_all_main.c'],
 		CPPFLAGS='-Isrc -DYUT_ALL_TEST',
-		LIBS='yamada regex m pthread'.split())
+		LIBS='yamada regex pcre m pthread'.split())
 	env.Depends('all_test', 'all_test.def')
 
 AllTest('''
@@ -112,5 +112,6 @@ AllTest('''
 	zstream
 	print
 	flags
-	value'''.split())
+	value
+	pcre'''.split())
 

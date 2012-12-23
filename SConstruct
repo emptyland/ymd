@@ -22,9 +22,10 @@ if conf['CC'] == 'clang':
 env = Environment(CC = conf['CC'],
 	CXX = conf['CXX'],
 	CCFLAGS = conf['CCFLAGS'],
-    LIBPATH = '#src third_party/regex'.split(),
+    LIBPATH = '#src third_party/regex third_party/pcre'.split(),
 	platform  = 'posix')
 
 Export('env')
 SConscript('src/SConscript')
 SConscript('src/third_party/regex/SConscript')
+SConscript('src/third_party/pcre/SConscript')

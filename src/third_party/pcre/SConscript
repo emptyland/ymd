@@ -1,0 +1,7 @@
+from SCons.Script import *
+
+Import('env')
+
+env.Library('pcre', Glob('*.c'),
+	CPPFLAGS='-Isrc/third_party/pcre -DSLJIT_CONFIG_AUTO -DHAVE_CONFIG_H')
+

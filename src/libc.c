@@ -653,9 +653,8 @@ static int libx_match(L) {
 	if (self->sub) {
 		regmatch_t matched[128];
 		ymd_dyay(l, 0);
-		err = regexec(&self->core, arg1->land,
-		              sizeof(matched)/sizeof(matched[0]),
-					  matched, 0);
+		err = regexec(&self->core, arg1->land, ARRAY_SIZEOF(matched),
+				matched, 0);
 		if (!err) {
 			regmatch_t *i;
 			for (i = matched; i->rm_so != -1; ++i) {
