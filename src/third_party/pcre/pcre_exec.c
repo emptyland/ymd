@@ -151,6 +151,7 @@ PCRE_PUCHAR eptr_start = eptr;
 register PCRE_PUCHAR p = md->start_subject + md->offset_vector[offset];
 #ifdef SUPPORT_UTF
 BOOL utf = md->utf;
+(void)utf;
 #endif
 
 #ifdef PCRE_DEBUG

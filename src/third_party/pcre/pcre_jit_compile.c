@@ -3705,7 +3705,7 @@ DEFINE_COMPILER;
 jump_list *found = NULL;
 jump_list **list = (*cc & XCL_NOT) == 0 ? &found : backtracks;
 pcre_int32 c, charoffset;
-const pcre_uint32 *other_cases;
+const pcre_uint32 *other_cases; (void)other_cases;
 struct sljit_jump *jump = NULL;
 pcre_uchar *ccbegin;
 int compares, invertcmp, numberofcmps;

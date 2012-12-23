@@ -89,11 +89,10 @@ static int test_jit_exec(void *p) {
 	int rv, vec[9] = {0};
 	pcre_jit_stack *js = pcre_jit_stack_alloc(1024, 4096);
 	pcre *re = pattern("(\\d+)\\+(\\d+)");
-	ASSERT_NOTNULL(re);
-	ASSERT_NOTNULL(js);
+	pcre_extra *ex = pcre_study(re, PCRE_STUDY_JIT_COMPILE, &sub);
 
 	sub = "100+99";
-	rv = pcre_jit_exec(re, NULL, sub, strlen(sub), 0, 0, vec, 9, js);
+	rv = pcre_jit_exec(re, ex, sub, strlen(sub), 0, 0, vec, 9, js);
 	rv = pcre_get_substring_list(sub, vec, rv, &list);
 	ASSERT_STREQ(sub, list[0]);
 	ASSERT_STREQ("100", list[1]);
