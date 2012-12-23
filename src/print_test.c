@@ -1,6 +1,6 @@
 #include "print.h"
 #include "yut_rand.h"
-#include "testing/print_test.def"
+#include "print_test.def"
 
 static int test_escape_color (void *p) {
 	(void)p;

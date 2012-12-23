@@ -1,6 +1,6 @@
 #include "core.h"
 #include "yut_rand.h"
-#include "testing/hash_map_test.def"
+#include "hash_map_test.def"
 
 static struct ymd_mach *setup() {
 	struct ymd_mach *vm = ymd_init();

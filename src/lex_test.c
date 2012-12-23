@@ -1,5 +1,5 @@
 #include "lex.h"
-#include "testing/lex_test.def"
+#include "lex_test.def"
 
 #define ASSERT_TOKEN(act) \
 	rv = lex_next(&lex, &token); \

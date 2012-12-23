@@ -1,6 +1,6 @@
 #include "encoding.h"
 #include "yut_rand.h"
-#include "testing/encoding_test.def"
+#include "encoding_test.def"
 
 #define ASSERT_ATOL(x) \
 	ASSERT_EQ(large, x, xtoll(#x, &ok)); \

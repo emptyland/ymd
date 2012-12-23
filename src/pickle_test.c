@@ -2,7 +2,7 @@
 #include "core.h"
 #include "zstream.h"
 #include "assembly.h"
-#include "testing/pickle_test.def"
+#include "pickle_test.def"
 
 static struct ymd_mach *setup() {
 	struct ymd_mach *vm = ymd_init();

@@ -1,6 +1,6 @@
 #include "state.h"
 #include "memory.h"
-#include "testing/memory_test.def"
+#include "memory_test.def"
 
 static struct ymd_mach *setup() {
 	struct ymd_mach *vm = ymd_init();

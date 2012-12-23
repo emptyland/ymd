@@ -24,8 +24,9 @@ struct ymd_mach {
 	// Internal memory function:
 	void *(*zalloc)(struct ymd_mach *, void *, size_t);
 	void (*free)(struct ymd_mach *, void *);
-	void *cookie;
+	void *cookie; // Cookie for allocator
 	ymd_int_t tick; // Instruction tick
+	int fatal; // Has panic? 
 	struct hmap *global; // Global environment
 	struct ymd_context *curr; // Current context
 	struct variable knil; // nil flag

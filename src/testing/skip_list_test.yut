@@ -52,7 +52,7 @@ SkipListTest = @{
 
 	toArray : func (self, o) {
 		var a = []
-		for var i in range(o) {
+		for var i in values(o) {
 			append(a, i)
 		}
 		return a

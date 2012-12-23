@@ -3,9 +3,9 @@ syntax keyword ymdContant nil true false
 syntax keyword ymdKeyword typeof var and or not func with "@"
 
 syntax keyword ymdFunc panic open len strbuf __g__ error pcall
-syntax keyword ymdFunc end range rank ranki print str insert remove slice
+syntax keyword ymdFunc end range values keys pairs print str insert remove
 syntax keyword ymdFunc append match pattern argv self import env atoi atof
-syntax keyword ymdFunc exit eval compile echo rand gc __loaded__
+syntax keyword ymdFunc exit eval compile echo rand gc slice __loaded__
 syntax keyword ymdTest Assert Fail True False Nil NotNil EQ NE LT LE GT GE
 
 syntax match ymdInteger "\<\d\+\>"

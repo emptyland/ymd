@@ -1,6 +1,6 @@
 #include "core.h"
 #include "yut_rand.h"
-#include "testing/dynamic_array_test.def"
+#include "dynamic_array_test.def"
 
 #define gc(p) ((struct gc_node *)(p))
 

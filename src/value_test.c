@@ -1,6 +1,6 @@
 #include "core.h"
 #include "yut_rand.h"
-#include "testing/value_test.def"
+#include "value_test.def"
 
 static struct ymd_mach *setup() {
 	struct ymd_mach *vm = ymd_init();

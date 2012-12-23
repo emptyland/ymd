@@ -57,15 +57,15 @@ def DefineTest(name, name_o):
 	dst_name = name + '_test'
 	src_name = name + '_test.c'
 	def_name = name + '_test.def'
-	env.Command('testing/' + def_name,
+	env.Command(def_name,
 		src_name,
-		'../bin/yut_scan.py ' + src_name + ' testing',
+		'../bin/yut_scan.py ' + src_name + ' ./',
 		chdir='src')
 	env.Program(dst_name,
 		[name_o, yut_o, yut_rand_o, test_main_o],
 		LIBS='yamada regex m pthread'.split(),
 		CPPFLAGS='-Isrc')
-	env.Depends(dst_name, 'testing/' + def_name)
+	env.Depends(dst_name, def_name)
 
 def AllTest(name):
 	cmd_src_name = []
@@ -84,21 +84,21 @@ def AllTest(name):
 		cmd_lst_name = cmd_lst_name + i
 		cmd_src_name.append(src_name)
 		# .def file rules
-		env.Command('testing/' + def_name,
+		env.Command(def_name,
 			src_name,
-			'../bin/yut_scan.py ' + src_name + ' testing',
+			'../bin/yut_scan.py ' + src_name + ' ./',
 			chdir='src')
-		env.Depends(obj_name, 'testing/' + def_name)
+		env.Depends(obj_name, def_name)
 	# all_test program rules:
-	env.Command('testing/all_test.def',
+	env.Command('all_test.def',
 		cmd_src_name,
-		'../bin/yut_all.py \"' + cmd_lst_name + '\" testing',
+		'../bin/yut_all.py \"' + cmd_lst_name + '\" ./',
 		chdir='src')
 	env.Program('all_test',
 		[units, yut_o, yut_rand_o, 'test_all_main.c'],
 		CPPFLAGS='-Isrc -DYUT_ALL_TEST',
 		LIBS='yamada regex m pthread'.split())
-	env.Depends('all_test', 'testing/all_test.def')
+	env.Depends('all_test', 'all_test.def')
 
 AllTest('''
 	yut

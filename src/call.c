@@ -686,6 +686,8 @@ int ymd_pcall(struct ymd_context *l, struct func *fn, int argc) {
 	struct call_info scope;
 	call_init(l, &scope);
 	call_jenter(l, &jpt, l->jpt->level + 1);
+	// Clear fatal flag.
+	l->vm->fatal = 0;
 	if ((i = setjmp(l->jpt->core)) != 0) {
 		call_jleave(l);
 		call_restore(l, &scope);
@@ -704,6 +706,8 @@ int ymd_xcall(struct ymd_context *l, int argc) {
 	struct call_info scope;
 	call_root_init(l, &scope); // External call need root call info.
 	call_jenter(l, &jpt, 1);
+	// Clear fatal flag.
+	l->vm->fatal = 0;
 	// Error and panic handler
 	if ((i = setjmp(l->jpt->core)) != 0) {
 		call_jleave(l);
@@ -728,6 +732,8 @@ int ymd_main(struct ymd_context *l, int argc, char *argv[]) {
 	call_jenter(l, &jpt, 1);
 	for (i = 0; i < argc; ++i)
 		ymd_kstr(l, argv[i], -1);
+	// Clear fatal flag.
+	l->vm->fatal = 0;
 	if ((i = setjmp(l->jpt->core)) != 0) {
 		if (!l->jpt->panic) puts("VM: Unhandled error!");
 		call_jleave(l);

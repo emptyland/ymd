@@ -72,7 +72,7 @@ struct yut_cookie {
 };
 
 static inline void yut_fault() {
-	ymd_printf("${[red][  FAILED  ]}$ Test fail, stop all.\n");
+	ymd_printf("${[!red][  FAILED  ]}$ Test fail, stop all.\n");
 }
 
 static inline struct yut_cookie *yut_jpt(L, struct variable *self) {
@@ -118,6 +118,11 @@ static void yut_fail0(L) {
 	if (l->top - l->stk < 3 || ymd_type(ymd_top(l, 0)) != T_DYAY) {
 		return;
 	}
+	// Has fatal ?
+	if (l->vm->fatal) {
+		ymd_printf("${[yellow][   PANIC  ] %s}$\n", "VM panic!");
+		return;
+	}
 	// print backtrace info
 	ax = dyay_of(l, ymd_top(l, 0));
 	for (i = 0; i < ax->count; ++i) {
@@ -125,11 +130,11 @@ static void yut_fail0(L) {
 		tostring(&os, ax->elem + i);
 		zos_append(&os, "\n", 1);
 	}
-	ymd_printf("${[yellow][   INFO   ] %s}$\n"
-			   "Runtime error: %s\nBacktrace:\n%s",
-			   kstr_of(l, ymd_top(l, 1))->land,
-			   kstr_of(l, ymd_top(l, 2))->land,
-			   (const char *)zos_buf(&os));
+	ymd_printf("${[yellow][   ERROR  ] A error has be Caught.}$\n"
+			"Where: %s\nWhat: %s\nBacktrace:\n%s",
+			kstr_of(l, ymd_top(l, 1))->land,
+			kstr_of(l, ymd_top(l, 2))->land,
+			(const char *)zos_buf(&os));
 	zos_final(&os);
 	ymd_pop(l, 3);
 }
@@ -140,11 +145,11 @@ static void yut_fail1(L, const char *expected,
 	struct func *fn = up->run;
 	struct zostream os = ZOS_INIT;
 	ymd_printf("${[yellow][   INFO   ] %s:%d Assert fail, expected}$"
-	           "${[purple]<%s>}$, ${[yellow]unexpected}$${[purple]<%s>}$;\n",
-			   fn->u.core->file->land,
-	           fn->u.core->line[up->pc - 1],
-	           expected,
-	           tostring(&os, arg0));
+			"${[purple]<%s>}$, ${[yellow]unexpected}$${[purple]<%s>}$;\n",
+			fn->u.core->file->land,
+	        fn->u.core->line[up->pc - 1],
+	        expected,
+	        tostring(&os, arg0));
 	zos_final(&os);
 	yut_raise(l);
 }
@@ -166,9 +171,9 @@ static int libx_Fail(L) {
 	struct call_info *up = l->info->chain;
 	struct func *fn = up->run;
 	ymd_printf("${[yellow][   INFO   ] %s:%d Fail: %s}$\n",
-	           fn->u.core->file->land,
-			   fn->u.core->line[up->pc - 1],
-	           arg0->land);
+			fn->u.core->file->land,
+			fn->u.core->line[up->pc - 1],
+	        arg0->land);
 	yut_raise(l);
 	return 0;
 }
@@ -426,7 +431,6 @@ int ymd_test(struct ymd_context *l, const char *pattern, int repeated,
 					rv = 1;
 					goto final;
 				}
-				//break;
 			}
 		}
 	}

@@ -354,6 +354,7 @@ static void do_panic(struct ymd_context *l, const char *msg) {
 	fprintf(stderr, "-- Back trace:\n");
 	vm_backtrace(l, 6);
 	assert(l->jpt);
+	l->vm->fatal = 1; // Set fatal flag.
 	l->jpt->panic = 1;
 	longjmp(l->jpt->core, 1);
 }

@@ -133,14 +133,12 @@ BuiltinTest = @{
 		Assert:Nil(iter())
 	},
 
-	testRangeContainer : func (self) {
-		var iter = range([])
-		var i
-		for i = 0, rand(100, 200) {
-			Assert:Nil(iter())
-		}
+	testContainerValues : func (self) {
+		self:assertIteratorNil(values([]))
+		self:assertIteratorNil(values({}))
+		self:assertIteratorNil(values(@{}))
 
-		iter = range([0, "1", false, func () {}, [], {}, @{}])
+		var iter = values([0, "1", false, func () {}, [], {}, @{}])
 		Assert:EQ(0, iter())
 		Assert:EQ("1", iter())
 		Assert:EQ(false, iter())
@@ -150,37 +148,84 @@ BuiltinTest = @{
 		Assert:EQ(@{}, iter())
 		Assert:Nil(iter())
 
-		iter = range({a:0, b:1, c:2})
+		iter = values({a:0, b:1, c:2})
 		Assert:EQ(0, iter())
 		Assert:EQ(1, iter())
 		Assert:EQ(2, iter())
 		Assert:Nil(iter())
 
-		iter = range(@{a:0, b:1, c:2})
+		iter = values(@{a:0, b:1, c:2})
 		Assert:EQ(0, iter())
 		Assert:EQ(1, iter())
 		Assert:EQ(2, iter())
 		Assert:Nil(iter())
 	},
 
-	testRank : func (self) {
-		var iter = rank([])
-		Assert:Nil(iter())
+	testKeys : func (self) {
+		self:assertIteratorNil(keys([]))
+		self:assertIteratorNil(keys({}))
+		self:assertIteratorNil(keys(@{}))
+
+		var iter = keys([9, 8, 7])
+		Assert:EQ(0, iter())
+		Assert:EQ(1, iter())
+		Assert:EQ(2, iter())
 		Assert:Nil(iter())
 
-		iter = rank([0, 1, 2])
+		iter = keys({a:0, b:1, c:2})
+		var set = {a: true, b: true, c: true}
+		Assert:True(self:elemInSet(iter(), set))
+		Assert:True(self:elemInSet(iter(), set))
+		Assert:True(self:elemInSet(iter(), set))
+		Assert:Nil(iter())
+
+		iter = keys(@[<]{d:0, e:1, f:2})
+		Assert:EQ("d", iter())
+		Assert:EQ("e", iter())
+		Assert:EQ("f", iter())
+		Assert:Nil(iter())
+
+		iter = keys(@[>]{f:0, e:1, d:2})
+		Assert:EQ("f", iter())
+		Assert:EQ("e", iter())
+		Assert:EQ("d", iter())
+		Assert:Nil(iter())
+	},
+
+	assertIteratorNil : func (self, iter) {
+		for var i = 0, rand(100, 200) {
+			Assert:Nil(iter())
+		}
+	},
+
+	elemInSet : func (self, elem, set) {
+		for var i in keys(set) {
+			if elem == i {
+				remove(set, elem)
+				return true
+			}
+		}
+		return false
+	},
+
+	testPairs : func (self) {
+		self:assertIteratorNil(pairs([]))
+		self:assertIteratorNil(pairs({}))
+		self:assertIteratorNil(pairs(@{}))
+
+		iter = pairs([0, 1, 2])
 		Assert:EQ([0, 0], iter())
 		Assert:EQ([1, 1], iter())
 		Assert:EQ([2, 2], iter())
 		Assert:Nil(iter())
 
-		iter = rank({a:0, b:1, c:2})
+		iter = pairs({a:0, b:1, c:2})
 		Assert:EQ(["a", 0], iter())
 		Assert:EQ(["b", 1], iter())
 		Assert:EQ(["c", 2], iter())
 		Assert:Nil(iter())
 
-		iter = rank(@{a:0, b:1, c:2})
+		iter = pairs(@[<]{a:0, b:1, c:2})
 		Assert:EQ(["a", 0], iter())
 		Assert:EQ(["b", 1], iter())
 		Assert:EQ(["c", 2], iter())
@@ -302,7 +347,7 @@ BuiltinTest = @{
 
 		var func build() {
 			var i, b, s = strbuf()
-			for i in range(argv) {
+			for i in values(argv) {
 				if b { s:cat("+") } else { b = true }
 				s:cat(i)
 			}

@@ -1,5 +1,5 @@
 #include "flags.h"
-#include "testing/flags_test.def"
+#include "flags_test.def"
 
 struct {
 	int b;

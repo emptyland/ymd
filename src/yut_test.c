@@ -1,5 +1,5 @@
 #include "yut_rand.h"
-#include "testing/yut_test.def"
+#include "yut_test.def"
 
 static int test_sanity(void *p) {
 	(void)p;

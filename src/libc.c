@@ -397,15 +397,12 @@ static int new_contain_iter(L, const struct variable *obj, int flag) {
 }
 
 // range(begin, end, [step])
-// range(container)
 // Example:
 // range(1,100) = 1,2,3,...99
 // range(1,100,2) = 1,3,5,...99
 // range([9,8,7]) = 9,8,7
 static int libx_range(L) {
 	switch (ymd_argc(l)) {
-	case 1:
-		return new_contain_iter(l, ymd_argv(l, 0), ITER_VALUE);
 	case 2: {
 		ymd_int_t i = int_of(l, ymd_argv(l, 0)),
 				  m = int_of(l, ymd_argv(l, 1));
@@ -416,17 +413,21 @@ static int libx_range(L) {
 		                     int_of(l, ymd_argv(l, 1)),
 		                     int_of(l, ymd_argv(l, 2)));
 	default:
-		ymd_panic(l, "Bad arguments, need 1 to 3");
+		ymd_panic(l, "Bad arguments, need 2 to 3");
 		break;
 	}
 	return 0;
 }
 
-static int libx_rank(L) {
+static int libx_values(L) {
+	return new_contain_iter(l, ymd_argv(l, 0), ITER_VALUE);
+}
+
+static int libx_pairs(L) {
 	return new_contain_iter(l, ymd_argv(l, 0), ITER_KV);
 }
 
-static int libx_ranki(L) {
+static int libx_keys(L) {
 	return new_contain_iter(l, ymd_argv(l, 0), ITER_KEY);
 }
 
@@ -996,8 +997,9 @@ LIBC_BEGIN(Builtin)
 	LIBC_ENTRY(remove)
 	LIBC_ENTRY(len)
 	LIBC_ENTRY(range)
-	LIBC_ENTRY(rank)
-	LIBC_ENTRY(ranki)
+	LIBC_ENTRY(values)
+	LIBC_ENTRY(pairs)
+	LIBC_ENTRY(keys)
 	LIBC_ENTRY(str)
 	LIBC_ENTRY(atoi)
 	LIBC_ENTRY(atof)

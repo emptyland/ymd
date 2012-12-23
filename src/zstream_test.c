@@ -1,5 +1,5 @@
 #include "zstream.h"
-#include "testing/zstream_test.def"
+#include "zstream_test.def"
 
 static int test_zos_init (void *p) {
 	struct zostream os = ZOS_INIT;
