@@ -2,6 +2,7 @@
 #include "tostring.h"
 #include "zstream.h"
 #include "print.h"
+#include "third_party/pcre/pcre.h"
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
@@ -126,6 +127,12 @@ int vm_bool(const struct variable *lhs) {
 	return 0;
 }
 
+void vm_pcre_lazy(struct ymd_mach *vm) {
+	if (vm->pcre_js)
+		return;
+	vm->pcre_js = pcre_jit_stack_alloc(YMD_JS_START, YMD_JS_MAX);
+	assert (vm->pcre_js);
+}
 //------------------------------------------------------------------------
 // Generic mapping functions:
 // -----------------------------------------------------------------------
@@ -334,6 +341,8 @@ void ymd_final(struct ymd_mach *vm) {
 	gc_final(vm);
 	kpool_final(vm);
 	vm_final_context(vm);
+	if (vm->pcre_js)
+		pcre_jit_stack_free(vm->pcre_js);
 	assert (vm->gc.used == 0); // Must free all memory!
 	assert (vm->gc.n_alloced == 0); // Allocated object must be zero.
 	free(vm);

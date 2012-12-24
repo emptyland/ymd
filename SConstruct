@@ -27,5 +27,4 @@ env = Environment(CC = conf['CC'],
 
 Export('env')
 SConscript('src/SConscript')
-SConscript('src/third_party/regex/SConscript')
 SConscript('src/third_party/pcre/SConscript')

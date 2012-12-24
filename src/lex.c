@@ -276,14 +276,6 @@ int lex_next(struct ymd_lex *lex, struct ytoken *x) {
 		case '#':
 			lex_skip_line(lex);
 			break;
-		/*case '@':
-			rv->off = lex->buf + lex->off;
-			if (lex_move(lex) != '{')
-				return ERROR;
-			rv->token = SKLS;
-			rv->len = 2;
-			lex_move(lex);
-			return rv->token;*/
 		case '0':
 			ch = lex_move(lex);
 			if (ch == 'x' || ch == 'X')

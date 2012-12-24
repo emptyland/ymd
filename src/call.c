@@ -2,7 +2,6 @@
 #include "core.h"
 #include "assembly.h"
 #include "encoding.h"
-#include "third_party/regex/regex.h"
 #include <stdio.h>
 
 #define call_init(l, x) { \
@@ -50,23 +49,6 @@ static inline struct variable *vm_find_local(struct ymd_context *l,
 	if (i < 0)
 		ymd_panic(l, "Can not find local: %s", name);
 	return vm_local(l, fn, i);
-}
-
-static inline int vm_match(struct ymd_mach *vm,
-                           const struct kstr *lhs,
-                           const struct kstr *pattern) {
-	regex_t regex;
-	int err = regcomp(&regex, pattern->land, REG_NOSUB|REG_EXTENDED);
-	if (err) {
-		char msg[128];
-		regerror(err, &regex, msg, sizeof(msg));
-		regfree(&regex);
-		ymd_panic(ioslate(vm), "Regex match fatal: %s", msg);
-		return 0;
-	}
-	err = regexec(&regex, lhs->land, 0, NULL, 0);
-	regfree(&regex);
-	return !err;
 }
 
 static inline void do_put(struct ymd_mach *vm,
@@ -467,9 +449,9 @@ retry:
 			case F_LE:
 				lhs->u.i = vm_compare(lhs, rhs) <= 0;
 				break;
-			case F_MATCH:
-				lhs->u.i = vm_match(vm, kstr_of(l, lhs), kstr_of(l, rhs));
-				break;
+			//TODO: New regex implement 
+			// case F_MATCH:
+			//	break;
 			default:
 				assert(!"No reached.");
 				break;

@@ -306,20 +306,15 @@ BuiltinTest = @{
 	},
 
 	testRegex : func (self) {
-		var regex = pattern("a=([0-9]*)", "*sub")
+		var regex = pattern "a=(\\d*)"
 		var fast_match = env("*global").match
-		//var match = func [fast_match] (r, s) {
-		//	print(fast_match(r, s))
-		//}
-		//match(regex, "a=2223 b")
-		//match(regex, "d a=9993")
 
-		regex = pattern "name=[a-zA-Z]*"
+		regex = pattern "name=\\w*"
 		Assert:True(match(regex, "name=a"))
 		Assert:True(match(regex, "name=A"))
 		Assert:True(match(regex, "name="))
 
-		regex = pattern("name=([a-zA-Z]*)", "*sub")
+		regex = pattern("name=(\\w*)")
 		Assert:EQ("aaaa", match(regex, "name=aaaa")[1])
 		Assert:EQ("bbbb", match(regex, "name=bbbb")[1])
 		Assert:EQ("", match(regex, "name=")[1])
@@ -404,5 +399,15 @@ BuiltinTest = @{
 		k = @{a:1, b:2, c:3, d:4, e:5, f:6, h:8, z:9}
 		Assert:EQ(@{h:8, z:9}, slice(k, "h"))
 		Assert:EQ(@{c:3, d:4, e:5}, slice(k, "c", "f"))
-	}
+	},
+
+	testSplit : func (self) {
+		var re = pattern "\\s+"
+		Assert:EQ(["a", "b", "c"], split("a b   c", re))
+		Assert:EQ(["a", "b", "c"], split("a b\t\tc\t", re))
+
+		re = pattern "\\|"
+		Assert:EQ(["a", "b", "c"], split("a|b|c", re))
+		Assert:EQ(["a", "", "b", "", "c"], split("a||b||c|", re))
+	},
 }

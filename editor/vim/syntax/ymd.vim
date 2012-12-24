@@ -2,7 +2,7 @@
 syntax keyword ymdContant nil true false
 syntax keyword ymdKeyword typeof var and or not func with "@"
 
-syntax keyword ymdFunc panic open len strbuf __g__ error pcall
+syntax keyword ymdFunc panic open len strbuf __g__ error pcall split
 syntax keyword ymdFunc end range values keys pairs print str insert remove
 syntax keyword ymdFunc append match pattern argv self import env atoi atof
 syntax keyword ymdFunc exit eval compile echo rand gc slice __loaded__

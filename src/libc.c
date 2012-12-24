@@ -1,4 +1,4 @@
-#include "third_party/regex/regex.h"
+#include "third_party/pcre/pcre.h"
 #include "tostring.h"
 #include "core.h"
 #include "compiler.h"
@@ -7,9 +7,9 @@
 #include <stdio.h>
 #include <setjmp.h>
 
-struct posix_regex {
-	regex_t core; // NOTE: This field must be first!
-	int sub;
+struct pcre_regex {
+	pcre *core;
+	pcre_extra *extra;
 };
 
 struct ansic_file {
@@ -606,65 +606,82 @@ static int libx_open(L) {
 //------------------------------------------------------------------------------
 // Regex pattern and match
 //------------------------------------------------------------------------------
-static int posix_regex_final(struct posix_regex *self) {
-	regfree(&self->core);
+static int pcre_regex_final(struct pcre_regex *re) {
+	pcre_free_study(re->extra);
+	pcre_free(re->core);
 	return 0;
 }
 
 // Example:
-// regex = pattern("^[0-9]+$")
+// regex = pattern("^\\d+$")
 // result = match(regex, "0000")
 // print(result)
 static int libx_pattern(L) {
-	int err = 0, cflag = REG_EXTENDED;
+	const char *err;
+	int err_off;
 	struct kstr *arg0 = kstr_of(l, ymd_argv(l, 0));
-	struct posix_regex *rv = ymd_mand(l, T_REGEX, sizeof(*rv),
-		(ymd_final_t)posix_regex_final);
-	switch (ymd_argc(l)) {
-	case 1:
-		cflag = REG_NOSUB;
-		break;
-	case 2: {
-		struct kstr *arg1 = kstr_of(l, ymd_argv(l, 1));
-		if (strcmp(arg1->land, "*nosub") == 0)
-			cflag |= REG_NOSUB;
-		else if (strcmp(arg1->land, "*sub") == 0)
-			rv->sub = 1;
-		else
-			ymd_panic(l, "Bad regex option: %s", arg1->land);
-		} break;
-	default:
-		ymd_panic(l, "Too many args, %d", ymd_argc(l));
-		break;
-	}
-	err = regcomp(&rv->core, arg0->land, cflag);
-	if (err) {
+	struct pcre_regex *re = ymd_mand(l, T_REGEX, sizeof(*re),
+			(ymd_final_t)pcre_regex_final);
+	re->core = pcre_compile(arg0->land, PCRE_UTF8, &err, &err_off, NULL);
+	if (!re->core) {
 		ymd_pop(l, 1);
-		return 0;
+		ymd_panic(l, "Regex compile fatal: %s, near: %s",
+				err, arg0->land);
 	}
+	re->extra = pcre_study(re->core, PCRE_STUDY_JIT_COMPILE, &err);
+	if (!re->extra) {
+		ymd_pop(l, 1);
+		ymd_panic(l, "Regex extra fatal: %s", err);
+	}
+	vm_pcre_lazy(l->vm);
 	return 1;
 }
 
 static int libx_match(L) {
-	struct posix_regex *self = mand_land(l, ymd_argv(l, 0),
-	                                     T_REGEX);
+	const char **list;
+	struct pcre_regex *re = mand_land(l, ymd_argv(l, 0), T_REGEX);
 	struct kstr *arg1 = kstr_of(l, ymd_argv(l, 1));
-	int err = 0;
-	if (self->sub) {
-		regmatch_t matched[128];
-		ymd_dyay(l, 0);
-		err = regexec(&self->core, arg1->land, ARRAY_SIZEOF(matched),
-				matched, 0);
-		if (!err) {
-			regmatch_t *i;
-			for (i = matched; i->rm_so != -1; ++i) {
-				ymd_kstr(l, arg1->land + i->rm_so, i->rm_eo - i->rm_so);
-				ymd_add(l);
-			}
-		}
-	} else {
-		err = regexec(&self->core, arg1->land, 0, NULL, 0);
-		ymd_bool(l, !err);
+	int i, ovec[128] = {0},
+		rv = pcre_jit_exec(re->core, re->extra, arg1->land, arg1->len,
+				0, 0, ovec, ARRAY_SIZEOF(ovec), l->vm->pcre_js);
+	if (rv <= 0)
+		return 0;
+	if (rv == 1) {
+		ymd_bool(l, 1);
+		return 1;
+	}
+	pcre_get_substring_list(arg1->land, ovec, rv, &list);
+	ymd_dyay(l, rv);
+	i = rv;
+	while (i--) {
+		ymd_kstr(l, list[rv - i - 1], -1);
+		ymd_add(l);
+	}
+	pcre_free_substring_list(list);
+	return 1;
+}
+
+// aaaa^bbb^ccc
+// [5, 6]
+// 
+static int libx_split(L) {
+	struct kstr *arg0 = kstr_of(l, ymd_argv(l, 0));
+	struct pcre_regex *re = mand_land(l, ymd_argv(l, 1), T_REGEX);
+	int ovec[3] = {0}, i = 0, len = arg0->len, rv;
+	ymd_dyay(l, 0);
+	while ((rv = pcre_jit_exec(
+					re->core, re->extra, arg0->land + i, len, 0, 0,
+					ovec, ARRAY_SIZEOF(ovec), l->vm->pcre_js)) > 0) {
+		if (ovec[1] == 0)
+			return 1;
+		ymd_kstr(l, arg0->land + i, ovec[0]);
+		ymd_add(l);
+		len -= ovec[1];
+		i   += ovec[1];
+	}
+	if (i < arg0->len) {
+		ymd_kstr(l, arg0->land + i, arg0->len - i);
+		ymd_add(l);
 	}
 	return 1;
 }
@@ -1003,6 +1020,7 @@ LIBC_BEGIN(Builtin)
 	LIBC_ENTRY(atoi)
 	LIBC_ENTRY(atof)
 	LIBC_ENTRY(slice)
+	LIBC_ENTRY(split)
 	LIBC_ENTRY(panic)
 	LIBC_ENTRY(strbuf)
 	LIBC_ENTRY(open)

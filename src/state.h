@@ -29,6 +29,7 @@ struct ymd_mach {
 	int fatal; // Has panic? 
 	struct hmap *global; // Global environment
 	struct ymd_context *curr; // Current context
+	void *pcre_js; // pcre jit stack
 	struct variable knil; // nil flag
 };
 
@@ -60,6 +61,10 @@ static inline void vm_free(struct ymd_mach *vm, void *p) {
 #define MAX_STACK     128
 #define FUNC_ALIGN    128
 #define GC_THESHOLD   10 * 1024
+
+// Config for PCRE jit stack:
+#define YMD_JS_START 1024
+#define YMD_JS_MAX   4096
 
 struct call_info {
 	struct call_info *chain;
@@ -179,6 +184,8 @@ static inline int vm_compare(const struct variable *lhs,
 
 int vm_bool(const struct variable *lhs);
 
+void vm_pcre_lazy(struct ymd_mach *vm);
+
 //
 // Runtime:
 //
@@ -190,7 +197,6 @@ static inline struct func *ymd_called(L) {
 
 // Get upval by index, in context.
 struct variable *ymd_upval(L, int i);
-
 //-----------------------------------------------------------------------------
 // Stack functions:
 // ----------------------------------------------------------------------------
