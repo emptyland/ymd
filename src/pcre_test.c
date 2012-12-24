@@ -104,25 +104,3 @@ static int test_jit_exec(void *p) {
 	(void)p; return 0;
 }
 
-static int test_jit_split(void *p) {
-	const char *sub = "1\t2 3\n";
-	int i = 0, len = strlen(sub);
-	int rv, vec[3] = {0};
-	pcre *re = pattern("\\s+");
-	char o[16] = {0};
-
-	while ((rv = pcre_exec(
-					re, NULL, sub + i, len, 0, 0, vec, 3)) > 0) {
-		o[0] = 0;
-		strncpy(o, sub + i, vec[0]);
-		printf("part:%s, i:%s\n", o, sub + i);
-		len -= vec[1];
-		i   += vec[1];
-	}
-	if (i < (len = strlen(sub))) {
-		o[0] = 0;
-		strncpy(o, sub + i, len - i);
-		printf("part:%s, i:%s\n", o, sub + i);
-	}
-	(void)p; return 0;
-}
