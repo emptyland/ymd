@@ -1,0 +1,32 @@
+func generateLargeTable(fileName, type, num) {
+	if var f = open(fileName, "w"); f == nil {
+		error("Can not open " + fileName)
+	}
+	var str = __g__.str
+
+	if type == "skiplist" {
+		f:write("return @{\n")
+	} elif type == "hashmap" {
+		f:write("return {\n")
+	} else {
+		error("Dot not support ", type)
+	}
+	for var i = 0, num {
+		var arr = "["
+		for var j = 0, 6 {
+			if j != 0 {
+				arr = arr + ", "
+			}
+			arr = arr + str(rand(100))
+		}
+		arr = arr + "]"
+		var s = "\t\"" + str(i) + "\": " + arr
+		if i != 0 {
+			f:write(",\n")
+		}
+		f:write(s)
+	}
+	f:write("\n}\n")
+	f:close()
+}
+

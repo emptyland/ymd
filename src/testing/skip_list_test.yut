@@ -1,3 +1,5 @@
+import "testing/generate_large.ymd"
+
 SkipListTest = @{
 	testSanity : func (self) {
 		var o = @{}
@@ -104,6 +106,18 @@ SkipListTest = @{
 		Assert:EQ(@{}, slice(o, -1))
 		Assert:EQ(@{[1] = "1"}, slice(o, 0, 1))
 		Assert:EQ(@{[1] = "1"}, slice(o, 1, 0))
+	},
+
+	testLargeTable : func (self) {
+		var fileName = "large_skip_list.ymd"
+		var k = 10000
+		if var rv = pcall(generateLargeTable, fileName, "skiplist", k); rv.err {
+			Assert:Fail(rv.err)
+		}
+		var large = import(fileName)
+		Assert:EQ("skiplist", typeof large)
+		Assert:EQ(k, len(large))
+		os.remove(fileName)
 	}
 }
 

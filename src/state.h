@@ -63,7 +63,7 @@ static inline void vm_free(struct ymd_mach *vm, void *p) {
 
 // Config for stack size
 #define YMD_INIT_STACK 128
-#define YMD_MAX_STACK  10240
+#define YMD_MAX_STACK  102400
 
 // Config for PCRE jit stack:
 #define YMD_JS_START 1024

@@ -451,7 +451,7 @@ struct variable *ymd_push(struct ymd_context *l) {
 	return l->top - 1;
 }
 
-static void vm_stack_shrink(struct ymd_context *l, size_t offset) {
+static void stack_shrink(struct ymd_context *l, size_t offset) {
 	struct variable *bak = NULL;
 	size_t shrink = l->kstk;
 	while (shrink > YMD_MAX(YMD_INIT_STACK, offset))
@@ -475,7 +475,7 @@ void ymd_pop(struct ymd_context *l, int n) {
 	offset = l->top - l->stk;
 	// offset less than 1/4
 	if (l->kstk > YMD_INIT_STACK && offset < (l->kstk >> 2))
-		vm_stack_shrink(l, offset);
+		stack_shrink(l, offset);
 	else
 		memset(l->top, 0, sizeof(*l->top) * n);
 }
