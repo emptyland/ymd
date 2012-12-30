@@ -33,7 +33,7 @@ static void fparse(const char *pattern, struct filter *filter) {
 	pattern = p;
 	p = strchr(pattern, '.');
 	if (!p) {
-		filter->test_pattern = strdup(p);
+		filter->test_pattern = strdup(pattern);
 		return;
 	}
 	filter->test_pattern = strndup(pattern, p - pattern);

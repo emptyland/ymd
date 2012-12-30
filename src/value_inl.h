@@ -4,9 +4,8 @@
 //
 // Type getter
 //
-static inline int ymd_type(const struct variable *var) {
-	return (var)->tt == T_REF ? (var)->u.ref->type : (var)->tt;
-}
+#define ymd_type(var) \
+	((var)->tt == T_REF ? (var)->u.ref->type : (var)->tt)
 
 //
 // Get referenced object for variable

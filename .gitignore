@@ -6,6 +6,7 @@ config.mk
 *.log
 *.dblite
 *.def
+*.prof
 tags
 src/keywords.c
 foo.ymd
