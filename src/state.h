@@ -58,9 +58,12 @@ static inline void vm_free(struct ymd_mach *vm, void *p) {
 
 #define MAX_KPOOL_LEN 40
 #define MAX_LOCAL     512
-#define MAX_STACK     128
 #define FUNC_ALIGN    128
-#define GC_THESHOLD   10 * 1024
+#define GC_THESHOLD   10240
+
+// Config for stack size
+#define YMD_INIT_STACK 128
+#define YMD_MAX_STACK  10240
 
 // Config for PCRE jit stack:
 #define YMD_JS_START 1024
@@ -71,7 +74,7 @@ struct call_info {
 	struct func *run; // Current function
 	union {
 		struct dyay *argv; // Argv object, use in ymd function.
-		struct variable *lea; // Args stack frame, use in C function.
+		size_t frame; // Args stack frame, use in C function.
 	} u;
 	short argc; // Current calling's argc
 	short adjust; // Adjust for argc
@@ -89,8 +92,9 @@ struct call_jmpbuf {
 struct ymd_context {
 	struct call_info *info;
 	struct variable loc[MAX_LOCAL];
-	struct variable stk[MAX_STACK];
+	struct variable *stk;
 	struct variable *top;
+	size_t kstk;
 	struct call_jmpbuf *jpt; // Jump point
 	struct ymd_mach *vm;
 };
@@ -200,21 +204,16 @@ struct variable *ymd_upval(L, int i);
 //-----------------------------------------------------------------------------
 // Stack functions:
 // ----------------------------------------------------------------------------
-static inline struct variable *ymd_push(L) {
-	if (l->top >= l->stk + MAX_STACK)
-		ymd_panic(l, "Stack overflow!");
-	++l->top;
-	return l->top - 1;
-}
+void ymd_pop(L, int n);
 
-static inline struct variable *ymd_top(L, int i) {
-	if (l->top == l->stk)
-		ymd_panic(l, "Stack empty!");
-	if (i < 0 && 1 - i >= l->top - l->stk)
-		ymd_panic(l, "Stack out of range [%d]", i);
-	if (i > 0 &&     i >= l->top - l->stk)
-		ymd_panic(l, "Stack out of range [%d]", i);
-	return i < 0 ? l->stk + 1 - i : l->top - 1 - i;
+struct variable *ymd_push(L);
+
+struct variable *ymd_top(L, int i);
+
+static inline size_t ymd_offset(L, int i) {
+	struct variable *end = ymd_top(l, i);
+	assert (end >= l->stk);
+	return end - l->stk;
 }
 
 static inline void ymd_move(L, int i) {
@@ -223,15 +222,6 @@ static inline void ymd_move(L, int i) {
 	k = *p;
 	memmove(p, p + 1, (l->top - p - 1) * sizeof(k));
 	*ymd_top(l, 0) = k;
-}
-
-static inline void ymd_pop(L, int n) {
-	if (n > 0 && l->top == l->stk)
-		ymd_panic(l, "Stack empty!");
-	if (n > l->top - l->stk)
-		ymd_panic(l, "Bad pop!");
-	l->top -= n;
-	memset(l->top, 0, sizeof(*l->top) * n);
 }
 
 // Adjust return variables
@@ -402,7 +392,7 @@ static inline struct variable *ymd_argv(L, int i) {
 	int k = ymd_argc(l);
 	if (i < 0 || i >= k)
 		ymd_panic(l, "Argv index[%d] out of range[0, %d)", i, k);
-	return l->info->u.lea + i;
+	return l->stk + l->info->u.frame + i;
 }
 
 #undef L

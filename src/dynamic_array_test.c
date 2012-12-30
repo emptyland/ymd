@@ -4,7 +4,6 @@
 
 #define gc(p) ((struct gc_node *)(p))
 
-//static struct dyay *arr;
 static struct ymd_mach *setup() {
 	struct ymd_mach *vm = ymd_init();
 	gc_active(vm, +1);

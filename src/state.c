@@ -54,11 +54,14 @@ static void default_free(struct ymd_mach *vm, void *chunk) {
 static int vm_init_context(struct ymd_mach *vm) {
 	vm->curr = vm_zalloc(vm, sizeof(*vm->curr));
 	vm->curr->vm = vm;
+	vm->curr->kstk = YMD_INIT_STACK;
+	vm->curr->stk = vm_zalloc(vm, vm->curr->kstk * sizeof(*vm->curr->stk));
 	vm->curr->top = vm->curr->stk;
 	return 0;
 }
 
 static void vm_final_context(struct ymd_mach *vm) {
+	vm_free(vm, vm->curr->stk);
 	vm_free(vm, vm->curr);
 	vm->curr = NULL;
 }
@@ -362,7 +365,10 @@ static void do_panic(struct ymd_context *l, const char *msg) {
 	vm_stack(l, 6);
 	fprintf(stderr, "-- Back trace:\n");
 	vm_backtrace(l, 6);
-	assert(l->jpt);
+	if (!l->jpt) {
+		fprintf(stderr, "-- Not one catch it\n");
+		return;
+	}
 	l->vm->fatal = 1; // Set fatal flag.
 	l->jpt->panic = 1;
 	longjmp(l->jpt->core, 1);
@@ -429,5 +435,58 @@ int ymd_error(struct ymd_context *l, const char *msg) {
 		ci = ci->chain;
 	}
 	return msg ? 3 : 2;
+}
+
+struct variable *ymd_push(struct ymd_context *l) {
+	if (l->top >= l->stk + YMD_MAX_STACK)
+		ymd_panic(l, "Stack overflow!");
+	if (l->top >= l->stk + l->kstk) {
+		l->stk = vm_realloc(l->vm, l->stk,
+				(l->kstk << 1) * sizeof(*l->stk));
+		l->top = l->stk + l->kstk;
+		memset(l->top, 0, l->kstk * sizeof(*l->top));
+		l->kstk <<= 1;
+	}
+	++l->top;
+	return l->top - 1;
+}
+
+static void vm_stack_shrink(struct ymd_context *l, size_t offset) {
+	struct variable *bak = NULL;
+	size_t shrink = l->kstk;
+	while (shrink > YMD_MAX(YMD_INIT_STACK, offset))
+		shrink >>= 1;
+	// Shrink stack to 1/2
+	bak = vm_zalloc(l->vm, shrink * sizeof(*l->stk));
+	memcpy(bak, l->stk, offset * sizeof(*l->stk));
+	vm_free(l->vm, l->stk);
+	l->stk = bak;
+	l->top = l->stk + offset;
+	l->kstk = shrink;
+}
+
+void ymd_pop(struct ymd_context *l, int n) {
+	size_t offset;
+	if (n > 0 && l->top == l->stk)
+		ymd_panic(l, "Stack empty!");
+	if (n > l->top - l->stk)
+		ymd_panic(l, "Bad pop!");
+	l->top -= n;
+	offset = l->top - l->stk;
+	// offset less than 1/4
+	if (l->kstk > YMD_INIT_STACK && offset < (l->kstk >> 2))
+		vm_stack_shrink(l, offset);
+	else
+		memset(l->top, 0, sizeof(*l->top) * n);
+}
+
+struct variable *ymd_top(struct ymd_context *l, int i) {
+	if (l->top == l->stk)
+		ymd_panic(l, "Stack empty!");
+	if (i < 0 && 1 - i >= l->top - l->stk)
+		ymd_panic(l, "Stack out of range [%d]", i);
+	if (i > 0 &&     i >= l->top - l->stk)
+		ymd_panic(l, "Stack out of range [%d]", i);
+	return i < 0 ? l->stk + 1 - i : l->top - 1 - i;
 }
 

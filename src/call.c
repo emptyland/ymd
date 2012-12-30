@@ -605,7 +605,7 @@ static void vm_copy_args(struct ymd_context *l, struct func *fn, int argc,
 			// 1 [2]  <- lea
 			// 2 [1]
 			// 3 [0]
-			l->info->u.lea = ymd_top(l, argc - 1);
+			l->info->u.frame = ymd_offset(l, argc - 1);
 		}
 	}
 	l->info->argc = argc;
@@ -620,7 +620,7 @@ static void vm_balance(struct ymd_context *l, int n, int rv) {
 	} else {
 		ymd_pop(l, n);
 	}
-	l->info->u.lea = NULL;
+	l->info->u.frame = 0;
 }
 
 static int vm_call(struct ymd_context *l, struct call_info *ci,
