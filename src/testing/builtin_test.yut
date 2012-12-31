@@ -232,18 +232,6 @@ BuiltinTest = @{
 		Assert:Nil(iter())
 	},
 
-	testImport : func (self) {
-		var lib = import "testing/imported1.ymd"
-		Assert:EQ("imported1", lib)
-		lib = import "testing/imported2.ymd"
-		Assert:EQ("imported2", lib)
-
-		lib = import "testing/imported1.ymd"
-		Assert:Nil(lib)
-		lib = import "testing/imported2.ymd"
-		Assert:Nil(lib)
-	},
-
 	testStrbuf : func (self) {
 		var s = strbuf()
 		var i, rv

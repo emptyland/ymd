@@ -104,7 +104,7 @@ static inline size_t hash_kstr(const struct kstr *kz) {
 
 static inline size_t hash_func(const struct func *fn) {
 	uintptr_t h = 0, p, i = fn->n_upval;
-	while (i--)
+	while (fn->upval && i--)
 		h += hash(fn->upval + i);
 	p = (uintptr_t)(fn->is_c ? (void*)fn->u.nafn : fn->u.core);
 	p = p / sizeof(void*);
@@ -162,18 +162,21 @@ static struct variable *hfind(const struct hmap *o,
 }
 
 struct hmap *hmap_new(struct ymd_mach *vm, int count) {
+	struct hmap *x = gc_new(vm, sizeof(*x), T_HMAP);
+	return hmap_init(vm, x, count);
+}
+
+struct hmap *hmap_init(struct ymd_mach *vm, struct hmap *o, int count) {
 	int shift = 0;
-	struct hmap *x = NULL;
 	if (count <= 0)
 		shift = 5;
 	else if (count > 0)
 		shift = log2x(count);
-	x = gc_new(vm, sizeof(*x), T_HMAP);
 	assert(shift > 0);
-	x->shift = shift;
-	x->item = mm_zalloc(vm, 1 << x->shift, sizeof(struct kvi));
-	x->free = x->item + (1 << x->shift) - 1;
-	return x;
+	o->shift = shift;
+	o->item = mm_zalloc(vm, 1 << o->shift, sizeof(struct kvi));
+	o->free = o->item + (1 << o->shift) - 1;
+	return o;
 }
 
 static int hmap_count(const struct hmap *o) {
@@ -225,9 +228,12 @@ void hmap_final(struct ymd_mach *vm, struct hmap *o) {
 static struct kvi *alloc_free(struct hmap *o) {
 	const struct kvi *first = o->item;
 	struct kvi *i;
-	for (i = o->free; i > first; --i)
-		if (i->flag == KVI_FREE)
+	for (i = o->free; i > first; --i) {
+		if (i->flag == KVI_FREE) {
+			o->free = i - 1;
 			return i;
+		}
+	}
 	return NULL;
 }
 
@@ -308,6 +314,8 @@ struct kvi *index_if_node(struct ymd_mach *vm, struct hmap *o,
 	slot->hash = h;
 	slot->flag = KVI_SLOT;
 	slot->next = NULL;
+	// Set new node's value to nil.
+	setv_nil(&slot->v);
 	return slot;
 }
 
@@ -359,6 +367,8 @@ int hmap_remove(struct ymd_mach *vm, struct hmap *o,
 		if (i->hash == h && equals(&i->k, k)) {
 			p->next = i->next;
 			memset(i, 0, sizeof(*i));
+			if (i > o->free) // Move free pointer to last node.
+				o->free = i;
 			if (dummy.next && dummy.next != slot) {
 				memcpy(slot, dummy.next, sizeof(*slot));
 				memset(dummy.next, 0, sizeof(*dummy.next));

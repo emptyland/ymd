@@ -68,6 +68,20 @@ static int test_dump_kstr (struct ymd_mach *vm) {
 	return 0;
 }
 
+static int blk_kz(struct ymd_mach *vm, struct chunk *o, struct hmap *map,
+		const char *z, int n) {
+	struct variable k;
+	setv_kstr(&k, kstr_fetch(vm, z, n));
+	return blk_kval(vm, o, map, &k);
+}
+
+static int blk_ki(struct ymd_mach *vm, struct chunk *o, struct hmap *map,
+		ymd_int_t i) {
+	struct variable k;
+	setv_int(&k, i);
+	return blk_kval(vm, o, map, &k);
+}
+
 static int test_dump_func (struct ymd_mach *vm) {
 	struct zostream os = ZOS_INIT;
 	struct zistream is = ZIS_INIT(NULL, NULL, 0);
@@ -75,6 +89,7 @@ static int test_dump_func (struct ymd_mach *vm) {
 	int ok = 1;
 	struct chunk *x = mm_zalloc(vm, 1, sizeof(*x));
 	struct func *o = func_new(vm, x, "foo");
+	struct hmap *kval = hmap_new(vm, 0);
 	o->n_upval = 2;
 	setv_int(func_bind(vm, o, 0), 1LL);
 	setv_bool(func_bind(vm, o, 1), 0LL);
@@ -82,9 +97,9 @@ static int test_dump_func (struct ymd_mach *vm) {
 	blk_emit(vm, x, emitAP(RET, 1), 1);
 	blk_add_lz(vm, x, "i");
 	blk_add_lz(vm, x, "k");
-	blk_kz(vm, x, "bar", 3);
-	blk_kz(vm, x, "baz", 3);
-	blk_ki(vm, x, 10028);
+	blk_kz(vm, x, kval, "bar", 3);
+	blk_kz(vm, x, kval, "baz", 3);
+	blk_ki(vm, x, kval, 10028);
 	x->kargs = 2;
 	x->file  = kstr_fetch(vm, "foo.ymd", -1);
 	blk_shrink(vm, x);

@@ -40,51 +40,6 @@ static struct variable *blk_klast(struct ymd_mach *vm, struct chunk *core) {
 	return core->kval + core->kkval;
 }
 
-int blk_kz(struct ymd_mach *vm, struct chunk *core, const char *z, int k) {
-	int i = core->kkval;
-	struct kstr *kz;
-	while (i--) {
-		if (ymd_type(&core->kval[i]) == T_KSTR &&
-			kstr_k(core->kval + i)->len == k &&
-			memcmp(kstr_k(core->kval + i)->land, z, k) == 0)
-			return i;
-	}
-	kz = kstr_fetch(vm, z, k);
-	setv_kstr(blk_klast(vm, core), kz);
-	return core->kkval++;
-}
-
-int blk_ki(struct ymd_mach *vm, struct chunk *core, ymd_int_t n) {
-	int i = core->kkval;
-	while (i--) {
-		if (ymd_type(&core->kval[i]) == T_INT && core->kval[i].u.i == n)
-			return i;
-	}
-	setv_int(blk_klast(vm, core), n);
-	return core->kkval++;
-}
-
-int blk_kd(struct ymd_mach *vm, struct chunk *core, ymd_float_t f) {
-	int i = core->kkval;
-	while (i--) {
-		if (ymd_type(&core->kval[i]) == T_FLOAT && core->kval[i].u.f == f)
-			return i;
-	}
-	setv_float(blk_klast(vm, core), f);
-	return core->kkval++;
-}
-
-int blk_kf(struct ymd_mach *vm, struct chunk *core, void *p) {
-	int i = core->kkval;
-	struct func *fn = p;
-	while (i--) {
-		if (ymd_type(&core->kval[i]) == T_FUNC && core->kval[i].u.ref == p)
-			return i;
-	}
-	setv_func(blk_klast(vm, core), fn);
-	return core->kkval++;
-}
-
 int blk_kval(struct ymd_mach *vm, struct chunk *core, struct hmap *map,
 		const struct variable *k) {
 	struct variable *val;

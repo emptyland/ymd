@@ -7,12 +7,13 @@
 #include <stdio.h>
 
 struct ymd_mach;
+struct func_env;
 
 struct ymd_parser {
 	struct ymd_lex lex;
 	struct ytoken lah; // look a head;
 	struct znode *lnk; // symbol strings
-	struct chunk *blk; // top block
+	struct func_env *env; // top block
 	struct loop_info *loop;
 	int for_id; // for iterator id
 	jmp_buf jpt;

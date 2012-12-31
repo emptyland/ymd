@@ -722,7 +722,7 @@ static int libx_import(L) {
 		return 0;
 	fp = fopen(name->land, "r");
 	if (!fp)
-		ymd_panic(l, "Can not open import file: %s", name->land);
+		ymd_panic(l, "Can not open file: %s", name->land);
 	i = ymd_compilef(l, file2blknam(name->land, blknam, sizeof(blknam)),
 	                 name->land, fp);
 	fclose(fp);
@@ -731,8 +731,7 @@ static int libx_import(L) {
 		       name->land);
 	for (i = 1; i < ymd_argc(l); ++i)
 		*ymd_push(l) = *ymd_argv(l, i);
-	return ymd_call(l, func_of(l, ymd_top(l, 0)),
-	                ymd_argc(l) - 1, 0);
+	return ymd_call(l, func_of(l, ymd_top(l, 0)), ymd_argc(l) - 1, 0);
 }
 
 static int libx_eval(L) {
@@ -1027,6 +1026,7 @@ LIBC_BEGIN(Builtin)
 	LIBC_ENTRY(pattern)
 	LIBC_ENTRY(match)
 	LIBC_ENTRY(import)
+	//LIBC_ENTRY(load)
 	LIBC_ENTRY(eval)
 	LIBC_ENTRY(compile)
 	LIBC_ENTRY(env)

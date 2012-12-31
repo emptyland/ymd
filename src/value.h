@@ -50,7 +50,6 @@ struct variable {
 // Byte Function
 struct chunk {
 	int ref; // Reference counter
-	struct chunk *chain; // Chain for compiling
 	ymd_inst_t *inst; // Instructions
 	int *line; // Instruction-line mapping
 	int kinst; // Number of instructions
@@ -200,6 +199,7 @@ void kpool_final(struct ymd_mach *vm);
 
 // Hash map: `hmap` functions:
 struct hmap *hmap_new(struct ymd_mach *vm, int count);
+struct hmap *hmap_init(struct ymd_mach *vm, struct hmap *o, int count);
 void hmap_final(struct ymd_mach *vm, struct hmap *o);
 struct variable *hmap_put(struct ymd_mach *vm, struct hmap *o,
                           const struct variable *key);
@@ -253,19 +253,6 @@ int mand_remove(struct ymd_mach *vm, struct mand *o,
 void blk_final(struct ymd_mach *vm, struct chunk *core);
 int blk_emit(struct ymd_mach *vm, struct chunk *core, ymd_inst_t inst,
              int line);
-
-// Find or get `string' in constant list
-int blk_kz(struct ymd_mach *vm, struct chunk *core, const char *z,
-           int k);
-
-// Find or put `int' in constant list
-int blk_ki(struct ymd_mach *vm, struct chunk *core, ymd_int_t i);
-
-// Find or put `float' in constant list
-int blk_kd(struct ymd_mach *vm, struct chunk *core, ymd_float_t f);
-
-// Find or put `function' in constant list
-int blk_kf(struct ymd_mach *vm, struct chunk *core, void *fn);
 
 // Find or put constant values may be faster.
 int blk_kval(struct ymd_mach *vm, struct chunk *core, struct hmap *map,

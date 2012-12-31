@@ -57,20 +57,6 @@ static int test_stack_incrment (struct ymd_mach *vm) {
 
 static const int kval_benchmark = 100000;
 
-static int test_kval_slow(struct ymd_mach *vm) {
-	struct chunk *core = vm_zalloc(vm, sizeof(*core));
-	int i = kval_benchmark;
-	RAND_BEGIN(NORMAL)
-	while (i--) {
-		blk_ki(vm, core, RAND_RANGE(large, 0, 1000));
-	}
-	RAND_END
-	blk_shrink(vm, core);
-	blk_final(vm, core);
-	vm_free(vm, core);
-	return 0;
-}
-
 static int test_kval_fast(struct ymd_mach *vm) {
 	struct chunk *core = vm_zalloc(vm, sizeof(*core));
 	struct hmap *map = hmap_new(vm, 0);

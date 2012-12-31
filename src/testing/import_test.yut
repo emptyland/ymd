@@ -1,15 +1,28 @@
 import "testing/im_external.ymd"
 
-func external.bar () {
-	return "bar"
-}
-
-func external.baz () {
-	return "baz"
-}
-
 ImportTest = @{
 	k_flag: "test.flag",
+
+	final : func (self) {
+		for var i in values(["testing/im_external.ymd",
+				"testing/im_data.ymd",
+				"testing/imported1.ymd",
+				"testing/imported2.ymd"]) {
+			__loaded__[i] = nil
+		}
+	},
+
+	testSanity : func (self) {
+		var lib = import "testing/imported1.ymd"
+		Assert:EQ("imported1", lib)
+		lib = import "testing/imported2.ymd"
+		Assert:EQ("imported2", lib)
+
+		lib = import "testing/imported1.ymd"
+		Assert:Nil(lib)
+		lib = import "testing/imported2.ymd"
+		Assert:Nil(lib)
+	},
 
 	testImportExternal : func (self) {
 		Assert:NotNil(external)
@@ -22,16 +35,10 @@ ImportTest = @{
 		Assert:EQ("foo", external:foo())
 	},
 
-	testImportPartial : func (self) {
-		Assert:EQ("function", typeof external.bar)
-		Assert:EQ("bar", external:bar())
-
-		Assert:EQ("function", typeof external.baz)
-		Assert:EQ("baz", external:baz())
-	},
-
 	testImportData : func (self) {
-		var data = import("testing/im_data.ymd")
+		var fileName = "testing/im_data.ymd"
+		var data = import(fileName)
+		Assert:NotNil(data)
 		Assert:EQ("imported data", data.name)
 		Assert:EQ(0x0fff, data.id)
 		Assert:EQ("allow", data.token[0])
@@ -42,8 +49,8 @@ ImportTest = @{
 	},
 
 	testImportReached : func (self) {
-		var ok = import("testing/im_external.ymd")
+		var fileName = "testing/im_external.ymd"
+		var ok = import(fileName)
 		Assert:Nil(ok)
-		print(__loaded__)
 	}
 }

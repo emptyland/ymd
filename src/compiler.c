@@ -33,6 +33,12 @@ struct func_decl_desc {
 	ushort_t id;
 };
 
+struct func_env {
+	struct func_env *chain; // chain to prev env.
+	struct chunk *core; // func block.
+	struct hmap kval; // kval map.
+};
+
 static inline int ymc_peek(struct ymd_parser *p) {
 	return p->lah.token;
 }
@@ -47,6 +53,34 @@ static inline int ymc_test(struct ymd_parser *p, int token) {
 		return 1;
 	}
 	return 0;
+}
+
+// Find or get `string' in constant list
+static inline int ymk_kz(struct ymd_parser *p, const char *z, int n) {
+	struct variable k;
+	setv_kstr(&k, kstr_fetch(p->vm, z, n));
+	return blk_kval(p->vm, p->env->core, &p->env->kval, &k);
+}
+
+// Find or put `int' in constant list
+static inline int ymk_ki(struct ymd_parser *p, ymd_int_t i) {
+	struct variable k;
+	setv_int(&k, i);
+	return blk_kval(p->vm, p->env->core, &p->env->kval, &k);
+}
+
+// Find or put `float' in constant list
+static inline int ymk_kd(struct ymd_parser *p, ymd_float_t f) {
+	struct variable k;
+	setv_float(&k, f);
+	return blk_kval(p->vm, p->env->core, &p->env->kval, &k);
+}
+
+// Find or put `function' in constant list
+static inline int ymk_kf(struct ymd_parser *p, void *fn) {
+	struct variable k;
+	setv_func(&k, fn);
+	return blk_kval(p->vm, p->env->core, &p->env->kval, &k);
 }
 
 static void ymc_fail(struct ymd_parser *p, const char *fmt, ...);
@@ -73,21 +107,26 @@ static inline void ymk_chunk_reserved(struct ymd_parser *p,
 }
 
 static inline void ymk_enter(struct ymd_parser *p, struct chunk *x) {
-	if (!x) x = ymk_chunk(p);
-	x->chain = p->blk;
-	p->blk = x;
+	struct func_env *env = vm_zalloc(p->vm, sizeof(*env));
+	env->core = !x ? ymk_chunk(p) : x;
+	hmap_init(p->vm, &env->kval, 0);
+	env->chain = p->env;
+	p->env = env;
 }
 
 static inline struct chunk *ymk_leave(struct ymd_parser *p) {
-	struct chunk *x = p->blk;
-	blk_shrink(p->vm, x); // Fixed chunk size
-	p->blk = x->chain;
-	return x;
+	struct func_env *env = p->env;
+	struct chunk *core = env->core;
+	blk_shrink(p->vm, core); // Fixed chunk size
+	p->env = env->chain;
+	hmap_final(p->vm, &env->kval);
+	vm_free(p->vm, env);
+	return core;
 }
 
 static inline void ymk_emitOfP(
 	struct ymd_parser *p, uchar_t o, uchar_t f, ushort_t param) {
-	blk_emit(p->vm, p->blk, asm_build(o, f, param), p->lex.i_line);
+	blk_emit(p->vm, p->env->core, asm_build(o, f, param), p->lex.i_line);
 }
 static inline void ymk_emitOf(
 	struct ymd_parser *p, uchar_t o, uchar_t f) {
@@ -104,12 +143,12 @@ static inline void ymk_emitOP(
 static inline void ymk_emit_call(
 	struct ymd_parser *p, uchar_t o, uchar_t aret,
 	uchar_t argc, ushort_t method) {
-	blk_emit(p->vm, p->blk, asm_call(o, aret, argc, method),
+	blk_emit(p->vm, p->env->core, asm_call(o, aret, argc, method),
 	         p->lex.i_line);
 }
 
 static inline ushort_t ymk_ipos(struct ymd_parser *p) {
-	return p->blk->kinst;
+	return p->env->core->kinst;
 }
 
 static inline ushort_t ymk_hold(struct ymd_parser *p) {
@@ -120,12 +159,12 @@ static inline ushort_t ymk_hold(struct ymd_parser *p) {
 
 static inline void ymk_emit_int(
 	struct ymd_parser *p, ymd_int_t imm) {
-	ymk_emitOfP(p, I_PUSH, F_KVAL, blk_ki(p->vm, p->blk, imm));
+	ymk_emitOfP(p, I_PUSH, F_KVAL, ymk_ki(p, imm));
 }
 
 static inline void ymk_emit_float(struct ymd_parser *p,
 		ymd_float_t imm) {
-	ymk_emitOfP(p, I_PUSH, F_KVAL, blk_kd(p->vm, p->blk, imm));
+	ymk_emitOfP(p, I_PUSH, F_KVAL, ymk_kd(p, imm));
 }
 
 static void ymk_emit_kz(
@@ -135,10 +174,10 @@ static void ymk_emit_kz(
 	if (k < 0)
 		ymc_fail(p, "Bad ESC string.");
 	if (priv) {
-		i = blk_kz(p->vm, p->blk, priv, k);
+		i = ymk_kz(p, priv, k);
 		free(priv);
 	} else {
-		i = blk_kz(p->vm, p->blk, "", 0);
+		i = ymk_kz(p, "", 0);
 	}
 	ymk_emitOfP(p, I_PUSH, F_KVAL, i);
 }
@@ -147,105 +186,105 @@ static void ymk_emit_store(
 	struct ymd_parser *p, const char *symbol) {
 	// Storing way:
 	// 1. Local variable first
-	int i = blk_find_lz(p->blk, symbol);
+	int i = blk_find_lz(p->env->core, symbol);
 	if (i >= 0) {
 		ymk_emitOfP(p, I_STORE, F_LOCAL, i);
 		return;
 	}
 	// 2. Upval second
-	i = blk_find_uz(p->blk, symbol);
+	i = blk_find_uz(p->env->core, symbol);
 	if (i >= 0) {
 		ymk_emitOfP(p, I_STORE, F_UP, i);
 		return;
 	}
 	// 3. Global third
-	i = blk_kz(p->vm, p->blk, symbol, -1);
+	i = ymk_kz(p, symbol, -1);
 	ymk_emitOfP(p, I_STORE, F_OFF, i);
 }
 
 static void ymk_emit_push(
 	struct ymd_parser *p, const char *symbol) {
-	struct chunk *x = p->blk;
+	struct func_env *x = p->env;
 	// Loading way:
 	// 1. Local variable first
-	int i = blk_find_lz(p->blk, symbol);
+	int i = blk_find_lz(p->env->core, symbol);
 	if (i >= 0) {
 		ymk_emitOfP(p, I_PUSH, F_LOCAL, i);
 		return;
 	}
 	// 2. Upval second
-	i = blk_find_uz(p->blk, symbol);
+	i = blk_find_uz(p->env->core, symbol);
 	if (i >= 0) {
 		ymk_emitOfP(p, I_PUSH, F_UP, i);
 		return;
 	}
 	// 2.5 Try find upval
 	while ((x = x->chain) != NULL) {
-		i = blk_find_lz(x, symbol); // upval is local?
+		i = blk_find_lz(x->core, symbol); // upval is local?
 		if (i < 0)
-			i = blk_find_uz(x, symbol); // upval is upval?
+			i = blk_find_uz(x->core, symbol); // upval is upval?
 		if (i >= 0) {
-			struct chunk *link = p->blk;
+			struct func_env *link = p->env;
 			while ((link = link->chain) != x) { // Link upval in every level.
 				// FIXME: use better linking
-				i = blk_add_uz(p->vm, link, symbol);
+				i = blk_add_uz(p->vm, link->core, symbol);
 				assert (i >= 0 && "Duplicate linked upval.");
 			}
-			i = blk_add_uz(p->vm, p->blk, symbol);
+			i = blk_add_uz(p->vm, p->env->core, symbol);
 			ymk_emitOfP(p, I_PUSH, F_UP, i);
 			return;
 		}
 	}
 	// 3. Global varialbe third
-	i = blk_kz(p->vm, p->blk, symbol, -1);
+	i = ymk_kz(p, symbol, -1);
 	ymk_emitOfP(p, I_PUSH, F_OFF, i);
 }
 
 static void ymk_emit_pushz(
 	struct ymd_parser *p, const char *symbol, int n) {
-	int i = blk_kz(p->vm, p->blk, symbol, n);
+	int i = ymk_kz(p, symbol, n);
 	ymk_emitOfP(p, I_PUSH, F_KVAL, i);
 }
 
 static int ymk_new_locvar(
 	struct ymd_parser *p, const char *symbol) {
-	int i = blk_find_uz(p->blk, symbol);
+	int i = blk_find_uz(p->env->core, symbol);
 	if (i >= 0) // Find symbol in upval
 		ymc_fail(p, "Duplicate upval: %s", symbol);
-	i = blk_add_lz(p->vm, p->blk, symbol);
+	i = blk_add_lz(p->vm, p->env->core, symbol);
 	if (i < 0) // Duplicate symbol in local
 		ymc_fail(p, "Duplicate local varibale: `%s'", symbol);
 	return i;
 }
 
 static void ymk_emit_end(struct ymd_parser *p) {
-	struct chunk *core = p->blk;
+	struct chunk *core = p->env->core;
 	if (!core->kinst || asm_op(core->inst[core->kinst - 1]) != I_RET)
 		ymk_emitOP(p, I_RET, 0);
 }
 
 static void ymk_emit_setf(
 	struct ymd_parser *p, const char *symbol) {
-	int i = blk_kz(p->vm, p->blk, symbol, -1);
+	int i = ymk_kz(p, symbol, -1);
 	ymk_emitOfP(p, I_SETF, F_FAST, i);
 }
 
 static void ymk_emit_getf(
 	struct ymd_parser *p, const char *symbol) {
-	int i = blk_kz(p->vm, p->blk, symbol, -1);
+	int i = ymk_kz(p, symbol, -1);
 	ymk_emitOfP(p, I_GETF, F_FAST, i);
 }
 
 static void ymk_emit_selfcall(
 	struct ymd_parser *p, int adjust, int argc, const char *method) {
-	int i = blk_kz(p->vm, p->blk, method, -1);
+	int i = ymk_kz(p, method, -1);
 	ymk_emit_call(p, I_SELFCALL, adjust, argc, i);
 }
 
 static inline void ymk_emit_jmp(struct ymd_parser *p, uint_t target,
                                 int bwd) {
 	ushort_t off;
-	const uint_t i_curr = p->blk->kinst;
+	const uint_t i_curr = p->env->core->kinst;
 	if (bwd) {
 		assert(i_curr >= target);
 		off = i_curr - target;
@@ -257,14 +296,14 @@ static inline void ymk_emit_jmp(struct ymd_parser *p, uint_t target,
 }
 
 static inline void ymk_hack(struct ymd_parser *p, ushort_t i, uint_t inst) {
-	const struct chunk *core = p->blk;
+	const struct chunk *core = p->env->core;
 	assert(i < core->kinst);
 	core->inst[i] = inst;
 }
 
 static inline void ymk_hack_jmp(
 	struct ymd_parser *p, ushort_t i, uchar_t op, int bwd) {
-	const struct chunk *core = p->blk;
+	const struct chunk *core = p->env->core;
 	ushort_t off = core->kinst - i;
 	assert(core->kinst >= i);
 	ymk_hack(p, i, asm_build(op, bwd ? F_BACKWARD : F_FORWARD, off));
@@ -273,7 +312,7 @@ static inline void ymk_hack_jmp(
 // Jmp to fail block
 static inline void ymk_fail_jmp(struct ymd_parser *p, ushort_t i_fail,
 		ushort_t i, uchar_t op) {
-	const struct chunk *core = p->blk;
+	const struct chunk *core = p->env->core;
 	ushort_t off = i_fail - i;
 	assert(core->kinst >= i);
 	ymk_hack(p, i, asm_build(op, F_FORWARD, off));
@@ -283,7 +322,7 @@ static inline void ymk_emit_func(
 	struct ymd_parser *p,
 	const struct func_decl_desc *desc,
 	struct func *fn) {
-	int i = blk_kf(p->vm, p->blk, fn);
+	int i = ymk_kf(p, fn);
 	if (fn->u.core->kuz) {
 		fn->n_upval = fn->u.core->kuz;
 		ymk_hack(p, desc->load_p, emitAfP(CLOSE, KVAL, i));
@@ -319,7 +358,7 @@ static inline void ymk_loop_enter(
 
 static void ymk_loop_leave(struct ymd_parser *p) {
 	int i;
-	const uint_t i_curr = p->blk->kinst;
+	const uint_t i_curr = p->env->core->kinst;
 	assert(p->loop != NULL);
 	assert(p->loop->i_retry <= i_curr);
 	// Jump back
@@ -546,7 +585,7 @@ static void parse_primary(struct ymd_parser *p) {
 	case ARGV:
 		ymc_next(p);
 		ymk_emitOf(p, I_PUSH, F_ARGV);
-		++(p->blk->argv); // Record argv number of referenced.
+		++(p->env->core->argv); // Record argv number of referenced.
 		break;
 	default:
 		ymc_fail(p, "Unexpected symbol");
@@ -951,7 +990,7 @@ static void parse_params(struct ymd_parser *p, int method) {
 	} while (ymc_test(p, ','));
 out:
 	ymc_match(p, ')');
-	p->blk->kargs = nparam;
+	p->env->core->kargs = nparam;
 }
 
 static void parse_block(struct ymd_parser *p) {
@@ -1256,17 +1295,20 @@ static void ymc_final(struct ymd_parser *p) {
 		p->lnk = NULL;
 	}
 	{
-		struct chunk *i = p->blk, *last = i;
+		struct func_env *i = p->env, *last = i;
 		while (i) {
 			last = i;
 			i = i->chain;
-			if (!last->ref) {
-				blk_final(p->vm, last);
-				mm_free(p->vm, last, 1, sizeof(*last));
+			if (!last->core->ref) {
+				blk_shrink(p->vm, last->core);
+				blk_final(p->vm, last->core);
+				mm_free(p->vm, last->core, 1, sizeof(*(last->core)));
 				ymd_pop(ioslate(p->vm), 1);
 			}
+			hmap_final(p->vm, &last->kval);
+			vm_free(p->vm, last);
 		}
-		p->blk = NULL;
+		p->env = NULL;
 	}
 }
 
@@ -1282,7 +1324,7 @@ int ymc_compile(struct ymd_parser *p, struct chunk *blk) {
 		parse_stmt(p);
 	ymk_emit_end(p);
 	ymk_leave(p);
-	assert(!p->blk);
+	assert(!p->env);
 	ymc_final(p);
 	return 0;
 }

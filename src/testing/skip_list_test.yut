@@ -114,6 +114,7 @@ SkipListTest = @{
 		if var rv = pcall(generateLargeTable, fileName, "skiplist", k); rv.err {
 			Assert:Fail(rv.err)
 		}
+		__loaded__[fileName] = nil
 		var large = import(fileName)
 		Assert:EQ("skiplist", typeof large)
 		Assert:EQ(k, len(large))

@@ -100,3 +100,4 @@ static inline int func_argv(const struct func *fn) {
 }
 
 #endif // YMD_VALUE_INL_H
+
