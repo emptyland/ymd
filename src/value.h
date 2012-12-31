@@ -175,6 +175,8 @@ int hmap_equals(const struct hmap *o, const struct hmap *rhs);
 int hmap_compare(const struct hmap *o, const struct hmap *rhs);
 int skls_equals(const struct skls *o, const struct skls *rhs);
 int skls_compare(const struct skls *o, const struct skls *rhs);
+int func_equals(const struct func *o, const struct func *rhs);
+int func_compare(const struct func *o, const struct func *rhs);
 int dyay_equals(const struct dyay *o, const struct dyay *rhs);
 int dyay_compare(const struct dyay *o, const struct dyay *rhs);
 int mand_equals(const struct mand *o, const struct mand *rhs);
@@ -264,6 +266,10 @@ int blk_kd(struct ymd_mach *vm, struct chunk *core, ymd_float_t f);
 
 // Find or put `function' in constant list
 int blk_kf(struct ymd_mach *vm, struct chunk *core, void *fn);
+
+// Find or put constant values may be faster.
+int blk_kval(struct ymd_mach *vm, struct chunk *core, struct hmap *map,
+		const struct variable *k);
 
 int blk_find_lz(struct chunk *core, const char *z);
 int blk_add_lz(struct ymd_mach *vm, struct chunk *core, const char *z);

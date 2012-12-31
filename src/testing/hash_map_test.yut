@@ -1,0 +1,37 @@
+HashMapTest = @{
+	testKeys : func (self) {
+		var o = {}
+		o[str] = 0
+		o[len] = 1
+
+		var func foo () {
+			return "Hello"
+		}
+		o[foo] = 2
+
+		Assert:EQ(0, o[str])
+		Assert:EQ(1, o[len])
+		Assert:EQ(2, o[foo])
+	},
+
+	testKeyEquals : func (self) {
+		Assert:True(str == str)
+		Assert:False(str != str)
+
+		Assert:True(len == len)
+		Assert:False(len != len)
+
+		var func foo () {
+			return "Hello"
+		}
+		var func bar () {
+			return "World"
+		}
+		Assert:True(foo == foo)
+		Assert:False(foo != foo)
+
+		Assert:True(bar != foo)
+		Assert:False(bar == foo)
+	}
+}
+

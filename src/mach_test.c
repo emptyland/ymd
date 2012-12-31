@@ -54,3 +54,36 @@ static int test_stack_incrment (struct ymd_mach *vm) {
 	ASSERT_EQ(ulong, YMD_INIT_STACK, l->kstk);
 	return 0;
 }
+
+static const int kval_benchmark = 100000;
+
+static int test_kval_slow(struct ymd_mach *vm) {
+	struct chunk *core = vm_zalloc(vm, sizeof(*core));
+	int i = kval_benchmark;
+	RAND_BEGIN(NORMAL)
+	while (i--) {
+		blk_ki(vm, core, RAND_RANGE(large, 0, 1000));
+	}
+	RAND_END
+	blk_shrink(vm, core);
+	blk_final(vm, core);
+	vm_free(vm, core);
+	return 0;
+}
+
+static int test_kval_fast(struct ymd_mach *vm) {
+	struct chunk *core = vm_zalloc(vm, sizeof(*core));
+	struct hmap *map = hmap_new(vm, 0);
+	int i = kval_benchmark;
+	RAND_BEGIN(NORMAL)
+	while (i--) {
+		struct variable k;
+		setv_int(&k, RAND_RANGE(large, 0, 1000));
+		blk_kval(vm, core, map, &k);
+	}
+	RAND_END
+	blk_shrink(vm, core);
+	blk_final(vm, core);
+	vm_free(vm, core);
+	return 0;
+}

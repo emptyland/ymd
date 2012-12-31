@@ -1,6 +1,7 @@
 #include "core.h"
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
 #include <assert.h>
 
 //------------------------------------------------------------------
@@ -101,6 +102,15 @@ static inline size_t hash_kstr(const struct kstr *kz) {
 	return kz->hash ? kz->hash : (mz->hash = kz_hash(kz->land, kz->len));
 }
 
+static inline size_t hash_func(const struct func *fn) {
+	uintptr_t h = 0, p, i = fn->n_upval;
+	while (i--)
+		h += hash(fn->upval + i);
+	p = (uintptr_t)(fn->is_c ? (void*)fn->u.nafn : fn->u.core);
+	p = p / sizeof(void*);
+	return (size_t)(p ^ h);
+}
+
 static size_t hash(const struct variable *v) {
 	switch (ymd_type(v)) {
 	case T_NIL:
@@ -113,8 +123,8 @@ static size_t hash(const struct variable *v) {
 		return hash_bool(v->u.i);
 	case T_KSTR:
 		return hash_kstr(kstr_k(v));
-	//case T_FUNC:
-	//	return hash_func(func_k(v));
+	case T_FUNC:
+		return hash_func(func_k(v));
 	case T_EXT:
 		return hash_ext(v->u.ext);
 	case T_DYAY:
@@ -360,3 +370,4 @@ int hmap_remove(struct ymd_mach *vm, struct hmap *o,
 	}
 	return 0;
 }
+

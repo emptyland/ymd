@@ -141,7 +141,7 @@ int equals(const struct variable *lhs, const struct variable *rhs) {
 	case T_KSTR:
 		return kstr_equals(kstr_k(lhs), kstr_k(rhs));
 	case T_FUNC:
-		return func_k(lhs) == func_k(rhs); // FIXME:
+		return func_equals(func_k(lhs), func_k(rhs));
 	case T_EXT:
 		return lhs->u.ext == rhs->u.ext;
 	case T_DYAY:
@@ -162,7 +162,6 @@ int equals(const struct variable *lhs, const struct variable *rhs) {
 
 #define safe_compare(l, r) \
 	(((l) < (r)) ? -1 : (((l) > (r)) ? 1 : 0))
-
 int compare(const struct variable *lhs, const struct variable *rhs) {
 	if (lhs == rhs)
 		return 0;
@@ -176,12 +175,12 @@ int compare(const struct variable *lhs, const struct variable *rhs) {
 		return safe_compare(lhs->u.i, rhs->u.i);
 	case T_FLOAT:
 		return safe_compare(lhs->u.f, rhs->u.f);
+	case T_EXT:
+		return safe_compare(lhs->u.ext, rhs->u.ext);
 	case T_KSTR:
 		return kstr_compare(kstr_k(lhs), kstr_k(rhs));
-	//case T_CLOSURE:
-	//	break;
-	case T_EXT:
-		return 0; // Do not compare a pointer.
+	case T_FUNC:
+		return func_compare(func_k(lhs), func_k(rhs));
 	case T_DYAY:
 		return dyay_compare(dyay_k(lhs), dyay_k(rhs));
 	case T_HMAP:

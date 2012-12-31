@@ -17,7 +17,7 @@ func generateLargeTable(fileName, type, num) {
 			if j != 0 {
 				arr = arr + ", "
 			}
-			arr = arr + str(rand(100))
+			arr = arr + str(rand(1000))
 		}
 		arr = arr + "]"
 		var s = "\t\"" + str(i) + "\": " + arr

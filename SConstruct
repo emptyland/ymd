@@ -4,8 +4,17 @@ from SCons.Script import *
 conf = {
 	'CC': 'clang',
 	'CXX': 'clang++',
-	'CCFLAGS': '-O0 -g3 -Wall -Wextra'
+	'CCFLAGS': '-Wall -Wextra ',
+	'profile': False
 }
+
+# Parse arguments
+if ARGUMENTS.get('profile', 0):
+	conf['CCFLAGS'] = conf['CCFLAGS'] + '-O2 -g3'
+	conf['profile'] = True
+else:
+	conf['CCFLAGS'] = conf['CCFLAGS'] + '-O0 -g3'
+	conf['profile'] = False
 
 # Use environment vairable for configuration
 if os.environ.has_key('CC'):
@@ -22,8 +31,9 @@ if conf['CC'] == 'clang':
 env = Environment(CC = conf['CC'],
 	CXX = conf['CXX'],
 	CCFLAGS = conf['CCFLAGS'],
-    LIBPATH = '#src third_party/regex third_party/pcre'.split(),
+    LIBPATH = '#src third_party/pcre'.split(),
 	platform  = 'posix')
+env.profile = conf['profile']
 
 Export('env')
 SConscript('src/SConscript')

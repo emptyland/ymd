@@ -49,8 +49,12 @@ yut_o = env.StaticObject('yut.c')
 yut_rand_o = env.StaticObject('yut_rand.c')
 test_main_o = env.StaticObject('test_main.c')
 
-env.Program('yamada', 'ymd_main.c',
-	LIBS='yamada pcre pthread'.split());
+if env.profile:
+	env.Program('yamada', 'ymd_main.c',
+			LIBS='yamada pcre profiler pthread'.split());
+else:
+	env.Program('yamada', 'ymd_main.c',
+			LIBS='yamada pcre pthread'.split());
 env.Depends('yamada', 'libyamada.a')
 
 def DefineTest(name, name_o):

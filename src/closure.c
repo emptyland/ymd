@@ -85,6 +85,20 @@ int blk_kf(struct ymd_mach *vm, struct chunk *core, void *p) {
 	return core->kkval++;
 }
 
+int blk_kval(struct ymd_mach *vm, struct chunk *core, struct hmap *map,
+		const struct variable *k) {
+	struct variable *val;
+	assert (!is_nil(k));
+	val = hmap_put(vm, map, k);
+	if (is_nil(val)) {
+		*blk_klast(vm, core) = *k;
+		setv_int(val, core->kkval);
+		return core->kkval++;
+	}
+	assert (ymd_type(val) == T_INT);
+	return (int)val->u.i;
+}
+
 void blk_final(struct ymd_mach *vm, struct chunk *core) {
 	if (core->inst)
 		mm_free(vm, core->inst, core->kinst, sizeof(*core->inst));
@@ -247,4 +261,38 @@ struct func *func_clone(struct ymd_mach *vm, struct func *fn) {
 	x->u.core = mm_grab(fn->u.core);
 	return x;
 }
+
+int func_equals(const struct func *o, const struct func *rhs) {
+	size_t i = o->n_upval;
+	if (o->is_c != rhs->is_c)
+		return 0;
+	if (!kstr_equals(o->name, rhs->name))
+		return 0;
+	if (o->n_upval != rhs->n_upval)
+		return 0;
+	while (i--) {
+		if (!equals(o->upval + i, rhs->upval + i))
+			return 0;
+	}
+	return o->is_c ? o->u.nafn == rhs->u.nafn : o->u.core == rhs->u.core;
+}
+
+#define safe_cmp(lhs, rhs) \
+	((lhs) < (rhs) ? -1 : ((lhs) > (rhs) ? 1 : 0))
+int func_compare(const struct func *o, const struct func *rhs) {
+	int i = YMD_MIN(o->n_upval, rhs->n_upval), rv = 0;
+	rv += o->is_c - rhs->is_c;
+	rv += kstr_compare(o->name, rhs->name);
+	while (i--)
+		rv += compare(o->upval + i, rhs->upval + i);
+	rv += safe_cmp(o->n_upval, rhs->n_upval);
+	if (o->is_c == rhs->is_c) {
+		if (o->is_c)
+			rv += safe_cmp((void*)o->u.nafn, (void*)rhs->u.nafn);
+		else
+			rv += safe_cmp(o->u.core, rhs->u.core);
+	}
+	return rv;
+}
+#undef safe_cmp
 
