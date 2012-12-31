@@ -1,6 +1,6 @@
 #include "compiler.h"
 #include "core.h"
-#include "assembly.h"
+#include "bytecode.h"
 #include "encoding.h"
 #include <stdio.h>
 
@@ -31,24 +31,13 @@
 
 #define call_jleave(l) { l->jpt = l->jpt->chain; } (void)0
 
-// +----------------------+
-// |  bind  |    local    |
-// +--------+-------------+
-// | n_bind |n_lz - n_bind|
-// +----------------------+
-static inline struct variable *vm_local(struct ymd_context *l,
-                                        struct func *fn, int i) {
-	assert(fn == l->info->run && "Not current running.");
-	return l->info->loc + i;
-}
-
 static inline struct variable *vm_find_local(struct ymd_context *l,
                                              struct func *fn,
                                              const char *name) {
 	int i = blk_find_lz(fn->u.core, name);
 	if (i < 0)
 		ymd_panic(l, "Can not find local: %s", name);
-	return vm_local(l, fn, i);
+	return l->info->loc + i;
 }
 
 static inline void do_put(struct ymd_mach *vm,
@@ -291,7 +280,7 @@ retry:
 		case I_STORE:
 			switch (asm_flag(inst)) {
 			case F_LOCAL:
-				*vm_local(l, fn, asm_param(inst)) = *ymd_top(l, 0);
+				l->info->loc[asm_param(inst)] = *ymd_top(l, 0);
 				break;
 			case F_UP:
 				fn->upval[asm_param(inst)] = *ymd_top(l, 0);
@@ -401,7 +390,7 @@ retry:
 				var = core->kval[asm_param(inst)];
 				break;
 			case F_LOCAL:
-				var = *vm_local(l, fn, asm_param(inst));
+				var = l->info->loc[asm_param(inst)];
 				break;
 			case F_BOOL:
 				setv_bool(&var, asm_param(inst));

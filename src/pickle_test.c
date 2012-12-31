@@ -1,7 +1,7 @@
 #include "pickle.h"
 #include "core.h"
 #include "zstream.h"
-#include "assembly.h"
+#include "bytecode.h"
 #include "pickle_test.def"
 
 static struct ymd_mach *setup() {

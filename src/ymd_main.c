@@ -1,4 +1,4 @@
-#include "disassembly.h"
+#include "decode.h"
 #include "core.h"
 #include "compiler.h"
 #include "libc.h"

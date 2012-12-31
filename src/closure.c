@@ -1,5 +1,5 @@
 #include "core.h"
-#include "assembly.h"
+#include "bytecode.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>

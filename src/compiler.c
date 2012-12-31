@@ -1,6 +1,6 @@
 #include "compiler.h"
 #include "core.h"
-#include "assembly.h"
+#include "bytecode.h"
 #include "encoding.h"
 #include "print.h"
 #include <stdarg.h>
@@ -314,7 +314,7 @@ static inline void ymk_fail_jmp(struct ymd_parser *p, ushort_t i_fail,
 		ushort_t i, uchar_t op) {
 	const struct chunk *core = p->env->core;
 	ushort_t off = i_fail - i;
-	assert(core->kinst >= i);
+	assert(core->kinst >= i); (void)core;
 	ymk_hack(p, i, asm_build(op, F_FORWARD, off));
 }
 
@@ -360,7 +360,7 @@ static void ymk_loop_leave(struct ymd_parser *p) {
 	int i;
 	const uint_t i_curr = p->env->core->kinst;
 	assert(p->loop != NULL);
-	assert(p->loop->i_retry <= i_curr);
+	assert(p->loop->i_retry <= i_curr); (void)i_curr;
 	// Jump back
 	ymk_emit_jmp(p, p->loop->i_retry, 1);
 	// Has `fail' block?

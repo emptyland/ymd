@@ -10,7 +10,7 @@ conf = {
 
 # Parse arguments
 if ARGUMENTS.get('profile', 0):
-	conf['CCFLAGS'] = conf['CCFLAGS'] + '-O2 -g3'
+	conf['CCFLAGS'] = conf['CCFLAGS'] + '-O2 -g3 -DNDEBUG'
 	conf['profile'] = True
 else:
 	conf['CCFLAGS'] = conf['CCFLAGS'] + '-O0 -g3'

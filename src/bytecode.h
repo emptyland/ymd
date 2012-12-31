@@ -104,28 +104,12 @@ static inline uint_t asm_call(
 #define emitAP(a, p)     asm_build(I_##a, 0, p)
 #define emitA(a)         asm_build(I_##a, 0, 0)
 
-static inline uchar_t asm_op(uint_t inst) {
-	return (uchar_t)((inst & 0xff000000U) >> 24);
-}
+#define asm_op(inst)    (((inst) & 0xff000000U) >> 24)
+#define asm_flag(inst)  (((inst) & 0x00ff0000U) >> 16)
+#define asm_param(inst) (((inst) & 0x0000ffffU))
 
-static inline uchar_t asm_flag(uint_t inst) {
-	return (uchar_t)((inst & 0x00ff0000U) >> 16);
-}
-
-static inline ushort_t asm_param(uint_t inst) {
-	return (ushort_t)(inst & 0x0000ffffU);
-}
-
-static inline uchar_t asm_aret(uint_t inst) {
-	return (uchar_t)((asm_param(inst) & 0xf000U) >> 12);
-}
-
-static inline ushort_t asm_method(uint_t inst) {
-	return (ushort_t)(asm_param(inst) & 0x0fffU);
-}
-
-static inline uchar_t asm_argc(uint_t inst) {
-	return asm_flag(inst);
-}
+#define asm_aret(inst)   ((asm_param(inst) & 0xf000U) >> 12)
+#define asm_method(inst) (asm_param(inst) & 0x0fffU)
+#define asm_argc(inst)   asm_flag(inst)
 
 #endif // YMD_ASSEMBLY_H

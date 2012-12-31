@@ -1,5 +1,5 @@
-#include "disassembly.h"
-#include "assembly.h"
+#include "decode.h"
+#include "bytecode.h"
 #include "tostring.h"
 #include "value.h"
 #include "value_inl.h"

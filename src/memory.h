@@ -101,14 +101,19 @@ static inline void mm_drop(struct ymd_mach *vm, void *p, size_t size) {
 
 #define mm_busy(o)  ((o)->marked & GC_BUSY)
 
-static inline void mm_work(struct gc_node *o) {
-	assert (!(o->marked & GC_BUSY) && "Don't grab a object again.");
-	o->marked |= GC_BUSY;
-}
+#if defined(NDEBUG)
+#	define mm_work(o) do { \
+		assert (!((o)->marked & GC_BUSY) && "Don't grab a object again."); \
+		(o)->marked |= GC_BUSY; \
+	} while(0)
 
-static inline void mm_idle(struct gc_node *o) {
-	assert ((o->marked & GC_BUSY) && "Don't drop a object again.");
-	o->marked &= ~GC_BUSY;
-}
+#	define mm_idle(o) do { \
+		assert (((o)->marked & GC_BUSY) && "Don't drop a object again."); \
+		(o)->marked &= ~GC_BUSY; \
+	} while(0)
+#else
+#	define mm_work(o) ((o)->marked |= GC_BUSY)
+#	define mm_idle(o) ((o)->marked &= ~GC_BUSY)
+#endif
 
 #endif // YMD_MEMORY_H
