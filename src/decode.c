@@ -117,6 +117,9 @@ int dasm_inst(FILE *fp, const struct func *fn, uint_t inst) {
 	case I_STORE:
 		rv = fprintf(fp, "store %s", address(fn, inst, BUF));
 		break;  
+	case I_INC:
+		rv = fprintf(fp, "inc %s", address(fn, inst, BUF));
+		break;
 	case I_RET:
 		rv = fprintf(fp, "ret %d", asm_param(inst));
 		break;

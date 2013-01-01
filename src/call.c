@@ -143,6 +143,27 @@ static inline int vm_zero(const struct variable *var) {
 	return 0;
 }
 
+#define IMPL_ADD(lhs, rhs, isstr)                                 \
+	switch (ymd_type(lhs)) {                                      \
+	case T_INT:                                                   \
+		if (ymd_type(rhs) == T_FLOAT)                             \
+			setv_float(lhs, float4of(l, lhs) + float4of(l, rhs)); \
+		else                                                      \
+			lhs->u.i = int4of(l, lhs) + int4of(l, rhs);           \
+		break;                                                    \
+	case T_FLOAT:                                                 \
+		setv_float(lhs, lhs->u.f + float4of(l, rhs));             \
+		break;                                                    \
+	case T_KSTR:                                                  \
+		lhs->u.ref = gcx(vm_strcat(l->vm, kstr_of(l, lhs),        \
+					kstr_of(l, rhs)));                            \
+		isstr = 1;                                                \
+		break;                                                    \
+	default:                                                      \
+		ymd_panic(l, "Operator + don't support this type");       \
+		break;                                                    \
+	} (void)0
+
 static int vm_calc(struct ymd_context *l, unsigned op) {
 	switch (op) {
 	case F_INV: {
@@ -176,25 +197,7 @@ static int vm_calc(struct ymd_context *l, unsigned op) {
 		struct variable *lhs = ymd_top(l, 1),
 						*rhs = ymd_top(l, 0);
 		int isstr = 0;
-		switch (ymd_type(lhs)) {
-		case T_INT:
-			if (ymd_type(rhs) == T_FLOAT)
-				setv_float(lhs, float4of(l, lhs) + float4of(l, rhs));
-			else
-				lhs->u.i = int4of(l, lhs) + int4of(l, rhs);
-			break;
-		case T_FLOAT:
-			setv_float(lhs, lhs->u.f + float4of(l, rhs));
-			break;
-		case T_KSTR:
-			lhs->u.ref = gcx(vm_strcat(l->vm, kstr_of(l, lhs),
-						kstr_of(l, rhs)));
-			isstr = 1;
-			break;
-		default:
-			ymd_panic(l, "Operator + don't support this type");
-			break;
-		}
+		IMPL_ADD(lhs, rhs, isstr);
 		ymd_pop(l, 1);
 		if (isstr) gc_step(l->vm);
 		} break;
@@ -273,7 +276,6 @@ retry:
 		l->vm->tick++;
 		switch (asm_op(inst)) {
 		case I_PANIC:
-			//assert (!"No reached. No panic instruction should be eval.");
 			ymd_panic(l, "%s Eval I_PANIC instruction",
 					func_proto(vm, fn)->land);
 			break;
@@ -294,6 +296,27 @@ retry:
 			}
 			ymd_pop(l, 1);
 			break;  
+		case I_INC: {
+			struct variable *lhs, *rhs = ymd_top(l, 0);
+			int isstr = 0;
+			switch (asm_flag(inst)) {
+			case F_LOCAL:
+				lhs = l->info->loc + asm_param(inst);
+				break;
+			case F_UP:
+				lhs = fn->upval + asm_param(inst);
+				break;
+			case F_OFF:
+				lhs = hmap_put(vm, vm->global, core->kval + asm_param(inst));
+				break;
+			default:
+				assert(!"No reached.");
+				break;
+			}
+			IMPL_ADD(lhs, rhs, isstr);
+			ymd_pop(l, 1);
+			if (isstr) gc_step(l->vm);
+			} break;
 		case I_RET:
 			return asm_param(inst); // return!
 		case I_JNE:

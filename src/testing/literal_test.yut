@@ -86,11 +86,21 @@ LiteralTest = @{
 		Assert:EQ("\a\b\f\n\r\t\v\0\\\"\x01\uABcd", str_esc)
 	},
 
+	testRawString : func (self) {
+		Assert:NotNil('')
+		Assert:True('')
+		Assert:EQ('', '')
+
+		var rawText = '\d+\w+\s+\(\)'
+		Assert:EQ(rawText, rawText)
+		Assert:EQ(rawText, '\d+\w+\s+\(\)')
+		Assert:EQ('\d+\w+\s+\(\)', rawText)
+		Assert:EQ(rawText, "\\d+\\w+\\s+\\(\\)")
+	},
+
 	testFunc : func (self) {
 		Assert:NotNil(func () {})
 		Assert:True(func () {})
-		
-		// TODO:
 	},
 
 	testArray : func (self) {

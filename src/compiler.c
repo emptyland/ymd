@@ -167,8 +167,7 @@ static inline void ymk_emit_float(struct ymd_parser *p,
 	ymk_emitOfP(p, I_PUSH, F_KVAL, ymk_kd(p, imm));
 }
 
-static void ymk_emit_kz(
-	struct ymd_parser *p, const char *raw) {
+static void ymk_emit_kz(struct ymd_parser *p, const char *raw) {
 	char *priv = NULL;
 	int i, k = stresc(raw, &priv);
 	if (k < 0)
@@ -182,25 +181,31 @@ static void ymk_emit_kz(
 	ymk_emitOfP(p, I_PUSH, F_KVAL, i);
 }
 
-static void ymk_emit_store(
-	struct ymd_parser *p, const char *symbol) {
+#define ymk_emit_rz(p) \
+	ymk_emitOfP(p, I_PUSH, F_KVAL, ymk_kz(p, p->lah.off, p->lah.len))
+
+static void ymk_emit_store_i(uchar_t op, struct ymd_parser *p,
+		const char *symbol) {
 	// Storing way:
 	// 1. Local variable first
 	int i = blk_find_lz(p->env->core, symbol);
 	if (i >= 0) {
-		ymk_emitOfP(p, I_STORE, F_LOCAL, i);
+		ymk_emitOfP(p, op, F_LOCAL, i);
 		return;
 	}
 	// 2. Upval second
 	i = blk_find_uz(p->env->core, symbol);
 	if (i >= 0) {
-		ymk_emitOfP(p, I_STORE, F_UP, i);
+		ymk_emitOfP(p, op, F_UP, i);
 		return;
 	}
 	// 3. Global third
 	i = ymk_kz(p, symbol, -1);
-	ymk_emitOfP(p, I_STORE, F_OFF, i);
+	ymk_emitOfP(p, op, F_OFF, i);
 }
+
+#define ymk_emit_store(p, symbol) ymk_emit_store_i(I_STORE, p, symbol)
+#define ymk_emit_inc(p, symbol)   ymk_emit_store_i(I_INC, p, symbol)
 
 static void ymk_emit_push(
 	struct ymd_parser *p, const char *symbol) {
@@ -516,6 +521,13 @@ static void parse_map(struct ymd_parser *p, int ord) {
 			parse_expr(p, 0);
 			++count;
 			break;
+		case RAW_STRING:
+			ymk_emit_rz(p);
+			ymc_next(p);
+			ymc_match(p, ':');
+			parse_expr(p, 0);
+			++count;
+			break;
 		default:
 			ymc_match(p, '[');
 			parse_expr(p, 0);
@@ -558,6 +570,11 @@ static void parse_callargs(struct ymd_parser *p, int adjust,
 		break;
 	case STRING:
 		ymk_emit_kz(p, ymk_literal(p));
+		ymc_next(p);
+		nargs += 1;
+		break;
+	case RAW_STRING:
+		ymk_emit_rz(p);
 		ymc_next(p);
 		nargs += 1;
 		break;
@@ -613,7 +630,7 @@ static void parse_suffixed(struct ymd_parser *p) {
 			method = ymk_symbol(p);
 			parse_callargs(p, 1, method);
 			} break;
-		case '(': case STRING: /*case '{':*/
+		case '(': case STRING: case RAW_STRING:
 			parse_callargs(p, 1, NULL);
 			break;
 		default:
@@ -650,6 +667,9 @@ static void parse_simple(struct ymd_parser *p) {
 		} break;
 	case STRING:
 		ymk_emit_kz(p, ymk_literal(p));
+		break;
+	case RAW_STRING:
+		ymk_emit_rz(p);
 		break;
 	case '{':
 		parse_map(p, 0);
@@ -943,7 +963,7 @@ static void parse_lval(struct ymd_parser *p, struct lval_desc *desc) {
 			desc->last = NULL;
 			desc->vt = VCALL;
 			break;
-		case '(': case STRING: /*case '{':*/
+		case '(': case STRING: case RAW_STRING:
 			ymk_lval_partial(p, desc);
 			parse_callargs(p, 0, NULL);
 			desc->last = NULL;
@@ -1173,10 +1193,8 @@ static void parse_forstep_partial(struct ymd_parser *p, const char *tmp) {
 	// `{' block `}'
 	parse_block(p); 
 	// Incrment i variable: tmp = tmp + step
-	ymk_emit_push(p, tmp);
 	ymk_emit_push(p, step);
-	ymk_emitOf(p, I_CALC, F_ADD);
-	ymk_emit_store(p, tmp);
+	ymk_emit_inc(p, tmp);
 	// Operator
 	p->loop->op = I_FORSTEP;
 }

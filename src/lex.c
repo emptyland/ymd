@@ -13,7 +13,7 @@
 	case ':': case '&': case '@'
 #define PREX_CHAR \
 	     '-': case '<': case '>': case '=': case '!': case '~': \
-	case '|': case '/': case '\"': case '#'
+	case '|': case '/': case '\"': case '\'': case '#'
 
 #define DEFINE_TOKEN(tok, literal) \
 	{ sizeof(literal) - 1, literal, },
@@ -190,7 +190,7 @@ static int lex_read_sym(struct ymd_lex *lex, struct ytoken *x) {
 	return x->token;
 }
 
-static int lex_read_raw(struct ymd_lex *lex, struct ytoken *x) {
+static int lex_read_string(struct ymd_lex *lex, struct ytoken *x) {
 	lex_move(lex);
 	x->token = ERROR;
 	x->off = lex->buf + lex->off;
@@ -204,7 +204,29 @@ static int lex_read_raw(struct ymd_lex *lex, struct ytoken *x) {
 			lex_move(lex);
 			lex_move(lex); x->len += 2; //Skip ESC char
 			break;
-		case '\n':
+		case '\n': case '\r':
+			return ERROR;
+		default:
+			lex_move(lex); ++x->len;
+			break;
+		}
+	}
+out:
+	lex_move(lex);
+	return x->token;
+}
+
+static int lex_read_raw(struct ymd_lex *lex, struct ytoken *x) {
+	lex_move(lex);
+	x->token = ERROR;
+	x->off = lex->buf + lex->off;
+	for (;;) {
+		int ch = lex_peek(lex);
+		switch (ch) {
+		case '\'':
+			x->token = RAW_STRING;
+			goto out;
+		case '\n': case '\r':
 			return ERROR;
 		default:
 			lex_move(lex); ++x->len;
@@ -246,6 +268,8 @@ int lex_next(struct ymd_lex *lex, struct ytoken *x) {
 		case '_':
 			return lex_read_sym(lex, rv);
 		case '\"':
+			return lex_read_string(lex, rv);
+		case '\'':
 			return lex_read_raw(lex, rv);
 		case '-':
 			lex_move(lex);

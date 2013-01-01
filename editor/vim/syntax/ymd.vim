@@ -18,6 +18,7 @@ syntax match ymdOperator "\^\|@"
 
 syntax region ymdComment start="//" skip="\\$" end="$"
 syntax region ymdString start=+L\="+ skip=+\\\\\|\\"+ end=+"+
+syntax region ymdRawString start=+L\='+ skip=+\\\\\|\\'+ end=+'+
 
 syntax keyword ymdCondition if elif else let
 syntax keyword ymdLoop for while break continue in fail
@@ -35,6 +36,7 @@ hi ymdInteger ctermfg=5
 hi ymdFloat ctermfg=5
 hi ymdHex ctermfg=5
 hi ymdString ctermfg=5
+hi ymdRawString ctermfg=1
 hi ymdComment ctermfg=2
 hi ymdContant ctermfg=5 guifg=#FFFF00
 hi ymdTest ctermfg=3

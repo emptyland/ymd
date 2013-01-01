@@ -141,3 +141,16 @@ static int test_lex_keyword(void *p) {
 	return 0;
 }
 
+#define ASSERT_RAW(str) \
+	ASSERT_TOKEN(RAW_STRING); \
+	ASSERT_EQ(int, 0, memcmp(str, token.off, token.len))
+static int test_lex_raw_string(void *p) {
+	struct ymd_lex lex;
+	struct ytoken token;
+	int rv;
+	lex_init(&lex, NULL, "\'\\d+\\w+\' \'\\s+\'");
+	ASSERT_RAW("\\d+\\w+");
+	ASSERT_RAW("\\s+");
+	(void)p; return 0;
+}
+

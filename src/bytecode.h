@@ -4,7 +4,7 @@
 #include "builtin.h"
 
 // Instructions:
-#define I_PANIC   0
+#define I_PANIC    0
 #define I_SELFCALL 5 // selfcall a, n, "string"
 #define I_STORE   10 // store local|up|off
 #define I_RET     15 // ret n
@@ -20,7 +20,8 @@
 #define I_CALC    65 // calc inv|mul|div|add|sub|mod|andb|orb|xorb|invb
 #define I_CLOSE   70 // close kval
 #define I_FORSTEP 75 // forstep label
-// reserved 80~115
+#define I_INC     80 // inc local|up|off (like store)
+// reserved 85~115
 #define I_SHIFT   120 // shift l|r, a|l
 #define I_CALL    125 // call a, n
 #define I_NEWMAP  130 // newmap n

@@ -19,6 +19,7 @@
 	v(TRUE, "true") \
 	v(FALSE, "false") \
 	v(STRING, "<raw>") \
+	v(RAW_STRING, "<raw>") \
 	v(HEX_LITERAL, "<hex>") \
 	v(DEC_LITERAL, "<dec>") \
 	v(FLOAT, "<float>") \
