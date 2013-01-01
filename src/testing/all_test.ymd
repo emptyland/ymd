@@ -3,6 +3,6 @@ var prefix = "testing"
 for var i in os.readdir(prefix) {
 	var n = len(i)
 	if n > 4 and slice(i, n - 4) == ".yut" {
-		import(prefix + "/" + i)
+		import(prefix .. "/" .. i)
 	}
 }

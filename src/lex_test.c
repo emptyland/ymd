@@ -11,16 +11,22 @@ static int test_sanity(void *p) {
 	struct ytoken token;
 	int rv;
 	(void)p;
-	lex_init(&lex, NULL, "!~+-=<>/\n\t .%^*(){}[]:==>=<=!=~=>>|><<|&");
+	lex_init(&lex, NULL,
+			"!~+- = ++ += -- -= <>/\n\t . ..%^*(){}[]:==>=<=!=~=>>|><<|&");
 	ASSERT_TOKEN('!');
 	ASSERT_TOKEN('~');
 	ASSERT_TOKEN('+');
 	ASSERT_TOKEN('-');
 	ASSERT_TOKEN('=');
+	ASSERT_TOKEN(INC_1);
+	ASSERT_TOKEN(INC);
+	ASSERT_TOKEN(DEC_1);
+	ASSERT_TOKEN(DEC);
 	ASSERT_TOKEN('<');
 	ASSERT_TOKEN('>');
 	ASSERT_TOKEN('/');
 	ASSERT_TOKEN('.');
+	ASSERT_TOKEN(STRCAT);
 	ASSERT_TOKEN('%');
 	ASSERT_TOKEN('^');
 	ASSERT_TOKEN('*');

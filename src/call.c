@@ -2,6 +2,8 @@
 #include "core.h"
 #include "bytecode.h"
 #include "encoding.h"
+#include "tostring.h"
+#include "zstream.h"
 #include <stdio.h>
 
 #define call_init(l, x) { \
@@ -143,26 +145,17 @@ static inline int vm_zero(const struct variable *var) {
 	return 0;
 }
 
-#define IMPL_ADD(lhs, rhs, isstr)                                 \
-	switch (ymd_type(lhs)) {                                      \
-	case T_INT:                                                   \
-		if (ymd_type(rhs) == T_FLOAT)                             \
-			setv_float(lhs, float4of(l, lhs) + float4of(l, rhs)); \
-		else                                                      \
-			lhs->u.i = int4of(l, lhs) + int4of(l, rhs);           \
-		break;                                                    \
-	case T_FLOAT:                                                 \
-		setv_float(lhs, lhs->u.f + float4of(l, rhs));             \
-		break;                                                    \
-	case T_KSTR:                                                  \
-		lhs->u.ref = gcx(vm_strcat(l->vm, kstr_of(l, lhs),        \
-					kstr_of(l, rhs)));                            \
-		isstr = 1;                                                \
-		break;                                                    \
-	default:                                                      \
-		ymd_panic(l, "Operator + don't support this type");       \
-		break;                                                    \
-	} (void)0
+#define IMPL_ADD(lhs, rhs)                                    \
+	if (floatize(lhs, rhs))                                   \
+		setv_float(lhs, float4of(l, lhs) + float4of(l, rhs)); \
+	else                                                      \
+		lhs->u.i = int4of(l, lhs) + int4of(l, rhs)
+
+#define IMPL_SUB(lhs, rhs)                                    \
+	if (floatize(lhs, rhs))                                   \
+		setv_float(lhs, float4of(l, lhs) - float4of(l, rhs)); \
+	else                                                      \
+		lhs->u.i = int4of(l, lhs) - int4of(l, rhs)
 
 static int vm_calc(struct ymd_context *l, unsigned op) {
 	switch (op) {
@@ -196,18 +189,13 @@ static int vm_calc(struct ymd_context *l, unsigned op) {
 	case F_ADD: {
 		struct variable *lhs = ymd_top(l, 1),
 						*rhs = ymd_top(l, 0);
-		int isstr = 0;
-		IMPL_ADD(lhs, rhs, isstr);
+		IMPL_ADD(lhs, rhs);
 		ymd_pop(l, 1);
-		if (isstr) gc_step(l->vm);
 		} break;
 	case F_SUB: {
 		struct variable *lhs = ymd_top(l, 1),
 						*rhs = ymd_top(l, 0);
-		if (floatize(lhs, rhs))
-			setv_float(lhs, float4of(l, lhs) - float4of(l, rhs));
-		else
-			lhs->u.i = int4of(l, lhs) - int4of(l, rhs);
+		IMPL_SUB(lhs, rhs);
 		ymd_pop(l, 1);
 		} break;
 	case F_MOD: {
@@ -261,6 +249,31 @@ static int vm_calc(struct ymd_context *l, unsigned op) {
 		assert(!"No reached.");      \
 		break;                       \
 	}
+
+#define IMPL_ADDR(lhs, pop)                                            \
+	switch (asm_flag(inst)) {                                          \
+	case F_LOCAL:                                                      \
+		lhs = l->info->loc + asm_param(inst);                          \
+		break;                                                         \
+	case F_UP:                                                         \
+		lhs = fn->upval + asm_param(inst);                             \
+		break;                                                         \
+	case F_OFF:                                                        \
+		lhs = hmap_put(vm, vm->global, core->kval + asm_param(inst));  \
+		break;                                                         \
+	case F_INDEX:                                                      \
+		lhs = vm_get(vm, ymd_top(l, 2), ymd_top(l, 1));                \
+		pop += 2;                                                      \
+		break;                                                         \
+	case F_FIELD:                                                      \
+		lhs = vm_put(vm, ymd_top(l, 1), core->kval + asm_param(inst)); \
+		pop += 1;                                                      \
+		break;                                                         \
+	default:                                                           \
+		assert(!"No reached.");                                        \
+		break;                                                         \
+	}(void)0
+
 int vm_run(struct ymd_context *l, struct func *fn, int argc) {
 	uint_t inst;
 	struct call_info *info = l->info;
@@ -298,24 +311,17 @@ retry:
 			break;  
 		case I_INC: {
 			struct variable *lhs, *rhs = ymd_top(l, 0);
-			int isstr = 0;
-			switch (asm_flag(inst)) {
-			case F_LOCAL:
-				lhs = l->info->loc + asm_param(inst);
-				break;
-			case F_UP:
-				lhs = fn->upval + asm_param(inst);
-				break;
-			case F_OFF:
-				lhs = hmap_put(vm, vm->global, core->kval + asm_param(inst));
-				break;
-			default:
-				assert(!"No reached.");
-				break;
-			}
-			IMPL_ADD(lhs, rhs, isstr);
-			ymd_pop(l, 1);
-			if (isstr) gc_step(l->vm);
+			int pop = 1;
+			IMPL_ADDR(lhs, pop);
+			IMPL_ADD(lhs, rhs);
+			ymd_pop(l, pop);
+			} break;
+		case I_DEC: {
+			struct variable *lhs, *rhs = ymd_top(l, 0);
+			int pop = 1;
+			IMPL_ADDR(lhs, pop);
+			IMPL_SUB(lhs, rhs);
+			ymd_pop(l, pop);
 			} break;
 		case I_RET:
 			return asm_param(inst); // return!
@@ -496,6 +502,25 @@ retry:
 		case I_CALC:
 			vm_calc(l, asm_flag(inst));
 			break;
+		case I_STRCAT: {
+			struct variable *lhs = ymd_top(l, 1),
+							*rhs = ymd_top(l, 0);
+			if (ymd_type(lhs) != T_KSTR) {
+				struct zostream os = ZOS_INIT;
+				tostring(&os, lhs);
+				setv_kstr(lhs, kstr_fetch(vm, zos_buf(&os), os.last));
+				zos_final(&os);
+			}
+			if (ymd_type(rhs) != T_KSTR) {
+				struct zostream os = ZOS_INIT;
+				tostring(&os, rhs);
+				setv_kstr(rhs, kstr_fetch(vm, zos_buf(&os), os.last));
+				zos_final(&os);
+			}
+			setv_kstr(lhs, vm_strcat(vm, kstr_k(lhs), kstr_k(rhs)));
+			ymd_pop(l, 1);
+			gc_step(vm);
+			} break;
 		case I_SHIFT: {
 			struct variable *rhs = ymd_top(l, 1),
 							*lhs = ymd_top(l, 0);

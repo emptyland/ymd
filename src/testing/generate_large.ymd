@@ -15,12 +15,12 @@ func generateLargeTable(fileName, type, num) {
 		var arr = "["
 		for var j = 0, 6 {
 			if j != 0 {
-				arr = arr + ", "
+				arr = arr .. ", "
 			}
-			arr = arr + str(rand(1000))
+			arr = arr .. rand(1000)
 		}
-		arr = arr + "]"
-		var s = "\t\"" + str(i) + "\": " + arr
+		arr = arr .. "]"
+		var s = "\t\"" .. i .. "\": " .. arr
 		if i != 0 {
 			f:write(",\n")
 		}

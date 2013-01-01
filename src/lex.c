@@ -8,11 +8,10 @@
 	memset(rv, 0, sizeof(*rv))
 
 #define TERM_CHAR \
-	     '+': case '*': case '%': case '^': case ',': case ';': \
-	case '(': case ')': case '[': case ']': case '{': case '}': \
-	case ':': case '&': case '@'
+	     '*': case '%': case '^': case ',': case ';': case '(': case ')': \
+	case '[': case ']': case '{': case '}': case ':': case '&': case '@'
 #define PREX_CHAR \
-	     '-': case '<': case '>': case '=': case '!': case '~': \
+	     '-': case '+': case '<': case '>': case '=': case '!': case '~': \
 	case '|': case '/': case '\"': case '\'': case '#'
 
 #define DEFINE_TOKEN(tok, literal) \
@@ -77,7 +76,7 @@ static inline int lex_token_c(struct ymd_lex *lex, struct ytoken *x) {
 	return lex_read(lex);
 }
 
-static int lex_token_l(struct ymd_lex *lex, int m, int tk,
+static int lex_token_less(struct ymd_lex *lex, int m, int tk,
                               struct ytoken *x) {
 	if (lex_move(lex) != m) {
 		lex_back(lex);
@@ -90,12 +89,12 @@ static int lex_token_l(struct ymd_lex *lex, int m, int tk,
 	return x->token;
 }
 
-static int lex_token_lt(struct ymd_lex *lex, struct ytoken *x) {
+static int lex_token_lesst(struct ymd_lex *lex, struct ytoken *x) {
 	switch (lex->buf[lex->off + 1]) {
 	case '=':
-		return lex_token_l(lex, '=', LE, x);
+		return lex_token_less(lex, '=', LE, x);
 	case '<':
-		return lex_token_l(lex, '<', LSHIFT, x);
+		return lex_token_less(lex, '<', LSHIFT, x);
 	}
 	return lex_token_c(lex, x);
 }
@@ -103,9 +102,9 @@ static int lex_token_lt(struct ymd_lex *lex, struct ytoken *x) {
 static int lex_token_gt(struct ymd_lex *lex, struct ytoken *x) {
 	switch (lex->buf[lex->off + 1]) {
 	case '=':
-		return lex_token_l(lex, '=', GE, x);
+		return lex_token_less(lex, '=', GE, x);
 	case '>':
-		return lex_token_l(lex, '>', RSHIFT_A, x);
+		return lex_token_less(lex, '>', RSHIFT_A, x);
 	}
 	return lex_token_c(lex, x);
 }
@@ -245,6 +244,13 @@ void lex_skip_line(struct ymd_lex *lex) {
 	lex->i_column = 0;
 }
 
+static int lex_token_final(struct ymd_lex *lex, int tok, struct ytoken *x) {
+	lex_move(lex);
+	x->off = lex->buf + lex->off - 2;
+	x->token = tok;
+	return x->token;
+}
+
 int lex_next(struct ymd_lex *lex, struct ytoken *x) {
 	DECL_RV;
 	for (;;) {
@@ -254,31 +260,48 @@ int lex_next(struct ymd_lex *lex, struct ytoken *x) {
 		case TERM_CHAR:
 			return lex_token_c(lex, rv);
 		case '<':
-			return lex_token_lt(lex, rv);
+			return lex_token_lesst(lex, rv);
 		case '>':
 			return lex_token_gt(lex, rv);
 		case '|':
-			return lex_token_l(lex, '>', RSHIFT_L, rv);
+			return lex_token_less(lex, '>', RSHIFT_L, rv);
 		case '!':
-			return lex_token_l(lex, '=', NE, rv);
+			return lex_token_less(lex, '=', NE, rv);
 		case '~':
-			return lex_token_l(lex, '=', MATCH, rv);
+			return lex_token_less(lex, '=', MATCH, rv);
 		case '=':
-			return lex_token_l(lex, '=', EQ, rv);
+			return lex_token_less(lex, '=', EQ, rv);
 		case '_':
 			return lex_read_sym(lex, rv);
 		case '\"':
 			return lex_read_string(lex, rv);
 		case '\'':
 			return lex_read_raw(lex, rv);
+		case '+':
+			lex_move(lex);
+			switch (lex_peek(lex)) {
+			case '+':
+				return lex_token_final(lex, INC_1, rv);
+			case '=': // -=
+				return lex_token_final(lex, INC, rv);
+			}
+			lex_back(lex);
+			return lex_token_c(lex, rv);
 		case '-':
 			lex_move(lex);
-			if (isdigit(lex_peek(lex)))
-				return lex_read_dec(lex, 1, rv);
-			if (lex_peek(lex) == '.') {
+			switch (lex_peek(lex)) {
+			case '.': // -.0012
 				lex_move(lex);
 				rv->off = lex->buf + lex->off - 2;
 				return lex_read_float(lex, 1, rv);
+			case '-': // --
+				return lex_token_final(lex, DEC_1, rv);
+			case '=': // -=
+				return lex_token_final(lex, DEC, rv);
+			default: // -220
+				if (isdigit(lex_peek(lex)))
+					return lex_read_dec(lex, 1, rv);
+				break;
 			}
 			lex_back(lex);
 			return lex_token_c(lex, rv);
@@ -287,6 +310,8 @@ int lex_next(struct ymd_lex *lex, struct ytoken *x) {
 			if (isdigit(lex_peek(lex))) {
 				rv->off = lex->buf + lex->off - 1;
 				return lex_read_float(lex, 0, rv);
+			} else if (lex_peek(lex) == '.') {
+				return lex_token_final(lex, STRCAT, rv);
 			}
 			lex_back(lex);
 			return lex_token_c(lex, rv);
@@ -339,3 +364,4 @@ const char *lex_line(struct ymd_lex *lex, char *buf, size_t n) {
 	buf[n] = '\0';
 	return buf;
 }
+

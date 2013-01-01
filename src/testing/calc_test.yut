@@ -1,5 +1,9 @@
 
 CalcTest = @{
+	final : func (self) {
+		__g__.testGi = nil
+	},
+
 	testVarDecl : func (self) {
 		Assert:EQ(0, 0)
 		Assert:EQ(-1, -1)
@@ -74,6 +78,52 @@ CalcTest = @{
 	testExpr : func (self) {
 		var a = 0, b = 1
 		Assert:EQ(-7, 1 - b * 8 / b)
+	},
+
+	testStrCat : func (self) {
+		var s = 'a' .. 'b'
+		Assert:EQ('ab', s)
+		
+		s = 'a = ' .. 1 .. "\n"
+		Assert:EQ("a = 1\n", s)
+
+		var a = 1, b = 2
+		s = 'a = ' .. a + b * 2 .. "\n"
+		Assert:EQ("a = 5\n", s)
+
+		s = 'a > b? ' .. a > b .. "\n"
+		Assert:EQ("a > b? false\n", s)
+
+		s = 'a > b or a < b ? ' .. (a > b or a < b) .. "\n"
+		Assert:EQ("a > b or a < b ? true\n", s)
+	},
+
+	testIncrment : func (self) {
+		var i = 0
+		Assert:EQ(0, i)
+
+		i++
+		Assert:EQ(1, i)
+
+		i += 3
+		Assert:EQ(4, i)
+
+		i--
+		Assert:EQ(3, i)
+
+		i -= 3
+		Assert:EQ(0, i)
+
+		var o = { i : 0 }
+		o.i++
+		Assert:EQ(1, o.i)
+
+		o['i']++
+		Assert:EQ(2, o.i)
+
+		testGi = 0
+		testGi++
+		Assert:EQ(1, testGi)
 	},
 
 	testEquals : func (self) {

@@ -184,28 +184,80 @@ static void ymk_emit_kz(struct ymd_parser *p, const char *raw) {
 #define ymk_emit_rz(p) \
 	ymk_emitOfP(p, I_PUSH, F_KVAL, ymk_kz(p, p->lah.off, p->lah.len))
 
-static void ymk_emit_store_i(uchar_t op, struct ymd_parser *p,
+static void ymk_emit_store_i(struct ymd_parser *p, int token,
 		const char *symbol) {
 	// Storing way:
 	// 1. Local variable first
-	int i = blk_find_lz(p->env->core, symbol);
-	if (i >= 0) {
-		ymk_emitOfP(p, op, F_LOCAL, i);
-		return;
+	int param = blk_find_lz(p->env->core, symbol);
+	uchar_t op, flag;
+	if (param >= 0) {
+		flag = F_LOCAL;
+		goto found;
 	}
 	// 2. Upval second
-	i = blk_find_uz(p->env->core, symbol);
-	if (i >= 0) {
-		ymk_emitOfP(p, op, F_UP, i);
-		return;
+	param = blk_find_uz(p->env->core, symbol);
+	if (param >= 0) {
+		flag = F_UP;
+		goto found;
 	}
 	// 3. Global third
-	i = ymk_kz(p, symbol, -1);
-	ymk_emitOfP(p, op, F_OFF, i);
+	param = ymk_kz(p, symbol, -1);
+	flag  = F_OFF;
+found:
+	switch (token) {
+	case '=':
+		op = I_STORE;
+		break;
+	case INC:
+	case INC_1:
+		op = I_INC;
+		break;
+	case DEC:
+	case DEC_1:
+		op = I_DEC;
+		break;
+	default:
+		assert (!"No reached!");
+		break;
+	}
+	if (token == INC_1 || token == DEC_1)
+		ymk_emit_int(p, 1);
+	ymk_emitOfP(p, op, flag, param);
 }
 
-#define ymk_emit_store(p, symbol) ymk_emit_store_i(I_STORE, p, symbol)
-#define ymk_emit_inc(p, symbol)   ymk_emit_store_i(I_INC, p, symbol)
+#define ymk_emit_store(p, symbol) ymk_emit_store_i(p, '=', symbol)
+#define ymk_emit_incr(p, symbol)  ymk_emit_store_i(p, INC, symbol)
+
+static void ymk_emit_setf_i(struct ymd_parser *p, int token,
+		const char *field) {
+	ushort_t param = !field ? 0 : ymk_kz(p, field, -1);
+	uchar_t op, flag;
+	switch (token) {
+	case '=':
+		op    = I_SETF;
+		flag  = !field ? F_STACK : F_FAST;
+		param = flag == F_STACK ? 1 : param;
+		break;
+	case INC:
+	case INC_1:
+		op    = I_INC;
+		flag  = !field ? F_INDEX : F_FIELD;
+		break;
+	case DEC:
+	case DEC_1:
+		op    = I_DEC;
+		flag  = !field ? F_INDEX : F_FIELD;
+		break;
+	default:
+		assert (!"No reached!");
+		break;
+	}
+	if (token == INC_1 || token == DEC_1)
+		ymk_emit_int(p, 1);
+	ymk_emitOfP(p, op, flag, param);
+}
+
+#define ymk_emit_setf(p, field) ymk_emit_setf_i(p, '=', field)
 
 static void ymk_emit_push(
 	struct ymd_parser *p, const char *symbol) {
@@ -266,12 +318,6 @@ static void ymk_emit_end(struct ymd_parser *p) {
 	struct chunk *core = p->env->core;
 	if (!core->kinst || asm_op(core->inst[core->kinst - 1]) != I_RET)
 		ymk_emitOP(p, I_RET, 0);
-}
-
-static void ymk_emit_setf(
-	struct ymd_parser *p, const char *symbol) {
-	int i = ymk_kz(p, symbol, -1);
-	ymk_emitOfP(p, I_SETF, F_FAST, i);
 }
 
 static void ymk_emit_getf(
@@ -699,7 +745,7 @@ static const struct {
 	{6, 6}, {6, 6}, {6, 6}, // == != ~=
 	{6, 6}, {6, 6}, {6, 6}, {6, 6}, // < <= > >=
 	{3, 3}, {4, 4}, {5, 5}, // | ^ &
-	{2, 2}, {1, 1}, // and or
+	{2, 2}, {1, 1}, {1, 1}, // and or ..
 };
 #define PRIO_UNARY 11
 
@@ -709,7 +755,7 @@ enum ymd_op {
 	OP_EQ, OP_NE, OP_MATCH,
 	OP_LT, OP_LE, OP_GT, OP_GE,
 	OP_ORB, OP_ANDB, OP_XORB,
-	OP_AND, OP_OR,
+	OP_AND, OP_OR, OP_STRCAT,
 	OP_NOT_BINARY,
 	OP_MINS,
 	OP_NOT,
@@ -747,6 +793,7 @@ static int ymc_binary_op(struct ymd_parser *p) {
 	case GE: return OP_GE;
 	case AND: return OP_AND;
 	case OR: return OP_OR;
+	case STRCAT: return OP_STRCAT;
 	case '|': return OP_ORB;
 	case '&': return OP_ANDB;
 	case '^': return OP_XORB;
@@ -853,6 +900,9 @@ static void ymk_binary(struct ymd_parser *p, int op, ushort_t ipos) {
 	case OP_OR:
 		ymk_hack_jmp(p, ipos, I_JNN, 0);
 		break;
+	case OP_STRCAT:
+		ymk_emitO(p, I_STRCAT);
+		break;
 	default:
 		assert(!"No reached.");
 		break;
@@ -910,18 +960,18 @@ static void ymk_lval_partial(struct ymd_parser *p,
 	}
 }
 
-static void ymk_lval_finish(struct ymd_parser *p,
-                            const struct lval_desc *desc) {
-	(void)p;
+static void ymk_lval_assign(struct ymd_parser *p,
+		const struct lval_desc *desc,
+		int op) {
 	switch (desc->vt) {
 	case VSYMBOL:
-		ymk_emit_store(p, desc->last);
+		ymk_emit_store_i(p, op, desc->last);
 		break;
 	case VINDEX:
-		ymk_emitOfP(p, I_SETF, F_STACK, 1);
+		ymk_emit_setf_i(p, op, NULL);
 		break;
 	case VDOT:
-		ymk_emit_setf(p, desc->last);
+		ymk_emit_setf_i(p, op, desc->last);
 		break;
 	default:
 		ymc_fail(p, "Syntax error, call is not lval.");
@@ -977,14 +1027,26 @@ static void parse_lval(struct ymd_parser *p, struct lval_desc *desc) {
 
 static void parse_expr_stat(struct ymd_parser *p) {
 	struct lval_desc desc;
+	int op;
 	parse_lval(p, &desc);
-	if (ymc_peek(p) == '=') {
+	op = ymc_peek(p);
+	switch (op) {
+	case '=':
+	case INC:
+	case DEC:
 		ymc_next(p);
 		parse_expr(p, 0);
-		ymk_lval_finish(p, &desc);
-	} else {
+		ymk_lval_assign(p, &desc, op);
+		break;
+	case INC_1:
+	case DEC_1:
+		ymc_next(p);
+		ymk_lval_assign(p, &desc, op);
+		break;
+	default:
 		if (desc.vt != VCALL)
 			ymc_fail(p, "Syntax error.");
+		break;
 	}
 }
 
@@ -1194,7 +1256,7 @@ static void parse_forstep_partial(struct ymd_parser *p, const char *tmp) {
 	parse_block(p); 
 	// Incrment i variable: tmp = tmp + step
 	ymk_emit_push(p, step);
-	ymk_emit_inc(p, tmp);
+	ymk_emit_incr(p, tmp);
 	// Operator
 	p->loop->op = I_FORSTEP;
 }

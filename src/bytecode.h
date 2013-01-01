@@ -20,8 +20,10 @@
 #define I_CALC    65 // calc inv|mul|div|add|sub|mod|andb|orb|xorb|invb
 #define I_CLOSE   70 // close kval
 #define I_FORSTEP 75 // forstep label
-#define I_INC     80 // inc local|up|off (like store)
-// reserved 85~115
+#define I_INC     80 // inc local|up|off|index|field
+#define I_DEC     85 // dec local|up|off|index|field
+#define I_STRCAT  90 // strcat
+// reserved 95~115
 #define I_SHIFT   120 // shift l|r, a|l
 #define I_CALL    125 // call a, n
 #define I_NEWMAP  130 // newmap n
@@ -45,6 +47,8 @@
 #define F_OFF     5 // param: `kz` offset
 #define F_UP      6 // param: `bind' offset closure's upval
 #define F_ARGV    7 // param: Ignore
+#define F_INDEX   8 // param: Ignore
+#define F_FIELD   9 // param: `kz' offset
 
 // test
 // param: Ignore all

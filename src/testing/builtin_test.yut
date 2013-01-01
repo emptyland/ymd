@@ -256,7 +256,7 @@ BuiltinTest = @{
 		print ("Memory begin:", gc("used"))
 		var s = ""
 		for var i = 0, 30000 {
-			s = s + str(i)
+			s = s .. i
 		}
 		print ("         end:", gc("used"))
 	},
@@ -337,9 +337,9 @@ BuiltinTest = @{
 			return s:get()
 		}
 
-		n = eval("return " + build(1, 2, 3))
+		n = eval("return " .. build(1, 2, 3))
 		Assert:EQ(6, n)
-		n = eval("return " + build(2, 2, 2))
+		n = eval("return " .. build(2, 2, 2))
 		Assert:EQ(6, n)
 	},
 
@@ -349,7 +349,7 @@ BuiltinTest = @{
 		var rv, i
 		Assert:True((typeof o) == "hashmap" or (typeof o) == "skiplist")
 		for i = 0, self.kBenchCount {
-			append(o, [i, "#" + str(i)])
+			append(o, [i, "#" .. i])
 		}
 		Assert:EQ(self.kBenchCount, len(o))
 		Assert:EQ("#998", o[998])
@@ -358,7 +358,7 @@ BuiltinTest = @{
 		for i = 0, self.kBenchCount {
 			rv = remove(o, i)
 			if rv == 0 {
-				Assert:Fail("Assert remove fail! index: " + str(i))
+				Assert:Fail("Assert remove fail! index: " .. i)
 			}
 		}
 		Assert:EQ(0, len(o))

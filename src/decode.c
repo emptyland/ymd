@@ -58,6 +58,13 @@ static const char *address(const struct func *fn, uint_t inst,
 	case F_ARGV:
 		strncpy(buf, "[argv]", n);
 		break;
+	case F_INDEX:
+		snprintf(buf, n, "%d", asm_param(inst));
+		break;
+	case F_FIELD:
+		assert(asm_param(inst) < fn->u.core->kkval);
+		snprintf(buf, n, "[%s]", fn_kz(fn, asm_param(inst)));
+		break;
 	default:
 		assert(!"No reached.");
 		return "<N/A>";
@@ -120,6 +127,9 @@ int dasm_inst(FILE *fp, const struct func *fn, uint_t inst) {
 	case I_INC:
 		rv = fprintf(fp, "inc %s", address(fn, inst, BUF));
 		break;
+	case I_DEC:
+		rv = fprintf(fp, "dec %s", address(fn, inst, BUF));
+		break;
 	case I_RET:
 		rv = fprintf(fp, "ret %d", asm_param(inst));
 		break;
@@ -161,6 +171,9 @@ int dasm_inst(FILE *fp, const struct func *fn, uint_t inst) {
 		break;
 	case I_CALC:
 		rv = fprintf(fp, "%s", kz_calc_op[asm_flag(inst)]);
+		break;
+	case I_STRCAT:
+		rv = fprintf(fp, "strcat");
 		break;
 	case I_SHIFT:
 		rv = fprintf(fp, "shift [%s]", kz_shift_op[asm_flag(inst)]);

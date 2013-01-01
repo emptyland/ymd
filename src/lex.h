@@ -32,6 +32,11 @@
 	v(LSHIFT, "<<") \
 	v(RSHIFT_A, ">>") \
 	v(RSHIFT_L, "|>") \
+	v(INC_1, "++") \
+	v(DEC_1, "--") \
+	v(INC, "+=") \
+	v(DEC, "-=") \
+	v(STRCAT, "..") \
 	v(VAR, "var") \
 	v(FUNC, "func") \
 	v(AND, "and") \
