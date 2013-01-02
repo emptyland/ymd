@@ -229,18 +229,48 @@ them both to 0; an emulation function will be used. */
 /* Define to the version of this package. */
 #define PACKAGE_VERSION "8.32"
 
-/* to make a symbol visible */
-#define PCRECPP_EXP_DECL extern __attribute__ ((visibility ("default")))
-
-/* to make a symbol visible */
-#define PCRECPP_EXP_DEFN __attribute__ ((visibility ("default")))
-
 /* The value of PCREGREP_BUFSIZE determines the size of buffer used by
    pcregrep to hold parts of the file it is searching. This is also the
    minimum value. The actual amount of memory used by pcregrep is three times
    this number, because it allows for the buffering of "before" and "after"
    lines. */
 #define PCREGREP_BUFSIZE 20480
+
+#if defined _MSC_VER
+/* to make a symbol visible */
+#define PCRECPP_EXP_DECL extern
+
+/* to make a symbol visible */
+#define PCRECPP_EXP_DEFN
+
+/* to make a symbol visible */
+#define PCREPOSIX_EXP_DECL extern
+
+/* to make a symbol visible */
+#define PCREPOSIX_EXP_DEFN extern
+
+/* to make a symbol visible */
+#define PCRE_EXP_DATA_DEFN
+
+/* to make a symbol visible */
+#define PCRE_EXP_DECL extern
+
+/* If you are compiling for a system other than a Unix-like system or
+   Win32, and it needs some magic to be inserted before the definition
+   of a function that is exported by the library, define this macro to
+   contain the relevant magic. If you do not define this macro, a suitable
+    __declspec value is used for Windows systems; in other environments
+   "extern" is used for a C compiler and "extern C" for a C++ compiler.
+   This macro apears at the start of every exported function that is part
+   of the external API. It does not appear on functions that are "external"
+   in the C sense, but which are internal to the library. */
+#define PCRE_EXP_DEFN
+#else
+/* to make a symbol visible */
+#define PCRECPP_EXP_DECL extern __attribute__ ((visibility ("default")))
+
+/* to make a symbol visible */
+#define PCRECPP_EXP_DEFN __attribute__ ((visibility ("default")))
 
 /* to make a symbol visible */
 #define PCREPOSIX_EXP_DECL extern __attribute__ ((visibility ("default")))
@@ -254,7 +284,6 @@ them both to 0; an emulation function will be used. */
 /* to make a symbol visible */
 #define PCRE_EXP_DECL extern __attribute__ ((visibility ("default")))
 
-
 /* If you are compiling for a system other than a Unix-like system or
    Win32, and it needs some magic to be inserted before the definition
    of a function that is exported by the library, define this macro to
@@ -265,6 +294,7 @@ them both to 0; an emulation function will be used. */
    of the external API. It does not appear on functions that are "external"
    in the C sense, but which are internal to the library. */
 #define PCRE_EXP_DEFN __attribute__ ((visibility ("default")))
+#endif
 
 /* Define to any value if linking statically (TODO: make nice with Libtool) */
 /* #undef PCRE_STATIC */

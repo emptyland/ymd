@@ -1,0 +1,113 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\src\third_party\pcre\config.h" />
+    <ClInclude Include="..\..\src\third_party\pcre\pcre.h" />
+    <ClInclude Include="..\..\src\third_party\pcre\pcre_internal.h" />
+    <ClInclude Include="..\..\src\third_party\pcre\pcre_stringpiece.h" />
+    <ClInclude Include="..\..\src\third_party\pcre\sljit\sljitConfig.h" />
+    <ClInclude Include="..\..\src\third_party\pcre\sljit\sljitConfigInternal.h" />
+    <ClInclude Include="..\..\src\third_party\pcre\sljit\sljitLir.h" />
+    <ClInclude Include="..\..\src\third_party\pcre\ucp.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\src\third_party\pcre\pcre_byte_order.c" />
+    <ClCompile Include="..\..\src\third_party\pcre\pcre_chartables.c" />
+    <ClCompile Include="..\..\src\third_party\pcre\pcre_compile.c" />
+    <ClCompile Include="..\..\src\third_party\pcre\pcre_config.c" />
+    <ClCompile Include="..\..\src\third_party\pcre\pcre_dfa_exec.c" />
+    <ClCompile Include="..\..\src\third_party\pcre\pcre_exec.c" />
+    <ClCompile Include="..\..\src\third_party\pcre\pcre_fullinfo.c" />
+    <ClCompile Include="..\..\src\third_party\pcre\pcre_get.c" />
+    <ClCompile Include="..\..\src\third_party\pcre\pcre_globals.c" />
+    <ClCompile Include="..\..\src\third_party\pcre\pcre_jit_compile.c" />
+    <ClCompile Include="..\..\src\third_party\pcre\pcre_maketables.c" />
+    <ClCompile Include="..\..\src\third_party\pcre\pcre_newline.c" />
+    <ClCompile Include="..\..\src\third_party\pcre\pcre_ord2utf8.c" />
+    <ClCompile Include="..\..\src\third_party\pcre\pcre_refcount.c" />
+    <ClCompile Include="..\..\src\third_party\pcre\pcre_string_utils.c" />
+    <ClCompile Include="..\..\src\third_party\pcre\pcre_study.c" />
+    <ClCompile Include="..\..\src\third_party\pcre\pcre_tables.c" />
+    <ClCompile Include="..\..\src\third_party\pcre\pcre_ucd.c" />
+    <ClCompile Include="..\..\src\third_party\pcre\pcre_valid_utf8.c" />
+    <ClCompile Include="..\..\src\third_party\pcre\pcre_version.c" />
+    <ClCompile Include="..\..\src\third_party\pcre\pcre_xclass.c" />
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{B9E983B8-A4B1-4C12-901B-F0913AEF1750}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>third_party</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v110</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v110</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup />
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <WarningLevel>Level4</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;SLJIT_CONFIG_AUTO;HAVE_CONFIG_H;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <SDLCheck>true</SDLCheck>
+      <PrecompiledHeaderFile />
+      <CompileAs>CompileAsC</CompileAs>
+      <AdditionalIncludeDirectories>..\src\third_party\pcre;..\src\third_party\pcre\sljit;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <SDLCheck>true</SDLCheck>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

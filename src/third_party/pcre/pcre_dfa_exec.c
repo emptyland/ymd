@@ -1705,7 +1705,7 @@ for (;;)
             active_count--;           /* Remove non-match possibility */
             next_active_state--;
             }
-          ADD_NEW_DATA(-(state_offset + count), 0, ncount);
+          ADD_NEW_DATA(-(state_offset + (int)count), 0, ncount);
           break;
 
           default:
@@ -1749,7 +1749,7 @@ for (;;)
             active_count--;           /* Remove non-match possibility */
             next_active_state--;
             }
-          ADD_NEW_DATA(-(state_offset + count), 0, 0);
+          ADD_NEW_DATA(-(state_offset + (int)count), 0, 0);
           }
         }
       break;
@@ -1790,7 +1790,7 @@ for (;;)
             active_count--;           /* Remove non-match possibility */
             next_active_state--;
             }
-          ADD_NEW_DATA(-(state_offset + count), 0, 0);
+          ADD_NEW_DATA(-(state_offset + (int)count), 0, 0);
           }
         }
       break;
