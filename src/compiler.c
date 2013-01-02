@@ -1313,6 +1313,36 @@ static void parse_for(struct ymd_parser *p) {
 	ymk_loop_leave(p);
 }
 
+// while_stmt ::= `while' expr `{' block `}'
+// while_stmt ::= `while' `let' assign `;' expr `{' block `}'
+// while_stmt ::= `while' `var' init `;' expr `{' block `}'
+static void parse_while(struct ymd_parser *p) {
+	struct loop_info scope;
+	ymc_next(p);
+	ymk_loop_enter(p, &scope);
+	p->loop->op = I_JNE;
+	switch (ymc_peek(p)) {
+	case LET:
+		ymc_next(p);
+		p->loop->i_retry = ymk_ipos(p);
+		parse_expr_stat(p);
+		ymc_match(p, ';');
+		break;
+	case VAR:
+		parse_local(p);
+		p->loop->i_retry = ymk_ipos(p);
+		ymc_match(p, ';');
+		break;
+	default:
+		p->loop->i_retry = ymk_ipos(p);
+		break;
+	}
+	parse_expr(p, 0);
+	p->loop->i_jcond = ymk_hold(p);
+	parse_block(p);
+	ymk_loop_leave(p);
+}
+
 static void parse_goto(struct ymd_parser *p) {
 	switch (ymc_peek(p)) {
 	case BREAK:
@@ -1333,11 +1363,13 @@ static void parse_stmt(struct ymd_parser *p) {
 	case IF:
 		parse_if(p);
 		break;
-	case WITH:
-		//parse_with(p);
-		break;
+	//TODO: case WITH:
+	//	break;
 	case FOR:
 		parse_for(p);
+		break;
+	case WHILE:
+		parse_while(p);
 		break;
 	case FUNC:
 		parse_func(p, 0);

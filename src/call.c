@@ -237,7 +237,7 @@ static int vm_calc(struct ymd_context *l, unsigned op) {
 	return 0;
 }
 
-#define IMPL_JUMP                    \
+#define IMPL_JUMP()                  \
 	switch (asm_flag(inst)) {        \
 	case F_FORWARD:                  \
 		info->pc += asm_param(inst); \
@@ -248,7 +248,7 @@ static int vm_calc(struct ymd_context *l, unsigned op) {
 	default:                         \
 		assert(!"No reached.");      \
 		break;                       \
-	}
+	}(void)0
 
 #define IMPL_ADDR(lhs, pop)                                            \
 	switch (asm_flag(inst)) {                                          \
@@ -382,7 +382,7 @@ retry:
 				ymd_pop(l, 1);
 				break;
 			}
-			IMPL_JUMP
+			IMPL_JUMP();
 			ymd_pop(l, 1);
 			goto retry;
 		case I_JNT:
@@ -390,32 +390,22 @@ retry:
 				ymd_pop(l, 1);
 				break;
 			}
-			IMPL_JUMP
+			IMPL_JUMP();
 			goto retry;
 		case I_JNN:
 			if (!vm_bool(ymd_top(l, 0))) {
 				ymd_pop(l, 1);
 				break;
 			}
-			IMPL_JUMP
+			IMPL_JUMP();
 			goto retry;
 		case I_JMP:
-			IMPL_JUMP
+			IMPL_JUMP();
 			goto retry;
 		case I_FOREACH: {
 			if (!is_nil(ymd_top(l, 0)))
 				break;
-			switch (asm_flag(inst)) {
-			case F_FORWARD:
-				info->pc += asm_param(inst);
-				break;
-			case F_BACKWARD:
-				info->pc -= asm_param(inst);
-				break;
-			default:
-				assert(!"No reached.");
-				break;
-			}
+			IMPL_JUMP();
 			ymd_pop(l, 1);
 			goto retry;
 			} break;
@@ -432,17 +422,7 @@ retry:
 			if ((step > 0 && tmp < end) || (step < 0 && tmp > end))
 				break; // Loop continue
 			// Loop finalize
-			switch (asm_flag(inst)) {
-			case F_FORWARD:
-				info->pc += asm_param(inst);
-				break;
-			case F_BACKWARD:
-				info->pc -= asm_param(inst);
-				break;
-			default:
-				assert(!"No reached.");
-				break;
-			}
+			IMPL_JUMP();
 			goto retry;
 			} break;
 		case I_CLOSE: {

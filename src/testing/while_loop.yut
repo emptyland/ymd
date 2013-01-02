@@ -1,0 +1,81 @@
+WhileLoopTest = @{
+
+	testSanity : func (self) {
+		var i = 0
+		while i < 10 {
+			i += 2
+			Assert:EQ(0, i % 2)
+		}
+		Assert:EQ(10, i)
+	},
+
+	testWhileCond : func (self) {
+		var i = 0, p = i
+		while i < 30 {
+			i += 3
+			Assert:EQ(0, i % 3)
+			Assert:EQ(3, i - p)
+			p = i
+		}
+		Assert:EQ(30, i)
+	},
+
+	testWhileVarCond : func (self) {
+		while var i = 0, p = i; i < 100 {
+			i += 5
+			Assert:EQ(0, i % 5)
+			Assert:EQ(5, i - p)
+			p = i
+		}
+		Assert:EQ(100, i)
+	},
+
+	testWhileLetCond : func (self) {
+		var i = 0, p = i
+		while let i += 7; i < 70 {
+			Assert:EQ(0, i % 7)
+			Assert:EQ(7, i - p)
+			p = i
+		}
+		Assert:EQ(70, i)
+	},
+
+	testWhileContinue : func (self) {
+		var i = 0, p = i
+		while let i += 13; i < 130 {
+			if i % 13 != 0 {
+				continue
+			}
+			Assert:EQ(0,  i % 13)
+			Assert:EQ(13, i - p)
+			p = i
+		}
+		Assert:EQ(130, i)
+	},
+
+	testWhileBreakFail : func (self) {
+		var i = 0
+		while let i += 11; 0 { // Ever to true, death loop
+			Assert:EQ(0, i % 11)
+			if i == 110 {
+				break
+			}
+		} fail {
+			Assert:EQ(110, i)
+			return
+		}
+		Assert:Fail('Can not run to here!')
+	},
+
+	testWhileNoFail : func (self) {
+		var i = 0, p = i
+		while let i += 17; i < 170 {
+			Assert:EQ(0,  i % 17)
+			Assert:EQ(17, i - p)
+			p = i
+		} fail {
+			Assert:Fail('Can not run to here!')
+		}
+		Assert:EQ(170, i)
+	}
+}

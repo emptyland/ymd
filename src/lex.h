@@ -54,7 +54,8 @@
 	v(IN, "in") \
 	v(FAIL, "fail") \
 	v(LET, "let") \
-	v(ARGV, "argv")
+	v(ARGV, "argv") \
+	v(WHILE, "while")
 
 #define DEFINE_TOKEN(tok, literal) tok,
 enum ymd_token {

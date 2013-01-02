@@ -123,8 +123,13 @@ ForLoopTest = @{
 	},
 
 	testForstepBenchmark : func (self) {
-		var i
-		for i = 0, self.benchmark {
+		for var i = 0, self.benchmark {
+		}
+	},
+
+	testWhileBenchmark : func (self) {
+		while var i = 0; i < self.benchmark {
+			i++
 		}
 	},
 
