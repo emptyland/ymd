@@ -20,7 +20,7 @@
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v110</PlatformToolset>
-    <CharacterSet>Unicode</CharacterSet>
+    <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -47,12 +47,13 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
-      <PrecompiledHeader>
-      </PrecompiledHeader>
-      <WarningLevel>Level3</WarningLevel>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
+      <ExceptionHandling>false</ExceptionHandling>
+      <PrecompiledHeaderFile />
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -88,12 +89,11 @@
     <ClCompile Include="..\..\src\hash_map.c" />
     <ClCompile Include="..\..\src\lex.c" />
     <ClCompile Include="..\..\src\libc.c" />
-    <ClCompile Include="..\..\src\libos_posix.c" />
     <ClCompile Include="..\..\src\libpickle.c" />
     <ClCompile Include="..\..\src\libtest.c" />
     <ClCompile Include="..\..\src\memory.c" />
     <ClCompile Include="..\..\src\pickle.c" />
-    <ClCompile Include="..\..\src\print_posix.c" />
+    <ClCompile Include="..\..\src\print_win.c" />
     <ClCompile Include="..\..\src\skip_list.c" />
     <ClCompile Include="..\..\src\state.c" />
     <ClCompile Include="..\..\src\string.c" />
