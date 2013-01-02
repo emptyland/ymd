@@ -231,22 +231,19 @@ found:
 static void ymk_emit_setf_i(struct ymd_parser *p, int token,
 		const char *field) {
 	ushort_t param = !field ? 0 : ymk_kz(p, field, -1);
-	uchar_t op, flag;
+	uchar_t op, flag = !field ? F_INDEX : F_FIELD;
 	switch (token) {
 	case '=':
-		op    = I_SETF;
-		flag  = !field ? F_STACK : F_FAST;
-		param = flag == F_STACK ? 1 : param;
+		op    = I_STORE;
+		param = flag == F_INDEX ? 1 : param;
 		break;
 	case INC:
 	case INC_1:
 		op    = I_INC;
-		flag  = !field ? F_INDEX : F_FIELD;
 		break;
 	case DEC:
 	case DEC_1:
 		op    = I_DEC;
-		flag  = !field ? F_INDEX : F_FIELD;
 		break;
 	default:
 		assert (!"No reached!");
@@ -320,11 +317,8 @@ static void ymk_emit_end(struct ymd_parser *p) {
 		ymk_emitOP(p, I_RET, 0);
 }
 
-static void ymk_emit_getf(
-	struct ymd_parser *p, const char *symbol) {
-	int i = ymk_kz(p, symbol, -1);
-	ymk_emitOfP(p, I_GETF, F_FAST, i);
-}
+#define ymk_emit_getf(p, symbol) \
+	ymk_emitOfP(p, I_PUSH, F_FIELD, ymk_kz(p, symbol, -1))
 
 static void ymk_emit_selfcall(
 	struct ymd_parser *p, int adjust, int argc, const char *method) {
@@ -668,7 +662,7 @@ static void parse_suffixed(struct ymd_parser *p) {
 			ymc_next(p);
 			parse_expr(p, 0);
 			ymc_match(p, ']');
-			ymk_emitOfP(p, I_GETF, F_STACK, 1);
+			ymk_emitOfP(p, I_PUSH, F_INDEX, 1);
 			break;
 		case ':': {
 			const char *method;
@@ -950,7 +944,7 @@ static void ymk_lval_partial(struct ymd_parser *p,
 		ymk_emit_push(p, desc->last);
 		break;
 	case VINDEX:
-		ymk_emitOfP(p, I_GETF, F_STACK, 1);
+		ymk_emitOfP(p, I_PUSH, F_INDEX, 1);
 		break;
 	case VDOT:
 		ymk_emit_getf(p, desc->last);

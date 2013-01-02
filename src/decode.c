@@ -59,7 +59,7 @@ static const char *address(const struct func *fn, uint_t inst,
 		strncpy(buf, "[argv]", n);
 		break;
 	case F_INDEX:
-		snprintf(buf, n, "%d", asm_param(inst));
+		snprintf(buf, n, "[%d]", asm_param(inst));
 		break;
 	case F_FIELD:
 		assert(asm_param(inst) < fn->u.core->kkval);
@@ -79,23 +79,6 @@ static const char *jmp(uint_t inst, char *buf, size_t n) {
 		break;
 	case F_BACKWARD:
 		snprintf(buf, n, "-%d", asm_param(inst));
-		break;
-	default:
-		assert(!"No reached.");
-		return "<N/A>";
-	}
-	return buf;
-}
-
-static const char *getf(const struct func *fn, uint_t inst,
-                       char *buf, size_t n) {
-	switch (asm_flag(inst)) {
-	case F_STACK:
-		snprintf(buf, n, "%d", asm_param(inst));
-		break;
-	case F_FAST:
-		assert(asm_param(inst) < fn->u.core->kkval);
-		snprintf(buf, n, "[%s]", fn_kz(fn, asm_param(inst)));
 		break;
 	default:
 		assert(!"No reached.");
@@ -124,6 +107,9 @@ int dasm_inst(FILE *fp, const struct func *fn, uint_t inst) {
 	case I_STORE:
 		rv = fprintf(fp, "store %s", address(fn, inst, BUF));
 		break;  
+	case I_PUSH:
+		rv = fprintf(fp, "push %s", address(fn, inst, BUF));
+		break;
 	case I_INC:
 		rv = fprintf(fp, "inc %s", address(fn, inst, BUF));
 		break;
@@ -151,20 +137,11 @@ int dasm_inst(FILE *fp, const struct func *fn, uint_t inst) {
 	case I_FORSTEP:
 		rv = fprintf(fp, "forstep %s", jmp(inst, BUF));
 		break;
-	case I_SETF:
-		rv = fprintf(fp, "setf %s", getf(fn, inst, BUF));
-		break;
-	case I_PUSH:
-		rv = fprintf(fp, "push %s", address(fn, inst, BUF));
-		break;
 	case I_CLOSE:
 		rv = fprintf(fp, "close %s", address(fn, inst, BUF));
 		break;
 	case I_TEST:
 		rv = fprintf(fp, "test <%s>", kz_test_op[asm_flag(inst)]);
-		break;
-	case I_GETF:
-		rv = fprintf(fp, "getf %s", getf(fn, inst, BUF));
 		break;
 	case I_TYPEOF:
 		rv = fprintf(fp, "typeof");

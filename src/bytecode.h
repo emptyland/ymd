@@ -6,13 +6,13 @@
 // Instructions:
 #define I_PANIC    0
 #define I_SELFCALL 5 // selfcall a, n, "string"
-#define I_STORE   10 // store local|up|off
+#define I_STORE   10 // store local|up|off|index|field
 #define I_RET     15 // ret n
 #define I_JNE     20 // jne label
 #define I_JMP     25 // jmp label
 #define I_FOREACH 30 // foreach label
-#define I_SETF    35 // setf stack|fast
-#define I_PUSH    40 // push kval|true|false|nil|local|up|off
+// reserved 35
+#define I_PUSH    40 // push kval|true|false|nil|local|up|off|index|field
 #define I_TEST    45 // test gt|ge|lt|le|eq|ne|match
 #define I_JNT     50 // jnt label
 #define I_JNN     55 // jnn label
@@ -29,17 +29,13 @@
 #define I_NEWMAP  130 // newmap n
 #define I_NEWSKL  135 // newskl order, n
 #define I_NEWDYA  140 // newdya
-#define I_BIND    145 // bind n
-// 150 reserved
-#define I_GETF    155 // getf stack|fast
-//#define I_NOT     160 // not
 
 // jne/jmp
 #define F_FORWARD  0 // param: Number of instructions
 #define F_BACKWARD 1 // param: Number of instructions
 #define F_UNDEF    2 // param: Ignore
 
-// push
+// push/store/inc/dec
 #define F_KVAL    1 // param: `kval` offset
 #define F_LOCAL   2 // param: `loc` offset
 #define F_BOOL    3 // param: 0 true other false

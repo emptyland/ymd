@@ -292,7 +292,8 @@ retry:
 			ymd_panic(l, "%s Eval I_PANIC instruction",
 					func_proto(vm, fn)->land);
 			break;
-		case I_STORE:
+		case I_STORE: {
+			int pop = 1;
 			switch (asm_flag(inst)) {
 			case F_LOCAL:
 				l->info->loc[asm_param(inst)] = *ymd_top(l, 0);
@@ -303,12 +304,63 @@ retry:
 			case F_OFF:
 				vm_iputg(vm, asm_param(inst), ymd_top(l, 0));
 				break;
+			case F_INDEX: {
+				int i, k = asm_param(inst) << 1;
+				struct variable *var = ymd_top(l, k);
+				for (i = 0; i < k; i += 2)
+					vm_iput(vm, var, ymd_top(l, i + 1), ymd_top(l, i));
+				pop += k;
+				} break;
+			case F_FIELD:
+				vm_iput(vm, ymd_top(l, 1), &core->kval[asm_param(inst)],
+				        ymd_top(l, 0));
+				pop += 1;
+				break;
 			default:
 				assert(!"No reached.");
 				break;
 			}
-			ymd_pop(l, 1);
-			break;  
+			ymd_pop(l, pop);
+			} break;
+		case I_PUSH: {
+			struct variable var;
+			switch (asm_flag(inst)) {
+			case F_KVAL:
+				var = core->kval[asm_param(inst)];
+				break;
+			case F_LOCAL:
+				var = l->info->loc[asm_param(inst)];
+				break;
+			case F_BOOL:
+				setv_bool(&var, asm_param(inst));
+				break;
+			case F_NIL:
+				setv_nil(&var);
+				break;
+			case F_OFF:
+				var = *vm_igetg(vm, asm_param(inst));
+				break;
+			case F_UP: // Push Upval
+				var = fn->upval[asm_param(inst)];
+				break;
+			case F_ARGV: // Push Argv
+				setv_dyay(&var, l->info->u.argv);
+				break;
+			case F_INDEX:
+				var = *vm_get(vm, ymd_top(l, 1), ymd_top(l, 0));
+				ymd_pop(l, 2);
+				break;
+			case F_FIELD:
+				var = *vm_get(vm, ymd_top(l, 0),
+						core->kval + asm_param(inst));
+				ymd_pop(l, 1);
+				break;
+			default:
+				assert (!"No reached!");
+				break;
+			}
+			*ymd_push(l) = var;
+			} break;
 		case I_INC: {
 			struct variable *lhs, *rhs = ymd_top(l, 0);
 			int pop = 1;
@@ -393,52 +445,6 @@ retry:
 			}
 			goto retry;
 			} break;
-		case I_SETF: {
-			switch (asm_flag(inst)) {
-			case F_STACK: {
-				int i, k = asm_param(inst) << 1;
-				struct variable *var = ymd_top(l, k);
-				for (i = 0; i < k; i += 2)
-					vm_iput(vm, var, ymd_top(l, i + 1), ymd_top(l, i));
-				ymd_pop(l, k + 1);
-				} break;
-			case F_FAST:
-				vm_iput(vm, ymd_top(l, 1), &core->kval[asm_param(inst)],
-				        ymd_top(l, 0));
-				ymd_pop(l, 2);
-				break;
-			default:
-				assert(!"No reached.");
-				break;
-			}
-			} break;
-		case I_PUSH: {
-			struct variable var;
-			switch (asm_flag(inst)) {
-			case F_KVAL:
-				var = core->kval[asm_param(inst)];
-				break;
-			case F_LOCAL:
-				var = l->info->loc[asm_param(inst)];
-				break;
-			case F_BOOL:
-				setv_bool(&var, asm_param(inst));
-				break;
-			case F_NIL:
-				setv_nil(&var);
-				break;
-			case F_OFF:
-				var = *vm_igetg(vm, asm_param(inst));
-				break;
-			case F_UP: // Push Upval
-				var = fn->upval[asm_param(inst)];
-				break;
-			case F_ARGV: // Push Argv
-				setv_dyay(&var, l->info->u.argv);
-				break;
-			}
-			*ymd_push(l) = var;
-			} break;
 		case I_CLOSE: {
 			struct variable *opd = &core->kval[asm_param(inst)];
 			struct func *copied = func_clone(vm, func_of(l, opd));
@@ -476,23 +482,6 @@ retry:
 			}
 			lhs->tt = T_BOOL;
 			ymd_pop(l, 1);
-			} break;
-		case I_GETF: {
-			switch (asm_flag(inst)) {
-			case F_STACK: {
-				struct variable *k = ymd_top(l, 0),
-								*v = vm_get(vm, ymd_top(l, 1), k);
-				ymd_pop(l, 2);
-				*ymd_push(l) = *v;
-				} break;
-			case F_FAST:
-				*ymd_top(l, 0) = *vm_get(vm, ymd_top(l, 0),
-				                         &core->kval[asm_param(inst)]);
-				break;
-			default:
-				assert(!"No reached.");
-				break;
-			}
 			} break;
 		case I_TYPEOF: {
 			const unsigned tt = ymd_type(ymd_top(l, 0));
