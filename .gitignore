@@ -19,6 +19,7 @@ config.mk
 *.suo
 *.pdb
 *.lastbuildstate
+*.unsuccessfulbuild
 tags
 src/keywords.c
 src/yamada
