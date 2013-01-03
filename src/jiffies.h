@@ -14,7 +14,7 @@
 static YMD_INLINE unsigned long long ymd_jiffy() {
 	struct timeval jiffx;
 	gettimeofday(&jiffx, NULL);
-	return jiffx->tv_sec * 1000ULL + jiffx->tv_usec / 1000ULL;
+	return jiffx.tv_sec * 1000ULL + jiffx.tv_usec / 1000ULL;
 }
 
 #endif
