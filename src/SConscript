@@ -14,7 +14,9 @@ Import('env')
 #
 env.Command('keywords.c',
 	'keywords.gperf',
-	'gperf -L ANSI-C -C -N lex_keyword -K z -t -c -n keywords.gperf | sed -e "s/{\\\"\\\"}/{\\\"\\\",0}/g" > keywords.c',
+	'gperf -L ANSI-C -C -N lex_keyword -K z -t -c -n keywords.gperf | ' +
+	'sed -e "s/{\\\"\\\"}/{\\\"\\\",0}/g" > keywords.c && ' +
+	'cp keywords.c ../sln/yamada',
 	chdir='src')
 env.Depends('keywords.c', 'keywords.gperf')
 
