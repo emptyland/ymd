@@ -76,7 +76,7 @@ int main(int argc, char *argv[]) {
 			break;
 		} else {
 			input_file = argv[i];
-			input = fopen(input_file, "r");
+			input = fopen(input_file, YMD_READ_MOD);
 			if (!input)
 				die("Bad file!");
 		}

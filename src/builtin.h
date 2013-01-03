@@ -40,9 +40,12 @@ typedef unsigned short     ushort_t;
 #define YMD_MAX(lhs, rhs) (((lhs) > (rhs)) ? (lhs) : (rhs))
 
 #if defined(_MSC_VER)
-#	define YMD_INLINE __inline
+#	define YMD_INLINE   __inline
+#	define snprintf     _snprintf
+#	define YMD_READ_MOD "rb"
 #else
 #	define YMD_INLINE inline
+#	define YMD_READ_MOD "r"
 #endif
 
 #endif // YMD_BUILTIN_H

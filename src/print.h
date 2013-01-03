@@ -19,6 +19,7 @@ enum ymd_color_e {
 	dBLUE,
 	dPURPLE,
 	dAZURE,
+	cMAX,
 };
 
 // Colored printf

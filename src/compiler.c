@@ -77,7 +77,7 @@ static YMD_INLINE int ymk_kd(struct ymd_parser *p, ymd_float_t f) {
 }
 
 // Find or put `function' in constant list
-static YMD_INLINE int ymk_kf(struct ymd_parser *p, void *fn) {
+static YMD_INLINE int ymk_kf(struct ymd_parser *p, struct func *fn) {
 	struct variable k;
 	setv_func(&k, fn);
 	return blk_kval(p->vm, p->env->core, &p->env->kval, &k);

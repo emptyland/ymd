@@ -50,14 +50,19 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;PCRE_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <SDLCheck>false</SDLCheck>
       <ExceptionHandling>false</ExceptionHandling>
       <PrecompiledHeaderFile />
+      <AdditionalIncludeDirectories>..\src</AdditionalIncludeDirectories>
+      <UndefinePreprocessorDefinitions>
+      </UndefinePreprocessorDefinitions>
+      <CompileAs>CompileAsC</CompileAs>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>..\Debug\third_party.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -87,8 +92,10 @@
     <ClCompile Include="..\..\src\encoding.c" />
     <ClCompile Include="..\..\src\flags.c" />
     <ClCompile Include="..\..\src\hash_map.c" />
+    <ClCompile Include="..\..\src\keywords_win.c" />
     <ClCompile Include="..\..\src\lex.c" />
     <ClCompile Include="..\..\src\libc.c" />
+    <ClCompile Include="..\..\src\libos_win.c" />
     <ClCompile Include="..\..\src\libpickle.c" />
     <ClCompile Include="..\..\src\libtest.c" />
     <ClCompile Include="..\..\src\memory.c" />
@@ -109,6 +116,7 @@
     <ClInclude Include="..\..\src\decode.h" />
     <ClInclude Include="..\..\src\encoding.h" />
     <ClInclude Include="..\..\src\flags.h" />
+    <ClInclude Include="..\..\src\jiffies.h" />
     <ClInclude Include="..\..\src\lex.h" />
     <ClInclude Include="..\..\src\libc.h" />
     <ClInclude Include="..\..\src\libtest.h" />

@@ -264,7 +264,7 @@ them both to 0; an emulation function will be used. */
    This macro apears at the start of every exported function that is part
    of the external API. It does not appear on functions that are "external"
    in the C sense, but which are internal to the library. */
-#define PCRE_EXP_DEFN
+#define PCRE_EXP_DEFN extern
 #else
 /* to make a symbol visible */
 #define PCRECPP_EXP_DECL extern __attribute__ ((visibility ("default")))

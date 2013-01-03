@@ -2,8 +2,17 @@
 #include "core.h"
 #include "libc.h"
 #include "print.h"
-#include <sys/time.h>
+#include "jiffies.h"
 #include <setjmp.h>
+
+#if defined(_MSC_VER)
+char *strndup(const char *s, size_t len) {
+	char *x = (char *)malloc(len);
+	assert (x);
+	memcpy(x, s, len);
+	return x;
+}
+#endif
 
 // Test filter:
 struct filter {
@@ -154,18 +163,6 @@ static void yut_fail1(L, const char *expected,
 	yut_raise(l);
 }
 
-static const char *format_interval(
-		const struct timeval *start,
-		const struct timeval *jiffx,
-		char buf[],
-		size_t len) {
-	unsigned long long 
-		jms = jiffx->tv_sec * 1000ULL + jiffx->tv_usec / 1000ULL,
-	    bms = start->tv_sec * 1000ULL + start->tv_usec / 1000ULL;
-	snprintf(buf, len, "%llu ms", jms - bms);
-	return buf;
-}
-
 static int libx_Fail(L) {
 	const struct kstr *arg0 = kstr_of(l, ymd_argv(l, 1));
 	struct call_info *up = l->info->chain;
@@ -263,22 +260,21 @@ static int yut_case(
 		struct func *teardown,
 		struct func *unit) {
 	char full_name[128], itv[32];
-	struct timeval jiffx, start;
+	unsigned long long jiffx, start;
 
 	strncpy(full_name, clazz, sizeof(full_name));
 	strcat(full_name, ".");
 	strcat(full_name, caze);
 	yut_call(l, test, setup);
 	ymd_printf("${[!green][ RUN      ]}$ %s\n", full_name);
-	gettimeofday(&start, NULL);
+	start = ymd_jiffy();
 	if (yut_call(l, test, unit) < 0) {
 		yut_fail0(l);
 		yut_fault();
 		return -1;
 	}
-	gettimeofday(&jiffx, NULL);
-	ymd_printf("${[!green][       OK ]}$ %s (%s)\n", full_name,
-			format_interval(&start, &jiffx, itv, sizeof(itv)));
+	jiffx = ymd_jiffy();
+	ymd_printf("${[!green][       OK ]}$ %s (%llu ms)\n", full_name, jiffx - start);
 	yut_call(l, test, teardown);
 	return 0;
 }

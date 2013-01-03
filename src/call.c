@@ -42,10 +42,9 @@ static YMD_INLINE struct variable *vm_find_local(struct ymd_context *l,
 	return l->info->loc + i;
 }
 
-static YMD_INLINE void do_put(struct ymd_mach *vm,
-                          struct gc_node *raw,
-						  const struct variable *k,
-                          const struct variable *v) {
+static void do_put(struct ymd_mach *vm, struct gc_node *raw,
+				   const struct variable *k,
+				   const struct variable *v) {
 	if ((k && is_nil(k)) || is_nil(v))
 		ymd_panic(ioslate(vm), "Value can not be `nil` in k-v pair");
 	switch (raw->type) {
@@ -64,7 +63,7 @@ static YMD_INLINE void do_put(struct ymd_mach *vm,
 	}
 }
 
-static YMD_INLINE void vm_iput(struct ymd_mach *vm, struct variable *var,
+static void vm_iput(struct ymd_mach *vm, struct variable *var,
 		const struct variable *k, const struct variable *v) {
 	if (is_nil(k))
 		ymd_panic(ioslate(vm), "Key can not be `nil' in k-v pair");

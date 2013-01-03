@@ -80,7 +80,7 @@ int FlagBool(const char *z, void *data) {
 		return -1;
 	}
 	++p;
-	if (strcasecmp(p, "yes") == 0)
+	if (strcmp(p, "yes") == 0)
 		*(int *)data = 1;
 	else
 		*(int *)data = 0;
@@ -94,9 +94,9 @@ int FlagTriBool(const char *z, void *data) {
 		return -1;
 	}
 	++p;
-	if (strcasecmp(p, "yes") == 0)
+	if (strcmp(p, "yes") == 0)
 		*(int *)data = FLAG_YES;
-	else if (strcasecmp(p, "auto") == 0)
+	else if (strcmp(p, "auto") == 0)
 		*(int *)data = FLAG_AUTO;
 	else
 		*(int *)data = FLAG_NO;

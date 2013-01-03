@@ -36,10 +36,7 @@ struct kstr *typeof_kstr(struct ymd_mach *vm, int tt) {
 //-------------------------------------------------------------------------
 // Constant variable value:
 //-------------------------------------------------------------------------
-static struct variable knil_fake_var = {
-	.u = { .i = 0LL, },
-	.tt = T_NIL,
-};
+static struct variable knil_fake_var = { T_NIL, {0} };
 struct variable *knil = &knil_fake_var;
 
 //-------------------------------------------------------------------------

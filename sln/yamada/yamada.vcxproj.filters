@@ -1,0 +1,147 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="..\..\src\dynamic_array.c">
+      <Filter>values</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\hash_map.c">
+      <Filter>values</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\skip_list.c">
+      <Filter>values</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\string.c">
+      <Filter>values</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\value.c">
+      <Filter>values</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\libc.c">
+      <Filter>libs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\libpickle.c">
+      <Filter>libs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\libtest.c">
+      <Filter>libs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\pickle.c">
+      <Filter>libs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\encoding.c">
+      <Filter>libs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\closure.c">
+      <Filter>values</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\flags.c">
+      <Filter>utils</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\print_win.c">
+      <Filter>utils</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\tostring.c">
+      <Filter>utils</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\call.c">
+      <Filter>vm</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\compiler.c">
+      <Filter>vm</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\decode.c">
+      <Filter>vm</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\keywords_win.c">
+      <Filter>vm</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\lex.c">
+      <Filter>vm</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\memory.c">
+      <Filter>vm</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\state.c">
+      <Filter>vm</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\ymd_main.c">
+      <Filter>vm</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\libos_win.c">
+      <Filter>libs</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\src\value.h">
+      <Filter>values</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\value_inl.h">
+      <Filter>values</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\libc.h">
+      <Filter>libs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\libtest.h">
+      <Filter>libs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\pickle.h">
+      <Filter>libs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\encoding.h">
+      <Filter>libs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\builtin.h">
+      <Filter>utils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\bytecode.h">
+      <Filter>utils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\core.h">
+      <Filter>utils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\flags.h">
+      <Filter>utils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\jiffies.h">
+      <Filter>utils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\print.h">
+      <Filter>utils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\tostring.h">
+      <Filter>utils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\zstream.h">
+      <Filter>utils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\compiler.h">
+      <Filter>vm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\decode.h">
+      <Filter>vm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\lex.h">
+      <Filter>vm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\memory.h">
+      <Filter>vm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\state.h">
+      <Filter>vm</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="values">
+      <UniqueIdentifier>{637ff259-bec7-4728-afa2-a2c06a527cd5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="libs">
+      <UniqueIdentifier>{aa0e2c64-07c6-471c-ae13-4d341f776638}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="utils">
+      <UniqueIdentifier>{5c3d860d-28fd-41df-810a-22a1ea099068}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="vm">
+      <UniqueIdentifier>{f99b83ed-95ba-48a0-8f2d-55c8f6da5c10}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

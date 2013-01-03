@@ -13,11 +13,12 @@ config.mk
 *.exe
 *.dll
 *.idb
-*.filters
 *.opensdf
 *.sdf
 *.suo
 *.pdb
+*.ilk
+*.user
 *.lastbuildstate
 *.unsuccessfulbuild
 tags

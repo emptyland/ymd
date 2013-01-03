@@ -560,13 +560,14 @@ static int libx_read(L) {
 }
 
 static int libx_write(L) {
+	int rv;
 	struct kstr *bin = NULL;
 	struct ansic_file *self = mand_land(l, ymd_argv(l, 0),
 	                                    T_STREAM);
 	if (is_nil(ymd_argv(l, 1)))
 		return 0;
 	bin = kstr_of(l, ymd_argv(l, 1));
-	int rv = fwrite(bin->land, 1, bin->len, self->fp);
+	rv = fwrite(bin->land, 1, bin->len, self->fp);
 	if (rv < 0)
 		ymd_panic(l, "Write file failed!");
 	return 0;
@@ -720,7 +721,7 @@ static int libx_import(L) {
 	struct kstr *name = kstr_of(l, ymd_argv(l, 0));
 	if (vm_loaded(l->vm, name->land))
 		return 0;
-	fp = fopen(name->land, "r");
+	fp = fopen(name->land, YMD_READ_MOD);
 	if (!fp)
 		ymd_panic(l, "Can not open file: %s", name->land);
 	i = ymd_compilef(l, file2blknam(name->land, blknam, sizeof(blknam)),
