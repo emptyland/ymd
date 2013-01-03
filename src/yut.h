@@ -139,11 +139,11 @@ if (!action##_DO(type##_cast, expected, actual)) \
 		yut_run_log2(__FILE__, __LINE__, 1, #actual, #expected, \
 			float_tag, actual, expected)
 
-static inline int yut_float_equal(float lhs, float rhs) {
+static YUT_INLINE int yut_float_equal(float lhs, float rhs) {
 	return fabs(lhs - rhs) < FLT_EPSILON;
 }
 
-static inline int yut_double_equal(double lhs, double rhs) {
+static YUT_INLINE int yut_double_equal(double lhs, double rhs) {
 	return fabs(lhs - rhs) < DBL_EPSILON;
 }
 

@@ -84,14 +84,14 @@
 #define F_DASC  1 // order by dasc
 #define F_USER  2 // order by user defined function
 
-static inline uint_t asm_build(
+static YMD_INLINE uint_t asm_build(
 	uchar_t op,
 	uchar_t flag,
 	ushort_t param) {
 	return ((uint_t)op) << 24 | ((uint_t)flag) << 16 | ((uint_t)param);
 }
 
-static inline uint_t asm_call(
+static YMD_INLINE uint_t asm_call(
 	uchar_t op,
 	uchar_t aret, // adjust return
 	uchar_t argc,

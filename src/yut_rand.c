@@ -14,7 +14,7 @@ struct yut_tracked {
 
 static struct yut_rand_context *top;
 
-static inline long long initial_rand_seed() {
+static YUT_INLINE long long initial_rand_seed() {
 	long long seed;
 	int rv, fd = open("/dev/urandom", O_RDONLY);
 	if (fd < 0)

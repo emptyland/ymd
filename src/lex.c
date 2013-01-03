@@ -45,17 +45,17 @@ static int lex_token(const struct ytoken *tok) {
 	return rv->token;
 }
 
-static inline int lex_peek(struct ymd_lex *lex) {
+static YMD_INLINE int lex_peek(struct ymd_lex *lex) {
 	return !lex->buf[lex->off] ? EOS : lex->buf[lex->off];
 }
 
-static inline int lex_read(struct ymd_lex *lex) {
+static YMD_INLINE int lex_read(struct ymd_lex *lex) {
 	int ch = lex->buf[lex->off++];
 	++lex->i_column;
 	return !ch ? EOS : ch;
 }
 
-static inline int lex_move(struct ymd_lex *lex) {
+static YMD_INLINE int lex_move(struct ymd_lex *lex) {
 	int ch = lex->buf[lex->off];
 	if (!ch) return EOS;
 	ch = lex->buf[++lex->off];
@@ -63,12 +63,12 @@ static inline int lex_move(struct ymd_lex *lex) {
 	return !ch ? EOS : ch;
 }
 
-static inline void lex_back(struct ymd_lex *lex) {
+static YMD_INLINE void lex_back(struct ymd_lex *lex) {
 	--lex->off;
 	--lex->i_column;
 }
 
-static inline int lex_token_c(struct ymd_lex *lex, struct ytoken *x) {
+static YMD_INLINE int lex_token_c(struct ymd_lex *lex, struct ytoken *x) {
 	char ch = lex->buf[lex->off];
 	x->token = !ch ? EOS : ch; 
 	x->off = lex->buf + lex->off;

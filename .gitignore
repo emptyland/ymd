@@ -21,8 +21,8 @@ config.mk
 *.lastbuildstate
 *.unsuccessfulbuild
 tags
-src/keywords.c
 src/yamada
+src/keywords.c
 foo.ymd
 foo.yut
 ymd_main

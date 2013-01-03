@@ -13,11 +13,11 @@ struct filter {
 };
 
 // Filter: is any?
-static inline int fany(const char *z) {
+static YMD_INLINE int fany(const char *z) {
 	return (!z || !z[0] || z[0] == '*');
 }
 
-static inline int fok(const char *pattern, const char *z) {
+static YMD_INLINE int fok(const char *pattern, const char *z) {
 	return fany(pattern) || strcmp(pattern, z) == 0;
 }
 
@@ -71,17 +71,17 @@ struct yut_cookie {
 	jmp_buf jpt;
 };
 
-static inline void yut_fault() {
+static YMD_INLINE void yut_fault() {
 	ymd_printf("${[!red][  FAILED  ]}$ Test fail, stop all.\n");
 }
 
-static inline struct yut_cookie *yut_jpt(L, struct variable *self) {
+static YMD_INLINE struct yut_cookie *yut_jpt(L, struct variable *self) {
 	struct hmap *o = hmap_of(l, self);
 	struct mand *cookie = mand_of(l, vm_mem(l->vm, o, "__cookie__"));
 	return (struct yut_cookie *)cookie->land;
 }
 
-static inline void yut_raise(L) {
+static YMD_INLINE void yut_raise(L) {
 	struct yut_cookie *cookie = yut_jpt(l, ymd_argv(l, 0));
 	longjmp(cookie->jpt, 1);
 }

@@ -39,18 +39,18 @@ void ymd_final(struct ymd_mach *vm);
 
 #define ioslate(vm) ((vm)->curr)
 
-static inline void ymd_log4gc(struct ymd_mach *vm, FILE *logf) {
+static YMD_INLINE void ymd_log4gc(struct ymd_mach *vm, FILE *logf) {
 	vm->gc.logf = logf;
 }
 
 // Mach functions:
-static inline void *vm_zalloc(struct ymd_mach *vm, size_t size) {
+static YMD_INLINE void *vm_zalloc(struct ymd_mach *vm, size_t size) {
 	return vm->zalloc(vm, NULL, size);
 }
-static inline void *vm_realloc(struct ymd_mach *vm, void *p, size_t size) {
+static YMD_INLINE void *vm_realloc(struct ymd_mach *vm, void *p, size_t size) {
 	return vm->zalloc(vm, p, size);
 }
-static inline void vm_free(struct ymd_mach *vm, void *p) {
+static YMD_INLINE void vm_free(struct ymd_mach *vm, void *p) {
 	vm->free(vm, p);
 }
 
@@ -106,14 +106,14 @@ struct ymd_context {
 // ----------------------------------------------------------------------------
 struct call_info *vm_nearcall(L);
 
-static inline const char *vm_file(const struct call_info *i) {
+static YMD_INLINE const char *vm_file(const struct call_info *i) {
 	assert(i != NULL);
 	assert(i->run);
 	assert(!i->run->is_c);
 	return i->run->u.core->file->land;
 }
 
-static inline int vm_line(const struct call_info *i) {
+static YMD_INLINE int vm_line(const struct call_info *i) {
 	assert(i != NULL);
 	assert(i->run);
 	assert(!i->run->is_c);
@@ -173,14 +173,14 @@ struct kstr *vm_format(struct ymd_mach *vm, const char *fmt, ...);
 
 // Comparing:
 // lhs == rhs ?
-static inline int vm_equals(const struct variable *lhs,
+static YMD_INLINE int vm_equals(const struct variable *lhs,
 		const struct variable *rhs) {
 	return (is_num(lhs) && is_num(rhs)) ? num_compare(lhs, rhs) == 0 :
 		equals(lhs, rhs);
 }
 
 // Compare lhs and rhs
-static inline int vm_compare(const struct variable *lhs,
+static YMD_INLINE int vm_compare(const struct variable *lhs,
 		const struct variable *rhs) {
 	return (is_num(lhs) && is_num(rhs)) ? num_compare(lhs, rhs) :
 		compare(lhs, rhs);
@@ -193,7 +193,7 @@ void vm_pcre_lazy(struct ymd_mach *vm);
 //
 // Runtime:
 //
-static inline struct func *ymd_called(L) {
+static YMD_INLINE struct func *ymd_called(L) {
 	assert(l->info);
 	assert(l->info->run);
 	return l->info->run;
@@ -210,13 +210,13 @@ struct variable *ymd_push(L);
 
 struct variable *ymd_top(L, int i);
 
-static inline size_t ymd_offset(L, int i) {
+static YMD_INLINE size_t ymd_offset(L, int i) {
 	struct variable *end = ymd_top(l, i);
 	assert (end >= l->stk);
 	return end - l->stk;
 }
 
-static inline void ymd_move(L, int i) {
+static YMD_INLINE void ymd_move(L, int i) {
 	struct variable k, *p = ymd_top(l, i);
 	if (i == 0) return;
 	k = *p;
@@ -225,7 +225,7 @@ static inline void ymd_move(L, int i) {
 }
 
 // Adjust return variables
-static inline int ymd_adjust(L, int adjust, int ret) {
+static YMD_INLINE int ymd_adjust(L, int adjust, int ret) {
 	if (adjust < ret) {
 		ymd_pop(l, ret - adjust);
 		return ret;
@@ -241,28 +241,28 @@ static inline int ymd_adjust(L, int adjust, int ret) {
 //-----------------------------------------------------------------------------
 // Fake stack functions:
 // ----------------------------------------------------------------------------
-static inline void ymd_dyay(L, int k) {
+static YMD_INLINE void ymd_dyay(L, int k) {
 	struct dyay *o = dyay_new(l->vm, k);
 	setv_dyay(ymd_push(l), o); 
 }
 
-static inline void ymd_add(L) {
+static YMD_INLINE void ymd_add(L) {
 	struct dyay *o = dyay_of(l, ymd_top(l, 1));
 	*dyay_add(l->vm, o) = *ymd_top(l, 0);
 	ymd_pop(l, 1);
 }
 
-static inline void ymd_hmap(L, int k) {
+static YMD_INLINE void ymd_hmap(L, int k) {
 	struct hmap *o = hmap_new(l->vm, k);
 	setv_hmap(ymd_push(l), o);
 }
 
-static inline void ymd_skls(L, struct func *cmp) {
+static YMD_INLINE void ymd_skls(L, struct func *cmp) {
 	struct skls *o = skls_new(l->vm, cmp);
 	setv_skls(ymd_push(l), o);
 }
 
-static inline void *ymd_mand(L, const char *tt, size_t size,
+static YMD_INLINE void *ymd_mand(L, const char *tt, size_t size,
                              ymd_final_t final) {
 	struct mand *o = mand_new(l->vm, size, final);
 	o->tt = tt;
@@ -270,62 +270,62 @@ static inline void *ymd_mand(L, const char *tt, size_t size,
 	return o->land;
 }
 
-static inline void ymd_kstr(L, const char *z, int len) {
+static YMD_INLINE void ymd_kstr(L, const char *z, int len) {
 	struct kstr *o = kstr_fetch(l->vm, z, len);
 	setv_kstr(ymd_push(l), o);
 }
 
 void ymd_format(L, const char *fmt, ... );
 
-static inline void ymd_int(L, ymd_int_t i) {
+static YMD_INLINE void ymd_int(L, ymd_int_t i) {
 	setv_int(ymd_push(l), i);
 }
 
-static inline void ymd_float(L, ymd_float_t f) {
+static YMD_INLINE void ymd_float(L, ymd_float_t f) {
 	setv_float(ymd_push(l), f);
 }
 
-static inline void ymd_ext(L, void *p) {
+static YMD_INLINE void ymd_ext(L, void *p) {
 	setv_ext(ymd_push(l), p);
 }
 
-static inline void ymd_bool(L, int b) {
+static YMD_INLINE void ymd_bool(L, int b) {
 	setv_bool(ymd_push(l), b);
 }
 
-static inline void ymd_nil(L) {
+static YMD_INLINE void ymd_nil(L) {
 	setv_nil(ymd_push(l));
 }
 
-static inline void ymd_nafn(L, ymd_nafn_t fn, const char *name, int nbind) {
+static YMD_INLINE void ymd_nafn(L, ymd_nafn_t fn, const char *name, int nbind) {
 	struct func *o = func_new_c(l->vm, fn, name);
 	o->n_upval = nbind;
 	setv_func(ymd_push(l), o);
 }
 
-static inline void ymd_func(L, struct chunk *blk, const char *name) {
+static YMD_INLINE void ymd_func(L, struct chunk *blk, const char *name) {
 	struct func *o = func_new(l->vm, blk, name);
 	setv_func(ymd_push(l), o);
 }
 
-static inline struct func *ymd_naked(L, struct chunk *blk) {
+static YMD_INLINE struct func *ymd_naked(L, struct chunk *blk) {
 	struct func *o = func_new(l->vm, blk, NULL);
 	setv_func(ymd_push(l), o);
 	return o;
 }
 
-static inline void ymd_getf(L) {
+static YMD_INLINE void ymd_getf(L) {
 	struct variable *v = vm_get(l->vm, ymd_top(l, 1), ymd_top(l, 0));
 	*ymd_top(l, 0) = *v;
 }
 
-static inline void ymd_putf(L) {
+static YMD_INLINE void ymd_putf(L) {
 	struct variable *v = vm_put(l->vm, ymd_top(l, 2), ymd_top(l, 1));
 	*v = *ymd_top(l, 0);
 	ymd_pop(l, 2);
 }
 
-static inline void ymd_mem(L, const char *field) {
+static YMD_INLINE void ymd_mem(L, const char *field) {
 	struct variable *v;
 	if (!is_ref(ymd_top(l, 0)))
 		ymd_panic(l, "Object must be hashmap or skiplist");
@@ -333,23 +333,23 @@ static inline void ymd_mem(L, const char *field) {
 	*ymd_push(l) = *v;
 }
 
-static inline void ymd_def(L, const char *field) {
+static YMD_INLINE void ymd_def(L, const char *field) {
 	if (!is_ref(ymd_top(l, 1)))
 		ymd_panic(l, "Object must be hashmap or skiplist");
 	*vm_def(l->vm, ymd_top(l, 1)->u.ref, field) = *ymd_top(l, 0);
 	ymd_pop(l, 1);
 }
 
-static inline void ymd_getg(L, const char *field) {
+static YMD_INLINE void ymd_getg(L, const char *field) {
 	*ymd_push(l) = *vm_getg(l->vm, field);
 }
 
-static inline void ymd_putg(L, const char *field) {
+static YMD_INLINE void ymd_putg(L, const char *field) {
 	*vm_putg(l->vm, field) = *ymd_top(l, 0);
 	ymd_pop(l, 1);
 }
 
-static inline void ymd_bind(L, int i) {
+static YMD_INLINE void ymd_bind(L, int i) {
 	struct func *o = func_of(l, ymd_top(l, 1));
 	if (i < 0 || i >= o->n_upval)
 		ymd_panic(l, "Upval index out of range, %d vs. [%d, %d)",
@@ -358,14 +358,14 @@ static inline void ymd_bind(L, int i) {
 	ymd_pop(l, 1);
 }
 
-static inline void ymd_insert(L) {
+static YMD_INLINE void ymd_insert(L) {
 	struct dyay *o = dyay_of(l, ymd_top(l, 2));
 	ymd_int_t i = int_of(l, ymd_top(l, 1));
 	*dyay_insert(l->vm, o, i) = *ymd_top(l, 0);
 	ymd_pop(l, 2);
 }
 
-static inline void ymd_setmetatable(L) {
+static YMD_INLINE void ymd_setmetatable(L) {
 	struct mand *o = mand_of(l, ymd_top(l, 1));
 	if (ymd_type(ymd_top(l, 0)) != T_HMAP && ymd_type(ymd_top(l, 0)) != T_SKLS)
 		ymd_panic(l, "Not metatable type!");
@@ -377,7 +377,7 @@ static inline void ymd_setmetatable(L) {
 int ymd_error(L, const char *msg);
 
 // Get argc
-static inline int ymd_argc(L) {
+static YMD_INLINE int ymd_argc(L) {
 	assert(!func_argv(ymd_called(l)));
 	return l->info->argc;
 }
@@ -388,7 +388,7 @@ static inline int ymd_argc(L) {
 // 1 [3-1 2]
 // 2 [3-2 1]
 // 3 [3-3 0]
-static inline struct variable *ymd_argv(L, int i) {
+static YMD_INLINE struct variable *ymd_argv(L, int i) {
 	int k = ymd_argc(l);
 	if (i < 0 || i >= k)
 		ymd_panic(l, "Argv index[%d] out of range[0, %d)", i, k);

@@ -64,7 +64,7 @@ struct variable *dyay_get(struct dyay *o, ymd_int_t i) {
 	return o->elem + pos;
 }
 
-static inline void resize(struct ymd_mach *vm, struct dyay *o) {
+static YMD_INLINE void resize(struct ymd_mach *vm, struct dyay *o) {
 	int old = o->max;
 	o->max = o->count * 3 / 2 + MAX_ADD;
 	o->elem = mm_realloc(vm, o->elem, old, o->max,

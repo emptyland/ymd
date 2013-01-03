@@ -3,7 +3,7 @@
 #include "encoding.h"
 #include "zstream.h"
 
-static inline void if_recursived(const void *p, int *ok) {
+static YMD_INLINE void if_recursived(const void *p, int *ok) {
 	const struct gc_node *o = p; *ok = !mm_busy(o);
 }
 #define mutable(obj) ((struct gc_node *)(obj))

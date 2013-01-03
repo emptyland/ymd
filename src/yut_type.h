@@ -18,4 +18,10 @@
 #define double_cast(i)   ((double)(i))
 #define double_tag       "%f"
 
+#if defined(_MSC_VER)
+#	define YUT_INLINE __inline
+#else
+#	define YUT_INLINE inline
+#endif
+
 #endif // TEST_YUT_TYPE_H

@@ -5,22 +5,22 @@
 #include "builtin.h"
 
 // Encoding/Decoding
-static inline ymd_uint_t zigzag64encode(ymd_int_t i) {
+static YMD_INLINE ymd_uint_t zigzag64encode(ymd_int_t i) {
 	if (i < 0)
 		return (ymd_uint_t)(((-i) << 1) | 1ULL);
 	return (ymd_uint_t)(i << 1);
 }
-static inline ymd_int_t zigzag64decode(ymd_uint_t u) {
+static YMD_INLINE ymd_int_t zigzag64decode(ymd_uint_t u) {
 	if (u & 0x1ULL)
 		return -((ymd_int_t)(u >> 1));
 	return (ymd_uint_t)(u >> 1);
 }
-static inline ymd_u32_t zigzag32encode(ymd_i32_t i) {
+static YMD_INLINE ymd_u32_t zigzag32encode(ymd_i32_t i) {
 	if (i < 0)
 		return (ymd_u32_t)(((-i) << 1) | 1U);
 	return (ymd_u32_t)(i << 1);
 }
-static inline ymd_i32_t zigzag32decode(ymd_u32_t u) {
+static YMD_INLINE ymd_i32_t zigzag32decode(ymd_u32_t u) {
 	if (u & 0x1U)
 		return -((ymd_i32_t)(u >> 1));
 	return (ymd_u32_t)(u >> 1);
@@ -41,16 +41,16 @@ int uint32encode(ymd_u32_t x, ymd_byte_t *rv);
 ymd_u32_t uint32decode(const ymd_byte_t *x, size_t *k);
 
 // Signed int encoding:
-static inline int sint64encode(ymd_int_t x, ymd_byte_t *rv) {
+static YMD_INLINE int sint64encode(ymd_int_t x, ymd_byte_t *rv) {
 	return uint64encode(zigzag64encode(x), rv);
 }
-static inline ymd_int_t sint64decode(const ymd_byte_t *x, size_t *k) {
+static YMD_INLINE ymd_int_t sint64decode(const ymd_byte_t *x, size_t *k) {
 	return zigzag64decode(uint64decode(x, k));
 }
-static inline int sint32encode(ymd_i32_t x, ymd_byte_t *rv) {
+static YMD_INLINE int sint32encode(ymd_i32_t x, ymd_byte_t *rv) {
 	return uint32encode(zigzag32encode(x), rv);
 }
-static inline ymd_i32_t sint32decode(const ymd_byte_t *x, size_t *k) {
+static YMD_INLINE ymd_i32_t sint32decode(const ymd_byte_t *x, size_t *k) {
 	return zigzag32decode(uint32decode(x, k));
 }
 

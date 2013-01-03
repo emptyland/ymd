@@ -3705,7 +3705,7 @@ DEFINE_COMPILER;
 jump_list *found = NULL;
 jump_list **list = (*cc & XCL_NOT) == 0 ? &found : backtracks;
 pcre_int32 c, charoffset;
-const pcre_uint32 *other_cases; /*(void)other_cases;*/
+const pcre_uint32 *other_cases;
 struct sljit_jump *jump = NULL;
 pcre_uchar *ccbegin;
 int compares, invertcmp, numberofcmps;
@@ -3716,6 +3716,7 @@ int typereg = TMP1, scriptreg = TMP1;
 pcre_int32 typeoffset;
 #endif
 
+(void)other_cases;
 /* Although SUPPORT_UTF must be defined, we are
    not necessary in utf mode even in 8 bit mode. */
 detect_partial_match(common, backtracks);

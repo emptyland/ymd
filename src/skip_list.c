@@ -32,7 +32,7 @@ static struct sknd *mknode(struct ymd_mach *vm, unsigned short lv) {
 	return x;
 }
 
-static inline int skls_count(const struct skls *o) {
+static YMD_INLINE int skls_count(const struct skls *o) {
 	int rv = 0;
 	const struct sknd *i = o->head;
 	while ((i = i->fwd[0]) != NULL)

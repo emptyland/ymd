@@ -2,6 +2,7 @@
 #define YMD_LEX_H
 
 #include <string.h>
+#include "builtin.h"
 
 #if defined(TRUE)
 #undef TRUE
@@ -80,7 +81,7 @@ struct ymd_lex {
 	int i_column;
 };
 
-static inline void lex_init(struct ymd_lex *lex, const char *file,
+static YMD_INLINE void lex_init(struct ymd_lex *lex, const char *file,
                             const char *buf) {
 	memset(lex, 0, sizeof(*lex));
 	lex->file = file;

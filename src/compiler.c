@@ -39,15 +39,15 @@ struct func_env {
 	struct hmap kval; // kval map.
 };
 
-static inline int ymc_peek(struct ymd_parser *p) {
+static YMD_INLINE int ymc_peek(struct ymd_parser *p) {
 	return p->lah.token;
 }
 
-static inline int ymc_next(struct ymd_parser *p) {
+static YMD_INLINE int ymc_next(struct ymd_parser *p) {
 	return lex_next(&p->lex, &p->lah);
 }
 
-static inline int ymc_test(struct ymd_parser *p, int token) {
+static YMD_INLINE int ymc_test(struct ymd_parser *p, int token) {
 	if (ymc_peek(p) == token) {
 		ymc_next(p);
 		return 1;
@@ -56,28 +56,28 @@ static inline int ymc_test(struct ymd_parser *p, int token) {
 }
 
 // Find or get `string' in constant list
-static inline int ymk_kz(struct ymd_parser *p, const char *z, int n) {
+static YMD_INLINE int ymk_kz(struct ymd_parser *p, const char *z, int n) {
 	struct variable k;
 	setv_kstr(&k, kstr_fetch(p->vm, z, n));
 	return blk_kval(p->vm, p->env->core, &p->env->kval, &k);
 }
 
 // Find or put `int' in constant list
-static inline int ymk_ki(struct ymd_parser *p, ymd_int_t i) {
+static YMD_INLINE int ymk_ki(struct ymd_parser *p, ymd_int_t i) {
 	struct variable k;
 	setv_int(&k, i);
 	return blk_kval(p->vm, p->env->core, &p->env->kval, &k);
 }
 
 // Find or put `float' in constant list
-static inline int ymk_kd(struct ymd_parser *p, ymd_float_t f) {
+static YMD_INLINE int ymk_kd(struct ymd_parser *p, ymd_float_t f) {
 	struct variable k;
 	setv_float(&k, f);
 	return blk_kval(p->vm, p->env->core, &p->env->kval, &k);
 }
 
 // Find or put `function' in constant list
-static inline int ymk_kf(struct ymd_parser *p, void *fn) {
+static YMD_INLINE int ymk_kf(struct ymd_parser *p, void *fn) {
 	struct variable k;
 	setv_func(&k, fn);
 	return blk_kval(p->vm, p->env->core, &p->env->kval, &k);
@@ -93,20 +93,20 @@ static void parse_block(struct ymd_parser *p);
 //------------------------------------------------------------------------------
 // Code generating
 //------------------------------------------------------------------------------
-static inline struct chunk *ymk_chunk(struct ymd_parser *p) {
+static YMD_INLINE struct chunk *ymk_chunk(struct ymd_parser *p) {
 	struct chunk *x = mm_zalloc(p->vm, 1, sizeof(*x));
 	x->file = kstr_fetch(p->vm, p->lex.file, -1);
 	return x;
 }
 
-static inline void ymk_chunk_reserved(struct ymd_parser *p,
+static YMD_INLINE void ymk_chunk_reserved(struct ymd_parser *p,
                                       struct chunk *x) {
 	(void)p;
 	(void)x;
 	// TODO:
 }
 
-static inline void ymk_enter(struct ymd_parser *p, struct chunk *x) {
+static YMD_INLINE void ymk_enter(struct ymd_parser *p, struct chunk *x) {
 	struct func_env *env = vm_zalloc(p->vm, sizeof(*env));
 	env->core = !x ? ymk_chunk(p) : x;
 	hmap_init(p->vm, &env->kval, 0);
@@ -114,7 +114,7 @@ static inline void ymk_enter(struct ymd_parser *p, struct chunk *x) {
 	p->env = env;
 }
 
-static inline struct chunk *ymk_leave(struct ymd_parser *p) {
+static YMD_INLINE struct chunk *ymk_leave(struct ymd_parser *p) {
 	struct func_env *env = p->env;
 	struct chunk *core = env->core;
 	blk_shrink(p->vm, core); // Fixed chunk size
@@ -124,45 +124,45 @@ static inline struct chunk *ymk_leave(struct ymd_parser *p) {
 	return core;
 }
 
-static inline void ymk_emitOfP(
+static YMD_INLINE void ymk_emitOfP(
 	struct ymd_parser *p, uchar_t o, uchar_t f, ushort_t param) {
 	blk_emit(p->vm, p->env->core, asm_build(o, f, param), p->lex.i_line);
 }
-static inline void ymk_emitOf(
+static YMD_INLINE void ymk_emitOf(
 	struct ymd_parser *p, uchar_t o, uchar_t f) {
 	ymk_emitOfP(p, o, f, 0);
 }
-static inline void ymk_emitO(
+static YMD_INLINE void ymk_emitO(
 	struct ymd_parser *p, uchar_t o) {
 	ymk_emitOf(p, o, 0);
 }
-static inline void ymk_emitOP(
+static YMD_INLINE void ymk_emitOP(
 	struct ymd_parser *p, uchar_t o, ushort_t param) {
 	ymk_emitOfP(p, o, 0, param);
 }
-static inline void ymk_emit_call(
+static YMD_INLINE void ymk_emit_call(
 	struct ymd_parser *p, uchar_t o, uchar_t aret,
 	uchar_t argc, ushort_t method) {
 	blk_emit(p->vm, p->env->core, asm_call(o, aret, argc, method),
 	         p->lex.i_line);
 }
 
-static inline ushort_t ymk_ipos(struct ymd_parser *p) {
+static YMD_INLINE ushort_t ymk_ipos(struct ymd_parser *p) {
 	return p->env->core->kinst;
 }
 
-static inline ushort_t ymk_hold(struct ymd_parser *p) {
+static YMD_INLINE ushort_t ymk_hold(struct ymd_parser *p) {
 	ushort_t ipos = ymk_ipos(p);
 	ymk_emitO(p, I_PANIC);
 	return ipos;
 }
 
-static inline void ymk_emit_int(
+static YMD_INLINE void ymk_emit_int(
 	struct ymd_parser *p, ymd_int_t imm) {
 	ymk_emitOfP(p, I_PUSH, F_KVAL, ymk_ki(p, imm));
 }
 
-static inline void ymk_emit_float(struct ymd_parser *p,
+static YMD_INLINE void ymk_emit_float(struct ymd_parser *p,
 		ymd_float_t imm) {
 	ymk_emitOfP(p, I_PUSH, F_KVAL, ymk_kd(p, imm));
 }
@@ -326,7 +326,7 @@ static void ymk_emit_selfcall(
 	ymk_emit_call(p, I_SELFCALL, adjust, argc, i);
 }
 
-static inline void ymk_emit_jmp(struct ymd_parser *p, uint_t target,
+static YMD_INLINE void ymk_emit_jmp(struct ymd_parser *p, uint_t target,
                                 int bwd) {
 	ushort_t off;
 	const uint_t i_curr = p->env->core->kinst;
@@ -340,13 +340,13 @@ static inline void ymk_emit_jmp(struct ymd_parser *p, uint_t target,
 	ymk_emitOfP(p, I_JMP, bwd ? F_BACKWARD : F_FORWARD, off);
 }
 
-static inline void ymk_hack(struct ymd_parser *p, ushort_t i, uint_t inst) {
+static YMD_INLINE void ymk_hack(struct ymd_parser *p, ushort_t i, uint_t inst) {
 	const struct chunk *core = p->env->core;
 	assert(i < core->kinst);
 	core->inst[i] = inst;
 }
 
-static inline void ymk_hack_jmp(
+static YMD_INLINE void ymk_hack_jmp(
 	struct ymd_parser *p, ushort_t i, uchar_t op, int bwd) {
 	const struct chunk *core = p->env->core;
 	ushort_t off = core->kinst - i;
@@ -355,7 +355,7 @@ static inline void ymk_hack_jmp(
 }
 
 // Jmp to fail block
-static inline void ymk_fail_jmp(struct ymd_parser *p, ushort_t i_fail,
+static YMD_INLINE void ymk_fail_jmp(struct ymd_parser *p, ushort_t i_fail,
 		ushort_t i, uchar_t op) {
 	const struct chunk *core = p->env->core;
 	ushort_t off = i_fail - i;
@@ -363,7 +363,7 @@ static inline void ymk_fail_jmp(struct ymd_parser *p, ushort_t i_fail,
 	ymk_hack(p, i, asm_build(op, F_FORWARD, off));
 }
 
-static inline void ymk_emit_func(
+static YMD_INLINE void ymk_emit_func(
 	struct ymd_parser *p,
 	const struct func_decl_desc *desc,
 	struct func *fn) {
@@ -376,7 +376,7 @@ static inline void ymk_emit_func(
 	}
 }
 
-static inline char *ymk_literal(struct ymd_parser *p) {
+static YMD_INLINE char *ymk_literal(struct ymd_parser *p) {
 	struct znode *x = vm_zalloc(p->vm, sizeof(*x) + p->lah.len);
 	x->len = p->lah.len;
 	memcpy(x->land, p->lah.off, x->len);
@@ -394,7 +394,7 @@ static const char *ymk_symbol(struct ymd_parser *p) {
 	return literal;
 }
 
-static inline void ymk_loop_enter(
+static YMD_INLINE void ymk_loop_enter(
 	struct ymd_parser *p, struct loop_info *info) {
 	memset(info, 0, sizeof(*info));
 	info->chain = p->loop;
@@ -1103,7 +1103,7 @@ static void parse_func_decl(struct ymd_parser *p, const char *prefix,
 	}
 }
 
-static inline struct chunk *fbk(struct ymd_context *l) {
+static YMD_INLINE struct chunk *fbk(struct ymd_context *l) {
 	struct func *fn = func_of(l, ymd_top(l, 0));
 	return fn->u.core;
 }
@@ -1278,7 +1278,7 @@ static void parse_foreach_partial(struct ymd_parser *p, const char *tmp) {
 	p->loop->op = I_FOREACH;
 }
 
-static inline void parse_for_partial(struct ymd_parser *p, const char *tmp) {
+static YMD_INLINE void parse_for_partial(struct ymd_parser *p, const char *tmp) {
 	if (ymc_peek(p) == '=')
 		parse_forstep_partial(p, tmp);
 	else

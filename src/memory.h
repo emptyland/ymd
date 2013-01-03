@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
+#include "builtin.h"
 
 struct ymd_mach;
 
@@ -86,13 +87,13 @@ void *mm_shrink(struct ymd_mach *vm, void *raw, int n, int align,
 		size_t chunk);
 
 // Reference count management:
-static inline void *mm_grab(void *p) {
+static YMD_INLINE void *mm_grab(void *p) {
 	int *ref = p;
 	++(*ref);
 	return p;
 }
 
-static inline void mm_drop(struct ymd_mach *vm, void *p, size_t size) {
+static YMD_INLINE void mm_drop(struct ymd_mach *vm, void *p, size_t size) {
 	int *ref = p;
 	assert(*ref > 0 && "Bad referened number.");
 	--(*ref);

@@ -4,7 +4,7 @@
 //------------------------------------------------------------------------------
 // Symbol -> Integer -> String
 //------------------------------------------------------------------------------
-static inline ymd_int_t xtol(char x, int *ok) {
+static YMD_INLINE ymd_int_t xtol(char x, int *ok) {
 	if (x >= '0' && x <= '9')
 		return x - '0';
 	else if (x >= 'a' && x <= 'f')
@@ -15,14 +15,14 @@ static inline ymd_int_t xtol(char x, int *ok) {
 	return 0;
 }
 
-static inline ymd_int_t dtol(char x, int *ok) {
+static YMD_INLINE ymd_int_t dtol(char x, int *ok) {
 	if (x >= '0' && x <= '9')
 		return x - '0';
 	*ok = 0;
 	return 0;
 }
 
-static inline void *priv_need(void *raw, int n, int align,
+static YMD_INLINE void *priv_need(void *raw, int n, int align,
                               size_t chunk) {
 	char *rv;
 	if (n % align)
@@ -32,7 +32,7 @@ static inline void *priv_need(void *raw, int n, int align,
 	return rv;
 }
 
-static inline char *priv_add(char *priv, int n, char c) {
+static YMD_INLINE char *priv_add(char *priv, int n, char c) {
 	priv = priv_need(priv, n, 64, 1);
 	priv[n] = c;
 	return priv;

@@ -33,7 +33,7 @@
 
 #define call_jleave(l) { l->jpt = l->jpt->chain; } (void)0
 
-static inline struct variable *vm_find_local(struct ymd_context *l,
+static YMD_INLINE struct variable *vm_find_local(struct ymd_context *l,
                                              struct func *fn,
                                              const char *name) {
 	int i = blk_find_lz(fn->u.core, name);
@@ -42,7 +42,7 @@ static inline struct variable *vm_find_local(struct ymd_context *l,
 	return l->info->loc + i;
 }
 
-static inline void do_put(struct ymd_mach *vm,
+static YMD_INLINE void do_put(struct ymd_mach *vm,
                           struct gc_node *raw,
 						  const struct variable *k,
                           const struct variable *v) {
@@ -64,7 +64,7 @@ static inline void do_put(struct ymd_mach *vm,
 	}
 }
 
-static inline void vm_iput(struct ymd_mach *vm, struct variable *var,
+static YMD_INLINE void vm_iput(struct ymd_mach *vm, struct variable *var,
 		const struct variable *k, const struct variable *v) {
 	if (is_nil(k))
 		ymd_panic(ioslate(vm), "Key can not be `nil' in k-v pair");
@@ -74,7 +74,7 @@ static inline void vm_iput(struct ymd_mach *vm, struct variable *var,
 		*vm_put(vm, var, k) = *v;
 }
 
-static inline const struct variable *do_keyz(struct func *fn, int i,
+static YMD_INLINE const struct variable *do_keyz(struct func *fn, int i,
                                              struct variable *key) {
 	struct chunk *core = fn->u.core;
 	assert(i >= 0);
@@ -84,13 +84,13 @@ static inline const struct variable *do_keyz(struct func *fn, int i,
 	return key;
 }
 
-static inline struct variable *vm_igetg(struct ymd_mach *vm, int i) {
+static YMD_INLINE struct variable *vm_igetg(struct ymd_mach *vm, int i) {
 	struct variable k;
 	struct func *fn = ymd_called(ioslate(vm));
 	return hmap_get(vm->global, do_keyz(fn, i, &k));
 }
 
-static inline void vm_iputg(struct ymd_mach *vm, int i,
+static YMD_INLINE void vm_iputg(struct ymd_mach *vm, int i,
 		const struct variable *v) {
 	struct variable k;
 	struct func *fn = ymd_called(ioslate(vm));
@@ -137,7 +137,7 @@ static int vm_close_upval(struct ymd_context *l, struct func *fn) {
 }
 
 // Operand is zero?
-static inline int vm_zero(const struct variable *var) {
+static YMD_INLINE int vm_zero(const struct variable *var) {
 	if (ymd_type(var) == T_INT)
 		return var->u.i == 0LL;
 	if (ymd_type(var) == T_FLOAT)

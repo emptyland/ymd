@@ -25,24 +25,24 @@ static int log2x(int n) {
 	return -1;
 }
 
-static inline struct kvi *position(const struct hmap *o,
+static YMD_INLINE struct kvi *position(const struct hmap *o,
                                    size_t h) {
 	return o->item + (((h - 1) | 1) % (1 << o->shift));
 }
 
 
-static inline size_t hash_int(ymd_int_t i) {
+static YMD_INLINE size_t hash_int(ymd_int_t i) {
 	return i;
 }
 
-static inline size_t hash_float(ymd_float_t f) {
+static YMD_INLINE size_t hash_float(ymd_float_t f) {
 	size_t i;
 	memcpy(&i, &f, sizeof(i));
 	return i;
 }
 
 
-static inline size_t hash_bool(ymd_int_t i) {
+static YMD_INLINE size_t hash_bool(ymd_int_t i) {
 	return !i ? 2 : 3;
 }
 
@@ -91,18 +91,18 @@ static size_t hash_skls(const struct skls *o) {
 	return h;
 }
 
-static inline size_t hash_mand(const struct mand *o) {
+static YMD_INLINE size_t hash_mand(const struct mand *o) {
 	size_t h = hash_ext((void *)o->final);
 	return h ^ kz_hash((const char *)o->land, o->len);
 }
 
 // Lazy hash:
-static inline size_t hash_kstr(const struct kstr *kz) {
+static YMD_INLINE size_t hash_kstr(const struct kstr *kz) {
 	struct kstr *mz = (struct kstr *)kz; // FIXME: Maybe unsafe
 	return kz->hash ? kz->hash : (mz->hash = kz_hash(kz->land, kz->len));
 }
 
-static inline size_t hash_func(const struct func *fn) {
+static YMD_INLINE size_t hash_func(const struct func *fn) {
 	uintptr_t h = 0, p, i = fn->n_upval;
 	while (fn->upval && i--)
 		h += hash(fn->upval + i);

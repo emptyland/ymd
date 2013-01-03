@@ -177,15 +177,15 @@ const struct ymd_flag_entry yut_opt_entries[] = {
 };
 
 // Filter: is any?
-static inline int fany(const char *z) {
+static YUT_INLINE int fany(const char *z) {
 	return (!z || !z[0] || z[0] == '*');
 }
 
-static inline int fok(const char *pattern, const char *z) {
+static YUT_INLINE int fok(const char *pattern, const char *z) {
 	return fany(pattern) || strcmp(pattern, z) == 0;
 }
 
-static inline
+static YUT_INLINE
 const char *fstr(const struct filter *filter, char *buf, size_t len) {
 	snprintf(buf, len, "%s%s.%s",
 			filter->negative ? "-" : "",

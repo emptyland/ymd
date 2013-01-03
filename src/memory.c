@@ -43,24 +43,24 @@ static void gc_mark_obj(struct gc_node *o);
 static void  gc_travel_obj(struct gc_node *o);
 static int gc_travel_func(struct func *o);
 
-static inline void gc_white2gray(struct gc_node *o) {
+static YMD_INLINE void gc_white2gray(struct gc_node *o) {
 	assert (gc_whiteo(o) && "Only white object can become gray.");
 	assert (!gc_fixedo(o) && "Don't mark fixed object.");
 	o->marked = (o->marked & ~GC_MASK) | GC_GRAY;
 }
 
-static inline void gc_white2black(struct gc_node *o) {
+static YMD_INLINE void gc_white2black(struct gc_node *o) {
 	assert (gc_whiteo(o) && "Only white object can become black.");
 	assert (!gc_fixedo(o) && "Don't mark fixed object.");
 	o->marked = (o->marked & ~GC_MASK) | GC_BLACK;
 }
 
-static inline void gc_gray2black(struct gc_node *o) {
+static YMD_INLINE void gc_gray2black(struct gc_node *o) {
 	assert (!gc_fixedo(o) && "Don't mark fixed object.");
 	o->marked = (o->marked & ~GC_MASK) | GC_BLACK;
 }
 
-static inline void gc_black2white(struct gc_node *o, int white) {
+static YMD_INLINE void gc_black2white(struct gc_node *o, int white) {
 	assert (gc_blacko(o) && "Only black object can become white.");
 	assert (!gc_fixedo(o) && "Don't mark fixed object.");
 	assert (white == GC_WHITE0 || white == GC_WHITE1);
@@ -68,14 +68,14 @@ static inline void gc_black2white(struct gc_node *o, int white) {
 }
 
 // Can we sweep a object?
-static inline int gc_should_sweep(const struct gc_struct *gc,
+static YMD_INLINE int gc_should_sweep(const struct gc_struct *gc,
 		const struct gc_node *o) {
 	assert (!mm_busy(o));
 	return !gc_fixedo(o) && o->marked == gc_otherwhite(gc->white);
 }
 
 // Get value between gc->point and gc->used: 
-static inline int gc_delta(const struct gc_struct *gc) {
+static YMD_INLINE int gc_delta(const struct gc_struct *gc) {
 	return gc->point > gc->used ? gc->point - gc->used :
 		gc->used - gc->point;
 }

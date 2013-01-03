@@ -189,7 +189,7 @@ size_t kz_hash(const char *z, int n);
 int kz_compare(const unsigned char *z1, int n1,
                const unsigned char *z2, int n2);
 
-static inline size_t kstr_hash(struct kstr *kz) {
+static YMD_INLINE size_t kstr_hash(struct kstr *kz) {
 	kz->hash = kz->hash ? kz->hash : kz_hash(kz->land, kz->len);
 	return kz->hash;
 }
