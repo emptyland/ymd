@@ -76,23 +76,31 @@ static int fcase(const struct filter *filter, const char *test,
 
 #define L struct ymd_context *l
 
+// NOTE: In windows x64 platform, setjmp must align 16 bytes!
 struct yut_cookie {
+#if defined(_WIN32)
+	char jpt[sizeof(jmp_buf) + 8];
+#else
 	jmp_buf jpt;
+#endif
 };
 
 static YMD_INLINE void yut_fault() {
 	ymd_printf("${[!red][  FAILED  ]}$ Test fail, stop all.\n");
 }
 
-static YMD_INLINE struct yut_cookie *yut_jpt(L, struct variable *self) {
+static YMD_INLINE void *yut_jpt(L, struct variable *self) {
 	struct hmap *o = hmap_of(l, self);
 	struct mand *cookie = mand_of(l, vm_mem(l->vm, o, "__cookie__"));
-	return (struct yut_cookie *)cookie->land;
+#if defined(_WIN32)
+	return ((struct yut_cookie *)cookie->land)->jpt + 8;
+#else
+	return ((struct yut_cookie *)cookie->land)->jpt;
+#endif
 }
 
 static YMD_INLINE void yut_raise(L) {
-	struct yut_cookie *cookie = yut_jpt(l, ymd_argv(l, 0));
-	longjmp(cookie->jpt, 1);
+	longjmp(yut_jpt(l, ymd_argv(l, 0)), 1);
 }
 
 // [   INFO   ] Line:%d <%s> Assert fail.
@@ -342,7 +350,7 @@ static int yut_test(struct ymd_mach *vm, const struct filter *filter,
 	teardown = yut_method(vm, test->u.ref, "teardown");
 	init     = yut_method(vm, test->u.ref, "init");
 	final    = yut_method(vm, test->u.ref, "final");
-	if (setjmp(yut_jpt(l, vm_getg(vm, "Assert"))->jpt)) {
+	if (setjmp(yut_jpt(l, vm_getg(vm, "Assert")))) {
 		l->info = curr;
 		yut_fault(); // Print failed message
 		return -1; // Test Fail
@@ -412,7 +420,8 @@ int ymd_test(struct ymd_context *l, const char *pattern, int repeated,
 	if (pattern && pattern[0])
 		ymd_printf("${[!yellow]Use filter: %s}$\n", pattern);
 	for (t = 0; t < repeated; ++t) {
-		struct kvi *k = l->vm->global->item + (1 << l->vm->global->shift);
+		struct kvi *k = l->vm->global->item + 
+			(size_t)(1 << l->vm->global->shift);
 		struct kvi *i;
 		if (repeated > 1)
 			ymd_printf("${[!yellow]Repeated test %d of %d ...}$\n",

@@ -90,7 +90,7 @@ static void vm_stack(struct ymd_context *l, int max) {
 	const struct variable *i = ymd_top(l, 0);
 	while (i >= l->stk && max--) {
 		struct zostream os = ZOS_INIT;
-		ymd_fprintf(stderr, " ${[green][%zd]}$ %s\n", ymd_top(l, 0) - i,
+		ymd_fprintf(stderr, " ${[green][%d]}$ %s\n", ymd_top(l, 0) - i,
 				tostring(&os, i));
 		--i;
 		zos_final(&os);
@@ -125,9 +125,9 @@ int vm_bool(const struct variable *lhs) {
 	case T_BOOL:
 		return lhs->u.i;
 	default:
-		return 1;
+		break;
 	}
-	return 0;
+	return 1;
 }
 
 void vm_pcre_lazy(struct ymd_mach *vm) {
@@ -236,7 +236,7 @@ struct variable *vm_def(struct ymd_mach *vm, void *o, const char *field) {
 		break;
 	default:
 		assert(!"No reached.");
-		break;
+		return NULL;
 	}
 	return v;
 }
@@ -380,7 +380,7 @@ void ymd_panic(struct ymd_context *l, const char *fmt, ...) {
 	va_start(ap, fmt);
 	vsnprintf(buf, sizeof(buf), fmt, ap);
 	va_end(ap);
-	return do_panic(l, buf);
+	do_panic(l, buf);
 }
 
 // Stack Adjust:
@@ -489,4 +489,3 @@ struct variable *ymd_top(struct ymd_context *l, int i) {
 		ymd_panic(l, "Stack out of range [%d]", i);
 	return i < 0 ? l->stk + 1 - i : l->top - 1 - i;
 }
-

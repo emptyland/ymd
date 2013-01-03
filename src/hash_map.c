@@ -48,10 +48,7 @@ static YMD_INLINE size_t hash_bool(ymd_int_t i) {
 
 static size_t hash_ext(void *p) {
 	size_t h = 0;
-	if (sizeof(void*) < sizeof(size_t))
-		memcpy(&h, &p, sizeof(p));
-	else
-		memcpy(&h, &p, sizeof(h));
+	memcpy(&h, &p, sizeof(h));
 	h /= sizeof(void*);
 	return h;
 }

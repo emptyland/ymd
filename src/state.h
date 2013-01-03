@@ -125,9 +125,9 @@ int vm_loaded(struct ymd_mach *vm, const char *name);
 //-----------------------------------------------------------------------------
 // Call and run:
 // ----------------------------------------------------------------------------
-void ymd_panic(L, const char *fmt, ...);
+YMD_NORETURN void ymd_panic(L, const char *fmt, ...);
 
-void ymd_raise(L);
+YMD_NORETURN void ymd_raise(L);
 
 int ymd_call(L, struct func *fn, int argc, int method);
 

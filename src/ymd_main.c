@@ -57,7 +57,7 @@ const struct ymd_flag_entry cmd_entries[] = {
 	}, { NULL, NULL, NULL, NULL },
 };
 
-static void die(const char *info) {
+YMD_NORETURN static void die(const char *info) {
 	fprintf(stderr, "%s\n", info);
 	exit(1);
 }
@@ -67,7 +67,7 @@ int main(int argc, char *argv[]) {
 	struct ymd_mach *vm;
 	struct ymd_context *l;
 	FILE *input = NULL;
-	const char *input_file;
+	const char *input_file = NULL;
 	// Flags parsing:
 	ymd_flags_parse(cmd_entries, NULL, &argc, &argv, 1);
 	for (i = 1; i < argc; ++i) {

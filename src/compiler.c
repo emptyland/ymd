@@ -218,7 +218,7 @@ found:
 		break;
 	default:
 		assert (!"No reached!");
-		break;
+		return;
 	}
 	if (token == INC_1 || token == DEC_1)
 		ymk_emit_int(p, 1);
@@ -247,7 +247,7 @@ static void ymk_emit_setf_i(struct ymd_parser *p, int token,
 		break;
 	default:
 		assert (!"No reached!");
-		break;
+		return;
 	}
 	if (token == INC_1 || token == DEC_1)
 		ymk_emit_int(p, 1);
@@ -826,7 +826,7 @@ static ushort_t ymk_hold_logc(struct ymd_parser *p, int op) {
 	case OP_OR:
 		return ymk_hold(p);
 	default:
-		return 0;
+		break;
 	}
 	return 0;
 }
