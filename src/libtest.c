@@ -259,7 +259,7 @@ static int yut_case(
 		struct func *setup,
 		struct func *teardown,
 		struct func *unit) {
-	char full_name[128], itv[32];
+	char full_name[128];
 	unsigned long long jiffx, start;
 
 	strncpy(full_name, clazz, sizeof(full_name));
