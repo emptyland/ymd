@@ -90,7 +90,7 @@ static void vm_stack(struct ymd_context *l, int max) {
 	const struct variable *i = ymd_top(l, 0);
 	while (i >= l->stk && max--) {
 		struct zostream os = ZOS_INIT;
-		ymd_fprintf(stderr, " ${[green][%ld]}$ %s\n", ymd_top(l, 0) - i,
+		ymd_fprintf(stderr, " ${[green][%ld]}$ %s\n", (long)(ymd_top(l, 0) - i),
 				tostring(&os, i));
 		--i;
 		zos_final(&os);
