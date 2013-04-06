@@ -11,7 +11,7 @@ struct func_env;
 
 struct ymd_parser {
 	struct ymd_lex lex;
-	struct ytoken lah; // look a head;
+	struct ytoken lah; // look a head token;
 	struct znode *lnk; // symbol strings
 	struct func_env *env; // top block
 	struct loop_info *loop;
