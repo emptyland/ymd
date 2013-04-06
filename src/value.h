@@ -127,8 +127,8 @@ struct skls {
 	unsigned short lv;
 	struct func *cmp; // user defined function
 	                  // (void*)0 : order by asc
-					  // (void*)1 : order by dasc
-					  // other    : order by user function
+	                  // (void*)1 : order by dasc
+	                  // other    : order by user function
 	struct sknd *head;
 };
 
