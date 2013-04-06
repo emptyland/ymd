@@ -114,7 +114,7 @@ struct hmap {
 struct sknd {
 	struct variable k;
 	struct variable v;
-	unsigned short n;
+	unsigned short n; // number of forward nodes
 	struct sknd *fwd[1]; // Forward list
 };
 
