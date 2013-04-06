@@ -110,6 +110,7 @@ struct hmap {
 };
 
 // Skip List:
+// Skip List Node
 struct sknd {
 	struct variable k;
 	struct variable v;
