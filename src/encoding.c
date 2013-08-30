@@ -5,7 +5,6 @@
 // Symbol -> Integer -> String
 //------------------------------------------------------------------------------
 static YMD_INLINE ymd_int_t xtol(char x, int *ok) {
-	*ok = 1;
 	if (x >= '0' && x <= '9')
 		return x - '0';
 	else if (x >= 'a' && x <= 'f')
@@ -92,6 +91,7 @@ ymd_int_t xtoll(const char *raw, int *ok) {
 	assert(k > 2);
 	assert(raw[0] == '0');
 	assert(raw[1] == 'x');
+	*ok = 1;
 	while (i-- > 2) {
 		rv |= (xtol(raw[i], ok) << ((k - i - 1) * 4));
 		if (!*ok)
@@ -108,6 +108,7 @@ ymd_int_t dtoll(const char *raw, int *ok) {
 		k = 1;
 	else
 		k = 0;
+	*ok = 1;
 	while (i-- > k) {
 		rv += (dtol(raw[i], ok) * pow);
 		if (!*ok)
