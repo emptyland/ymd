@@ -5,14 +5,14 @@
 // Symbol -> Integer -> String
 //------------------------------------------------------------------------------
 static YMD_INLINE ymd_int_t xtol(char x, int *ok) {
+	*ok = 1;
 	if (x >= '0' && x <= '9')
 		return x - '0';
 	else if (x >= 'a' && x <= 'f')
 		return 10 + x - 'a';
 	else if (x >= 'A' && x <= 'F')
 		return 10 + x - 'A';
-	*ok = 0;
-	return 0;
+	*ok = 0; return 0;
 }
 
 static YMD_INLINE ymd_int_t dtol(char x, int *ok) {
