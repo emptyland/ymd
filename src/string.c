@@ -135,7 +135,6 @@ int kstr_equals(const struct kstr *kz, const struct kstr *rhs) {
 
 int kstr_compare(const struct kstr *kz, const struct kstr *rhs) {
 	return kz_compare((const unsigned char *)kz->land,
-	                  kz->len,
-					  (const unsigned char *)rhs->land,
-					  rhs->len);
+		kz->len, (const unsigned char *)rhs->land,
+		rhs->len);
 }

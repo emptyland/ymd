@@ -110,10 +110,11 @@ struct hmap {
 };
 
 // Skip List:
+// Skip List Node
 struct sknd {
 	struct variable k;
 	struct variable v;
-	unsigned short n;
+	unsigned short n; // number of forward nodes
 	struct sknd *fwd[1]; // Forward list
 };
 
@@ -126,8 +127,8 @@ struct skls {
 	unsigned short lv;
 	struct func *cmp; // user defined function
 	                  // (void*)0 : order by asc
-					  // (void*)1 : order by dasc
-					  // other    : order by user function
+	                  // (void*)1 : order by dasc
+	                  // other    : order by user function
 	struct sknd *head;
 };
 
