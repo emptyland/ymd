@@ -1,5 +1,5 @@
-/* ANSI-C code produced by gperf version 3.0.4 */
-/* Command-line: gperf -L ANSI-C -C -N lex_keyword -K z -t -c -n keywords.gperf  */
+/* ANSI-C code produced by gperf version 3.0.3 */
+/* Command-line: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/gperf -L ANSI-C -C -N lex_keyword -K z -t -c -n keywords.gperf  */
 /* Computed positions: -k'1-2,$' */
 
 #if !((' ' == 32) && ('!' == 33) && ('"' == 34) && ('#' == 35) \
@@ -85,7 +85,7 @@ hash (register const char *str, register unsigned int len)
       61, 61, 61, 61, 61, 61, 61, 61, 61, 61,
       61, 61, 61, 61, 61, 61, 61
     };
-  register int hval = 0;
+  register unsigned int hval = 0;
 
   switch (len)
     {
@@ -99,12 +99,6 @@ hash (register const char *str, register unsigned int len)
   return hval + asso_values[(unsigned char)str[len - 1]];
 }
 
-#ifdef __GNUC__
-__inline
-#if defined __GNUC_STDC_INLINE__ || defined __GNUC_GNU_INLINE__
-__attribute__ ((__gnu_inline__))
-#endif
-#endif
 const struct keyword *
 lex_keyword (register const char *str, register unsigned int len)
 {
@@ -197,9 +191,9 @@ lex_keyword (register const char *str, register unsigned int len)
 
   if (len <= MAX_WORD_LENGTH && len >= MIN_WORD_LENGTH)
     {
-      register int key = hash (str, len);
+      unsigned int key = hash (str, len);
 
-      if (key <= MAX_HASH_VALUE && key >= 0)
+      if (key <= MAX_HASH_VALUE)
         {
           register const char *s = wordlist[key].z;
 

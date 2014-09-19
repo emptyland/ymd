@@ -8,8 +8,8 @@
 
 #define ymd_jiffy() ((unsigned long long)GetTickCount())
 
-#elif defined(__linux__)
-#include "sys/time.h"
+#elif defined(__APPLE__) || defined(__linux__)
+#include <sys/time.h>
 
 static YMD_INLINE unsigned long long ymd_jiffy() {
 	struct timeval jiffx;

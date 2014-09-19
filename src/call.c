@@ -33,14 +33,14 @@
 
 #define call_jleave(l) { l->jpt = l->jpt->chain; } (void)0
 
-static YMD_INLINE struct variable *vm_find_local(struct ymd_context *l,
-                                             struct func *fn,
-                                             const char *name) {
-	int i = blk_find_lz(fn->u.core, name);
-	if (i < 0)
-		ymd_panic(l, "Can not find local: %s", name);
-	return l->info->loc + i;
-}
+// static YMD_INLINE struct variable *vm_find_local(struct ymd_context *l,
+//                                              struct func *fn,
+//                                              const char *name) {
+// 	int i = blk_find_lz(fn->u.core, name);
+// 	if (i < 0)
+// 		ymd_panic(l, "Can not find local: %s", name);
+// 	return l->info->loc + i;
+// }
 
 static void do_put(struct ymd_mach *vm, struct gc_node *raw,
 				   const struct variable *k,
