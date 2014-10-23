@@ -8,6 +8,7 @@ before_script:
     - sudo apt-get install gperf
 
 script:
+    - which clang
     - scons -Q
     - src/all_test
     - cd src && ./yamada --test testing/all_test.ymd
