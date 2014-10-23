@@ -8,8 +8,8 @@ before_script:
     - sudo apt-get install gperf
 
 script:
-    - '[[ $CC == "clang" ]] && CC=`which clang`'
-    - '[[ $CXX == "clang++" ]] && CXX=`which clang++`'
+    - if [[ $CC == "clang" ]]; then export CC=`which clang`; fi
+    - if [[ $CXX == "clang++" ]]; then export CXX=`which clang++`; fi
     - scons -Q
     - src/all_test
     - cd src && ./yamada --test testing/all_test.ymd
